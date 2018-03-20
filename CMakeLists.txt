@@ -5,19 +5,30 @@ PROJECT(qmcpack)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.10)
 IF(COMMAND cmake_policy)
   cmake_policy(SET CMP0003 NEW)
+  IF(NOT($ENV{CRAYPE_VERSION} MATCHES "."))
+    MESSAGE(STATUS "Running on a Cray machine.")
+    cmake_policy(SET CMP0056 NEW)
+    # This policy insures that the CMAKE_EXE_LINKER_FLAGS of the calling project
+    # are used in the try_compile test cmake project.  Without this
+    # clean rpath builds with mkl aren't possible. While it is unknown by
+    # cmake 2.8.10.2 on titan it still breaks the iszero test there --PWD
+  endif(NOT($ENV{CRAYPE_VERSION} MATCHES "."))
 ENDIF(COMMAND cmake_policy)
 
 
 ######################################################################
-# Version 
+# Version
 ######################################################################
 SET(QMCPACK_VERSION_MAJOR 3)
 SET(QMCPACK_VERSION_MINOR 4)
 SET(QMCPACK_VERSION_PATCH 0)
 SET(QMCPACK_VERSION "${QMCPACK_VERSION_MAJOR}.${QMCPACK_VERSION_MINOR}.${QMCPACK_VERSION_PATCH}")
 
+MESSAGE( "INITIAL CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}" )
+MESSAGE( "INITIAL CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE}" )
+
 ######################################################################
-# CTest 
+# CTest
 ######################################################################
 SET( DROP_METHOD "http" )
 SET( DROP_SITE "cdash.qmcpack.org" )
@@ -42,7 +53,7 @@ MESSAGE(STATUS "QMC_SYMLINK_TEST_FILES = ${QMC_SYMLINK_TEST_FILES}.  ${SYMLINK_M
 ######################################################################
 # Build level
 ######################################################################
-SET(QMC_BUILD_LEVEL 3 CACHE INTEGER 
+SET(QMC_BUILD_LEVEL 3 CACHE INTEGER
   "QMC Build Level: 1=bare, 2=developer, 3=experimental, 4=minimal")
 IF ( NOT CMAKE_BUILD_TYPE AND NOT CMAKE_TOOLCHAIN_FILE)
   SET( CMAKE_BUILD_TYPE Release )
@@ -78,8 +89,8 @@ SET (EXECUTABLE_OUTPUT_PATH ${qmcpack_BINARY_DIR}/bin CACHE PATH "Single output 
 # OHMMS_PRECISION  = base precision, float, double etc
 # OHMMS_PRECISION_FULL  = full precision, double etc
 # QMC_COMPLEX = true if using complex wavefunctions
-# QMC_MPI =  enable MPI 
-# QMC_OMP = enable OMP 
+# QMC_MPI =  enable MPI
+# QMC_OMP = enable OMP
 ######################################################################
 SET(OHMMS_DIM 3 CACHE INTEGER "Select physical dimension")
 SET(OHMMS_INDEXTYPE int)
@@ -229,7 +240,7 @@ set(TAU_HOME $ENV{TAU_HOME})
 SET (PROJECT_CMAKE ${qmcpack_SOURCE_DIR}/CMake)
 
 ######################################################
-# set ADIOS flags 
+# set ADIOS flags
 ######################################################
 IF(QMC_ADIOS)
   IF(NOT HAVE_ADIOS)
@@ -265,12 +276,11 @@ ENDIF()
 ######################################################
 #COMPILER choose one of the cmake files to customize the compiler options
 #If nothing is chosen, default settings by cmake will  be used.
-#If the automatic detection does not work, comment out everything 
+#If the automatic detection does not work, comment out everything
 #upto COMPILER MANUAL SELECTION and use one of the customized cmake file.
 ######################################################
 INCLUDE(${CMAKE_ROOT}/Modules/CheckCCompilerFlag.cmake)
 INCLUDE(${CMAKE_ROOT}/Modules/CheckCXXCompilerFlag.cmake)
-
 
 ######################################################
 # DO NOT MODIFY BELOW
@@ -338,7 +348,7 @@ ELSE(CMAKE_TOOLCHAIN_FILE)
   ENDIF($ENV{CRAYPE_VERSION} MATCHES ".")
 
   #------------------------------------
-  # Identify the compiler
+  # Identify the compiler -- This serves only to deal with case where only C or CXX is set, refactor? 
   #------------------------------------
   IF ( CMAKE_C_COMPILER_WORKS OR CMAKE_C_COMPILER_WORKS )
     IF( (CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR ( CMAKE_C_COMPILER_ID MATCHES "GNU") )
@@ -397,10 +407,10 @@ ELSE(CMAKE_TOOLCHAIN_FILE)
       IF(MPI_FOUND)
         MESSAGE(STATUS "Found mpi.h and libraries. Check for working mpi compiler ")
         INCLUDE_DIRECTORIES(${MPI_CXX_INCLUDE_PATH})
-        FILE(WRITE ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/testmpi.cxx 
+        FILE(WRITE ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/testmpi.cxx
           "#include <mpi.h>"
           "int main(int argc, char** argv){MPI_Init(&argc,&argv); MPI_Finalize();return 0;}\n")
-        #TRY_COMPILE(MPI_WORKS ${CMAKE_BINARY_DIR} 
+        #TRY_COMPILE(MPI_WORKS ${CMAKE_BINARY_DIR}
         #${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/testmpi.cxx
         #OUTPUT_VARIABLE OUTPUT)
         set(MPI_WORKS 1)
@@ -432,10 +442,13 @@ ELSE(CMAKE_TOOLCHAIN_FILE)
   #-------------------------------------------------------------------
   # check lapack/blas
   #-------------------------------------------------------------------
-  # Quick search for MKL (this will need to be improved). Currently only for Intel compilers
-  IF (INTEL_COMPILER)
+  # Quick search for MKL (this will need to be improved).
+  # This reproduces the old intel -mkl behavior or
+  # if ENABLE_OUTSIDE_MKL is set to 1 supports other compilers
+  SET(ENABLE_OUTSIDE_MKL FALSE CACHE BOOL "ENABLE MKL for non-intel compilers (Experimental)")
+  IF (INTEL_COMPILER OR ENABLE_OUTSIDE_MKL)
    INCLUDE(CMake/FindMKL.cmake)
-  ENDIF(INTEL_COMPILER)
+  ENDIF(INTEL_COMPILER OR ENABLE_OUTSIDE_MKL)
   IF ( HAVE_MKL )
     # We found MKL, add the link library
     SET(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} ${MKL_FLAGS}")
@@ -445,10 +458,10 @@ ELSE(CMAKE_TOOLCHAIN_FILE)
     SET(LAPACK_LINKER_FLAGS "${MKL_LINKER_FLAGS}")
   ELSEIF ( $ENV{CRAYPE_VERSION} MATCHES "." )
     # Cray specific environment variable indicates we are on a cray. Assume libsci will be linked
-    # preferable to attempt a compile/link 
+    # preferable to attempt a compile/link
     SET(LAPACK_FOUND 1)
     MESSAGE(STATUS "Assuming Cray libsci or other BLAS/LAPACK will be linked by compiler wrappers")
-  ELSE()	 
+  ELSE()
     # Search for Blas/Lapack
     find_package(LAPACK)
     # When cmake finds and sets up the MKL libraries with a non-Intel compiler, set the flag
@@ -464,7 +477,7 @@ ELSE(CMAKE_TOOLCHAIN_FILE)
     MESSAGE(STATUS "LAPACK linker flags: ${LAPACK_LINKER_FLAGS}")
     SET(LAPACK_LIBRARY ${LAPACK_LIBRARIES} ${LAPACK_LINKER_FLAGS})
   ELSE()
-    MESSAGE(FATAL_ERROR "Could not find required libraries LAPACK &/or BLAS") 
+    MESSAGE(FATAL_ERROR "Could not find required libraries LAPACK &/or BLAS")
   ENDIF()
 
   INCLUDE(CMake/FindVectorMath.cmake)
@@ -477,14 +490,15 @@ IF (ENABLE_GCOV)
   ENDIF()
 ENDIF(ENABLE_GCOV)
 
-# Require C++11 while leaving possibility to fall back by modifying this file
+# Check for the compiler C++11 flag, if we go to requiring >= cmake 3.1.3 we could drop this
+# and just write
+# set(CMAKE_CXX_STANDARD_REQUIRED 11 CACHE INTEGER "C++ stangard must be at least 11")
 SET(CXX11_NEEDED TRUE)
 IF(CXX11_NEEDED)
   SET(CXX11_FLAG "-std=c++11")
   #check if the CXX compiler supports -std=c++11 option
-  include(CheckCXXCompilerFlag)
+  include(CheckCXXCompilerFlag) # works with clean load paths and non system compilers with CMP0056
   CHECK_CXX_COMPILER_FLAG(${CXX11_FLAG} CXX_COMPILER_SUPPORT_CXX11)
-  # Turn on C++11 for this code
 
   # Force the flag on Cray with Intel compiler, because the Cray wrapper
   #  prints an warning that interferes with the flag detection code
@@ -520,7 +534,7 @@ ENDIF()
 IF (BUILD_AFQMC AND NOT APPLE)
   LINK_LIBRARIES("rt")
 ENDIF()
-  
+
 # setup ctest variables
 IF ( HAVE_MPI )
   SET( USE_MPI 1 )
@@ -573,13 +587,13 @@ ELSE(FFTW_FOUND)
 #  MESSAGE(STATUS "Disabling FFTW")
   MESSAGE(FATAL_ERROR "Could not find required library FFTW. Verify FFTW_HOME")
 ENDIF(FFTW_FOUND)
- 
+
 SET(QMC_UTIL_LIBS ${QMC_UTIL_LIBS} ${FORTRAN_LIBRARIES})
 
 find_package(ZLIB)
-#find_package(LibXml2) 
+#find_package(LibXml2)
 INCLUDE(CMake/FindLibxml2QMC.cmake)
-   
+
 IF(LIBXML2_FOUND)
   INCLUDE_DIRECTORIES(${LIBXML2_INCLUDE_DIR})
   SET(HAVE_LIBXML2 1)
@@ -729,7 +743,7 @@ INCLUDE_DIRECTORIES( ${PROJECT_SOURCE_DIR}/src ${PROJECT_BINARY_DIR}/src)
 
 ######################################################################
 # Manage Einspline library
-# - toolchain file can set 
+# - toolchain file can set
 # - check if libeinspline can be found in $EINSPLINE_HOME/include and
 # $EINSPLINE_HOME/lib
 # - if not found, build it from the source directory in $EINSPLINE_HOME
@@ -797,7 +811,7 @@ ENDIF()
 #######################################################################
 ## Manage GTK+ and GTKMM packages for GUI
 ## search headers and libraries
-##   1) -lXYZ-${XYZ_VERSION} 
+##   1) -lXYZ-${XYZ_VERSION}
 ##   2) -lXYZ
 ## example: -lgtk-${GTK_VERSION} | -lgtk
 #######################################################################
