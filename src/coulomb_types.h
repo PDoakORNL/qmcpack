@@ -21,5 +21,5 @@
   using pComplexType = std::complex<pRealType>;            \
   using mComplexType = std::complex<OHMMS_PRECISION_FULL>; \
   using PosType      = TinyVector<pRealType, OHMMS_DIM>;
-
+  using FakeType     = TinyVector<float, OHMMS_DIM>;
 #endif

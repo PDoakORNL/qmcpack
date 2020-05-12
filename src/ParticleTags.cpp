@@ -62,3 +62,5 @@ std::string ParticleTags::condition_tag = "condition";
 std::string ParticleTags::size_tag      = "size";
 std::string ParticleTags::format_tag    = "format";
 std::string ParticleTags::role_tag      = "role";
+
+std::string why = "do this I wonder";
