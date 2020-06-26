@@ -41,16 +41,9 @@ ENDFOREACH()
 
 IF ((NOT QMC_MIXED_PRECISION) AND (NOT QMC_CUDA))
   IF (NOT QMC_COMPLEX)
-    SET(MO_SRCS test_MO.cpp test_multiquintic_spline.cpp)
-    IF (ENABLE_SOA)
-      SET(MO_SRCS ${MO_SRCS} test_soa_cusp_corr.cpp)
-    ELSE()
-      SET(MO_SRCS ${MO_SRCS} test_cusp_corr.cpp)
-    ENDIF()
+    SET(MO_SRCS test_MO.cpp test_multiquintic_spline.cpp test_soa_cusp_corr.cpp)
   ELSE()
-    IF (ENABLE_SOA)
-      SET(MO_SRCS test_pyscf_complex_MO.cpp)
-    ENDIF()
+    SET(MO_SRCS test_pyscf_complex_MO.cpp)
   ENDIF()
 ENDIF()
 
@@ -63,6 +56,9 @@ ADD_EXECUTABLE(${UTEST_EXE} test_wf.cpp test_TrialWaveFunction.cpp FakeSPO.cpp t
                test_lattice_gaussian.cpp test_kspace_jastrow.cpp
                test_short_range_cusp_jastrow.cpp ${MO_SRCS})
 TARGET_LINK_LIBRARIES(${UTEST_EXE} catch_main qmcwfs Math::BLAS_LAPACK Math::scalar_vector_functions)
+IF(USE_OBJECT_TARGET)
+TARGET_LINK_LIBRARIES(${UTEST_EXE} qmcparticle qmcutil containers platform_omp)
+ENDIF()
 
 ADD_UNIT_TEST(${UTEST_NAME} "${QMCPACK_UNIT_TEST_DIR}/${UTEST_EXE}")
 SET_TESTS_PROPERTIES(${UTEST_NAME} PROPERTIES WORKING_DIRECTORY ${UTEST_DIR})

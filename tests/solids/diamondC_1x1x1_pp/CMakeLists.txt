@@ -19,7 +19,6 @@
                     0 DIAMOND_SCALARS # VMC
                     )
 
-IF(ENABLE_SOA OR QMC_CUDA)
   QMC_RUN_AND_CHECK(short-diamondC_1x1x1_hybridrep_pp-vmc_sdj
                     "${CMAKE_SOURCE_DIR}/tests/solids/diamondC_1x1x1_pp"
                     qmc_short
@@ -28,9 +27,6 @@ IF(ENABLE_SOA OR QMC_CUDA)
                     TRUE
                     0 DIAMOND_SCALARS # VMC
                     )
-ELSE()
-  MESSAGE("Skipping diamondC_1x1x1_hybridrep_pp-vmc_sdj test because neiher SOA nor CUDA is enabled")
-ENDIF()
 
   QMC_RUN_AND_CHECK(short-diamondC_1x1x1_pp-vmc_sdj-meshf
                     "${CMAKE_SOURCE_DIR}/tests/solids/diamondC_1x1x1_pp"
@@ -41,7 +37,7 @@ ENDIF()
                     0 DIAMOND_SCALARS # VMC
                     )
 
-IF(NOT QMC_CUDA)
+IF(NOT QMC_CUDA AND NOT ENABLE_OFFLOAD)
   LIST(APPEND DIAMOND_KSPACE_SCALARS "totenergy" "-10.500719 0.001769")
   LIST(APPEND DIAMOND_KSPACE_SCALARS "variance"  "0.312264 0.028662")
   QMC_RUN_AND_CHECK(short-diamondC_1x1x1_pp-vmc_sdj_kspace
@@ -243,7 +239,7 @@ IF(NOT QMC_CUDA)
                     )
 ENDIF()
 
-IF(NOT QMC_CUDA)
+IF(NOT QMC_CUDA AND NOT ENABLE_OFFLOAD)
   LIST(APPEND LONG_DIAMOND_KSPACE_SCALARS "totenergy" "-10.500719 0.001769")
   LIST(APPEND LONG_DIAMOND_KSPACE_SCALARS "variance"  "0.312264 0.028662")
   QMC_RUN_AND_CHECK(long-diamondC_1x1x1_pp-vmc_sdj_kspace
@@ -605,6 +601,7 @@ IF(NOT QMC_CUDA)
   LIST(APPEND DET_DIAMOND_KSPACE_SCALARS "flux" "-10.16222139 0.000001")
  ENDIF()
 
+IF(NOT ENABLE_OFFLOAD)
   QMC_RUN_AND_CHECK(deterministic-diamondC_1x1x1_pp-vmc_sdj_kspace
                     "${CMAKE_SOURCE_DIR}/tests/solids/diamondC_1x1x1_pp"
                     det_qmc_short_kspace
@@ -613,7 +610,7 @@ IF(NOT QMC_CUDA)
                     TRUE
                     0 DET_DIAMOND_KSPACE_SCALARS # VMC
                     )
-
+ENDIF()
 
  IF(QMC_MIXED_PRECISION)
    LIST(APPEND DET_DIAMOND_DMC_SCALARS "totenergy" "-10.52336521 0.00001129")
@@ -850,7 +847,7 @@ ENDIF()
                     )
 
 
-IF((NOT QMC_MIXED_PRECISION) AND (NOT QMC_CUDA) AND (NOT QMC_COMPLEX) AND ENABLE_SOA)
+IF((NOT QMC_MIXED_PRECISION) AND (NOT QMC_CUDA) AND (NOT QMC_COMPLEX))
   # DMC cycle 1
   LIST(APPEND DET_DIAMOND_DMC_LGTS1_SCALARS "totenergy" "-11.15181221 0.000001")
   LIST(APPEND DET_DIAMOND_DMC_LGTS1_SCALARS "kinetic" "11.34674025 0.000001")

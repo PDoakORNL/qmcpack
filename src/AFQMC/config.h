@@ -93,7 +93,7 @@ namespace afqmc
   template<class T>
   using shm_pointer = typename shared_allocator<T>::pointer; 
 
-#if defined(ENABLE_CUDA)
+#if defined(ENABLE_CUDA) || defined(ENABLE_HIP)
   template<class T>  using device_allocator = device::device_allocator<T>;
   template<class T>  using device_ptr = device::device_pointer<T>;
   template<class T>  using localTG_allocator = device_allocator<T>;
@@ -123,6 +123,7 @@ namespace afqmc
   using device_memory_resource = device::memory_resource;
   using shm_memory_resource = device::memory_resource;
   template<class T> using device_constructor = device::constructor<T>;
+  template<class T> using shm_constructor = device::constructor<T>;
 
 #else
   template<class T>  using device_allocator = std::allocator<T>;
@@ -146,9 +147,11 @@ namespace afqmc
   using device_memory_resource = boost::multi::memory::resource<>; 
   using shm_memory_resource = shm::memory_resource_shm_ptr_with_raw_ptr_dispatch; 
   template<class T>  using device_constructor = device_allocator<T>; 
+  template<class T>  using shm_constructor = shared_allocator<T>;  
 
 #endif
 
+  template<class T>  using host_constructor = std::allocator<T>; 
   using host_memory_resource = boost::multi::memory::resource<>; 
 
   // new types
@@ -171,7 +174,7 @@ namespace afqmc
                                 shared_allocator<T>,
                                 ma::sparse::is_root>;
   using PsiT_Matrix = PsiT_Matrix_t<ComplexType>;
-#ifdef ENABLE_CUDA
+#if defined(ENABLE_CUDA) || defined(ENABLE_HIP)
   using devcsr_Matrix = ma::sparse::csr_matrix<ComplexType,int,int,
                                 device_allocator<ComplexType>>; 
 #else
@@ -185,7 +188,7 @@ namespace afqmc
 //#endif
 
 
-#if defined(ENABLE_CUDA)
+#if defined(ENABLE_CUDA) || defined(ENABLE_HIP)
   using P1Type = ma::sparse::csr_matrix<ComplexType,int,int,
                                  localTG_allocator<ComplexType>>;
 #else

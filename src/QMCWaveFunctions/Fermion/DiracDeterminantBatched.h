@@ -18,6 +18,9 @@
 
 #include "QMCWaveFunctions/Fermion/DiracDeterminantBase.h"
 #include "QMCWaveFunctions/Fermion/MatrixUpdateOMP.h"
+#if defined(ENABLE_CUDA) && defined(ENABLE_OFFLOAD)
+#include "QMCWaveFunctions/Fermion/MatrixDelayedUpdateCUDA.h"
+#endif
 #include "Platforms/PinnedAllocator.h"
 #include "OpenMP/OMPallocator.hpp"
 
@@ -165,10 +168,11 @@ public:
 
   void evaluateRatiosAlltoOne(ParticleSet& P, std::vector<ValueType>& ratios) override;
 
-  /// inverse transpose of psiM(j,i) \f$= \psi_j({\bf r}_i)\f$
+  /// return  for testing
+  auto& getPsiMinv() const { return psiMinv; }
+
+  /// inverse transpose of psiM(j,i) \f$= \psi_j({\bf r}_i)\f$, actual memory owned by det_engine_
   OffloadPinnedValueMatrix_t psiMinv;
-  /// device pointer of psiMinv data
-  ValueType* psiMinv_dev_ptr;
 
   /// memory for psiM, dpsiM and d2psiM. [5][norb*norb]
   OffloadVGLVector_t psiM_vgl;
@@ -220,11 +224,18 @@ private:
 
   /// Resize multi walker scratch spaces
   void resizeMultiWalkerScratch(int norb, int nw);
+
+  /// maximal number of delayed updates
+  int ndelay;
+
+  /// timers
+  NewTimer &D2HTimer, &H2DTimer;
 };
 
 extern template class DiracDeterminantBatched<>;
-#if defined(ENABLE_CUDA)
-//extern template class DiracDeterminantBatched<DelayedUpdateCUDA<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>>;
+#if defined(ENABLE_CUDA) && defined(ENABLE_OFFLOAD)
+extern template class DiracDeterminantBatched<
+    MatrixDelayedUpdateCUDA<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>>;
 #endif
 
 } // namespace qmcplusplus

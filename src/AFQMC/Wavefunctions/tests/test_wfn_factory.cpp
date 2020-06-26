@@ -19,7 +19,6 @@
 #include "OhmmsApp/ProjectData.h"
 #include "io/hdf_archive.h"
 #include "Utilities/RandomGenerator.h"
-#include "Utilities/SimpleRandom.h"
 #include <Utilities/NewTimer.h>
 #include "Utilities/Timer.h"
 #include "Platforms/Host/OutputManager.h"
@@ -226,7 +225,7 @@ const char *wlk_xml_block_noncol =
         ComplexType Xsum2=0;
         for(int i=0; i<X.size(0); i++) {
           Xsum += X[i][0];
-          Xsum2 += 0.5*X[i][0]*X[i][0];
+          Xsum2 += ComplexType(0.5)*X[i][0]*X[i][0];
         }
         app_log()<<" Xsum: " <<setprecision(12) <<Xsum <<" Time: " <<t1 <<std::endl;
         app_log()<<" Xsum2 (EJ): " <<setprecision(12) <<Xsum2/sqrtdt/sqrtdt <<std::endl;
@@ -331,7 +330,7 @@ const char *wlk_xml_block_noncol =
         ComplexType Xsum2(0.0);
         for(int i=0; i<X.size(0); i++) {
           Xsum += X[i][0];
-          Xsum2 += 0.5*X[i][0]*X[i][0];
+          Xsum2 += ComplexType(0.5)*X[i][0]*X[i][0];
         }
         app_log()<<" Xsum: " <<setprecision(12) <<Xsum <<std::endl;
         app_log()<<" Xsum2 (EJ): " <<setprecision(12) <<Xsum2/sqrtdt/sqrtdt <<std::endl;
@@ -1057,7 +1056,7 @@ TEST_CASE("wfn_fac_sdet", "[wavefunction_factory]")
   auto world = boost::mpi3::environment::get_world_instance();
   if(not world.root()) infoLog.pause();
 
-#ifdef ENABLE_CUDA
+#if defined(ENABLE_CUDA) || defined(ENABLE_HIP)
   auto node = world.split_shared(world.rank());
 
   arch::INIT(node);
@@ -1076,7 +1075,7 @@ TEST_CASE("wfn_fac_distributed", "[wavefunction_factory]")
   auto world = boost::mpi3::environment::get_world_instance();
   if(not world.root()) infoLog.pause();
 
-#ifdef ENABLE_CUDA
+#if defined(ENABLE_CUDA) || defined(ENABLE_HIP)
   auto node = world.split_shared(world.rank());
   int ngrp(world.size());
 

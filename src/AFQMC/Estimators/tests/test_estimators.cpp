@@ -18,7 +18,7 @@
 #include "io/hdf_archive.h"
 
 #undef APP_ABORT
-#define APP_ABORT(x) {std::cout << x <<std::endl; exit(0);}
+#define APP_ABORT(x) {std::cout << x <<std::endl; throw;}
 
 #include <stdio.h>
 #include <string>
@@ -249,7 +249,7 @@ TEST_CASE("reduced_density_matrix", "[estimators]")
   auto world = boost::mpi3::environment::get_world_instance();
   if(not world.root()) infoLog.pause();
 
-#ifdef ENABLE_CUDA
+#if defined(ENABLE_CUDA) || defined(ENABLE_HIP)
   auto node = world.split_shared(world.rank());
   arch::INIT(node);
   using Alloc = device::device_allocator<ComplexType>;

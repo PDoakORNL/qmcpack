@@ -20,14 +20,14 @@
 #define QMCPLUSPLUS_PARTICLESET_H
 
 #include <Configuration.h>
-#include <ParticleTags.h>
-#include <Particle/DynamicCoordinates.h>
-#include <Particle/Walker.h>
+#include "ParticleTags.h"
+#include "DynamicCoordinates.h"
+#include "Walker.h"
 #include <Utilities/SpeciesSet.h>
 #include <Utilities/PooledData.h>
 #include <OhmmsPETE/OhmmsArray.h>
 #include <Utilities/NewTimer.h>
-#include <OhmmsSoA/Container.h>
+#include <OhmmsSoA/VectorSoaContainer.h>
 #include "type_traits/template_types.hpp"
 namespace qmcplusplus
 {

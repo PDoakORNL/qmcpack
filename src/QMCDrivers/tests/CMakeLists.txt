@@ -44,12 +44,15 @@ ENDIF(QMC_CUDA)
 
 USE_FAKE_RNG(${UTEST_EXE})
 TARGET_LINK_LIBRARIES(${UTEST_EXE} catch_main qmcdriver_unit qmcfakerng)
+IF(USE_OBJECT_TARGET)
+TARGET_LINK_LIBRARIES(${UTEST_EXE} qmcham_unit qmcwfs qmcparticle qmcutil containers platform_omp)
+ENDIF()
 
 ADD_UNIT_TEST(${UTEST_NAME} "${QMCPACK_UNIT_TEST_DIR}/${UTEST_EXE}")
 SET_TESTS_PROPERTIES(${UTEST_NAME} PROPERTIES WORKING_DIRECTORY ${UTEST_DIR})
 
 
-IF(NOT QMC_CUDA AND ENABLE_SOA)
+IF(NOT QMC_CUDA)
   # New Driver Only test program
   # to avoid dealing with the build dependencies
   # and memory leaks brought in by the old driver tests
@@ -64,6 +67,9 @@ IF(NOT QMC_CUDA AND ENABLE_SOA)
   ADD_EXECUTABLE(${UTEST_EXE} ${DRIVER_TEST_SRC})
   USE_FAKE_RNG(${UTEST_EXE})
   TARGET_LINK_LIBRARIES(${UTEST_EXE} catch_main qmcdriver_unit qmcfakerng)
+  IF(USE_OBJECT_TARGET)
+  TARGET_LINK_LIBRARIES(${UTEST_EXE} qmcham_unit qmcwfs qmcparticle qmcutil containers platform_omp)
+  ENDIF()
 
   ADD_UNIT_TEST(${UTEST_NAME} "${QMCPACK_UNIT_TEST_DIR}/${UTEST_EXE}")
   SET_TESTS_PROPERTIES(${UTEST_NAME} PROPERTIES WORKING_DIRECTORY ${UTEST_DIR})
@@ -78,8 +84,11 @@ IF(NOT QMC_CUDA AND ENABLE_SOA)
     SET(DRIVER_TEST_SRC SetupPools.cpp test_WalkerControlMPI.cpp)
     ADD_EXECUTABLE(${UTEST_EXE} ${DRIVER_TEST_SRC})
     TARGET_LINK_LIBRARIES(${UTEST_EXE} catch_main qmcdriver_unit qmcfakerng)
+    IF(USE_OBJECT_TARGET)
+    TARGET_LINK_LIBRARIES(${UTEST_EXE} qmcham_unit qmcwfs qmcparticle qmcutil containers platform_omp)
+    ENDIF()
     # Right now the unified driver mpi tests are hard coded for 3 MPI ranks
     ADD_MPI_UNIT_TEST(${UTEST_NAME} "${QMCPACK_UNIT_TEST_DIR}/${UTEST_EXE}" 3)
     SET_TESTS_PROPERTIES(${UTEST_NAME} PROPERTIES WORKING_DIRECTORY ${UTEST_DIR})
   ENDIF(HAVE_MPI)
-ENDIF(NOT QMC_CUDA AND ENABLE_SOA)
+ENDIF(NOT QMC_CUDA)

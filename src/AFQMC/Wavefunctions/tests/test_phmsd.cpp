@@ -19,13 +19,12 @@
 #include "OhmmsApp/ProjectData.h"
 #include "io/hdf_archive.h"
 #include "Utilities/RandomGenerator.h"
-#include "Utilities/SimpleRandom.h"
 #include <Utilities/NewTimer.h>
 #include "Utilities/Timer.h"
 #include "Platforms/Host/OutputManager.h"
 
 #undef APP_ABORT
-#define APP_ABORT(x) {std::cout << x <<std::endl; exit(0);}
+#define APP_ABORT(x) {std::cout << x <<std::endl; throw;}
 
 #include <string>
 #include <vector>
@@ -326,7 +325,7 @@ TEST_CASE("test_read_phmsd", "[test_read_phmsd]")
   auto world = boost::mpi3::environment::get_world_instance();
   if(not world.root()) infoLog.pause();
 
-#ifdef ENABLE_CUDA
+#if defined(ENABLE_CUDA) || defined(ENABLE_HIP)
   auto node = world.split_shared(world.rank());
   arch::INIT(node);
   using Alloc = device::device_allocator<ComplexType>;
@@ -342,7 +341,7 @@ TEST_CASE("test_phmsd", "[read_phmsd]")
   auto world = boost::mpi3::environment::get_world_instance();
   if(not world.root()) infoLog.pause();
 
-#ifdef ENABLE_CUDA
+#if defined(ENABLE_CUDA) || defined(ENABLE_HIP)
   auto node = world.split_shared(world.rank());
   arch::INIT(node);
   using Alloc = device::device_allocator<ComplexType>;

@@ -22,10 +22,10 @@ namespace afqmc {
   auto host_buffer_generator = std::make_shared<host_allocator_generator_type> ( 
             host_memory_resource{},
             std::size_t(10*1024*1024),
-            device_constructor<char>{}
+            host_constructor<char>{}
         );
 //#if defined(ENABLE_ACCELERATOR)
-#if defined(ENABLE_CUDA)
+#if defined(ENABLE_CUDA) || defined(ENABLE_HIP)
   std::shared_ptr<device_allocator_generator_type> device_buffer_generator{nullptr};
 #else  
 // on cpu build, device and host are the same memory space
@@ -50,18 +50,18 @@ namespace afqmc {
 
   void make_localTG_buffer_generator(mpi3::shared_communicator& local, 
                                      std::size_t sz) {
-#if defined(ENABLE_CUDA)
+#if defined(ENABLE_CUDA) || defined(ENABLE_HIP)
     // do nothing, since localTG_buffer_generator is in device and setup in arch::INIT
 #else
     if(localTG_buffer_generator == nullptr)
       localTG_buffer_generator = std::make_shared<localTG_allocator_generator_type> (
                       shm::memory_resource_shm_ptr_with_raw_ptr_dispatch{local},
-                      sz, device_constructor<char>{} );
+                      sz, shm_constructor<char>{local} );
 #endif
   }
 
   void destroy_shm_buffer_generators() {
-#if defined(ENABLE_CUDA)
+#if defined(ENABLE_CUDA) || defined(ENABLE_HIP)
     // do nothing 
 #else
     if(localTG_buffer_generator != nullptr)

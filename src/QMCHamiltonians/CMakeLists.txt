@@ -27,7 +27,6 @@ SET(HAMSRCS
   NonLocalTOperator.cpp
   ForwardWalking.cpp
   PairCorrEstimator.cpp
-  LocalMomentEstimator.cpp
   DensityEstimator.cpp
   SkPot.cpp
   SkEstimator.cpp
@@ -48,15 +47,8 @@ SET(HAMSRCS
 IF(OHMMS_DIM MATCHES 3)
   SET(HAMSRCS ${HAMSRCS}
     ChiesaCorrection.cpp
-    PulayForce.cpp
-    ZeroVarianceForce.cpp
     ForceCeperley.cpp
     ForceChiesaPBCAA.cpp
-#    StressPBCAA.cpp
-#    StressPBCAB.cpp
-#    StressKinetic.cpp
-    StressPBC.cpp
-    LocalCorePolPotential.cpp
     LocalECPotential.cpp
     NonLocalECPComponent.cpp
     NonLocalECPotential.deriv.cpp
@@ -104,8 +96,13 @@ IF(OHMMS_DIM MATCHES 3)
 
 ENDIF(OHMMS_DIM MATCHES 3)
 
-ADD_LIBRARY(qmcham ${HAMSRCS})
-ADD_LIBRARY(qmcham_unit ${HAMSRCS})
+IF(USE_OBJECT_TARGET)
+  ADD_LIBRARY(qmcham OBJECT ${HAMSRCS})
+  ADD_LIBRARY(qmcham_unit OBJECT ${HAMSRCS})
+ELSE()
+  ADD_LIBRARY(qmcham ${HAMSRCS})
+  ADD_LIBRARY(qmcham_unit ${HAMSRCS})
+ENDIF()
 IF(QMC_CUDA)
   CUDA_ADD_LIBRARY(qmcham_cuda ${HAMSRCS_CUDA})
   TARGET_LINK_LIBRARIES(qmcham PRIVATE qmcham_cuda)
