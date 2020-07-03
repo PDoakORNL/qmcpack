@@ -171,14 +171,29 @@ void MCPopulation::createWalkers(IndexType num_walkers, RealType reserve)
     killLastWalker();
 }
 
+WalkerElements MCPopulation::operator[](const size_t index)
+{
+  return {*walkers_[index], *walker_elec_particle_sets_[index], *walker_trial_wavefunctions_[index]};
+}
+
+std::vector<WalkerElements> MCPopulation::get_walker_elements()
+{
+  std::vector<WalkerElements> walker_elements;
+  for(int iw = 0; iw < walkers_.size(); ++iw)
+  {
+    walker_elements.push_back({*walkers_[iw], *walker_elec_particle_sets_[iw], *walker_trial_wavefunctions_[iw]});
+  }
+  return walker_elements;
+}
 
 /** creates a walker and returns a reference
  *
  *  Walkers are reused
  *  It would be better if this could be done just by
  *  reusing memory.
+ *  Not thread safe.
  */
-MCPopulation::MCPWalker* MCPopulation::spawnWalker()
+WalkerElements MCPopulation::spawnWalker()
 {
   ++num_local_walkers_;
   outputManager.pause();
@@ -208,7 +223,7 @@ MCPopulation::MCPWalker* MCPopulation::spawnWalker()
                   << " outside of reserves, this ideally should never happend." << std::endl;
     MCPWalker last_walker = *(walkers_.back());
     walkers_.push_back(std::make_unique<MCPWalker>(last_walker));
-    
+
     //walkers_.back()->R          = elec_particle_set_->R;
     //walkers_.back()->Properties = elec_particle_set_->Properties;
     //walkers_.back()->registerData();
@@ -220,14 +235,13 @@ MCPopulation::MCPWalker* MCPopulation::spawnWalker()
     walker_hamiltonians_.back().reset(
         hamiltonian_->makeClone(*(walker_elec_particle_sets_.back()), *(walker_trial_wavefunctions_.back())));
     //walker_trial_wavefunctions_.back()->registerData(*(walker_elec_particle_sets_.back()), walkers_.back()->DataSet);
-                       //walkers_.back()->DataSet.allocate();
+    //walkers_.back()->DataSet.allocate();
     walkers_.back()->Multiplicity = 1.0;
     walkers_.back()->Weight       = 1.0;
-    
   }
 
   outputManager.resume();
-  return walkers_.back().get();
+  return {*walkers_.back().get(), *walker_elec_particle_sets_.back().get(), *walker_trial_wavefunctions_.back().get()};
 }
 
 /** Kill last walker (just barely)
@@ -262,7 +276,7 @@ void MCPopulation::killWalker(MCPWalker& walker)
   {
     if (&walker == (*it_walkers).get())
     {
-      //(*it_walkers)->DataSet.clear();
+      (*it_walkers)->DataSet.zero();
       dead_walkers_.push_back(std::move(*it_walkers));
       walkers_.erase(it_walkers);
       dead_walker_elec_particle_sets_.push_back(std::move(*it_psets));
