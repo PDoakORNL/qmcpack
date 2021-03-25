@@ -199,11 +199,7 @@ public:
 
   void mw_recompute(const RefVectorWithLeader<WaveFunctionComponent>& wfc_list,
                     const RefVectorWithLeader<ParticleSet>& p_list,
-                    const std::vector<bool>& recompute) const override
-  {
-    DiracDeterminantDetails<DiracDeterminantBatched<DET_ENGINE>, DET_ENGINE>::mw_recomputeDispatch(wfc_list, p_list, recompute);
-  }
-
+                    const std::vector<bool>& recompute) const override;
   
   LogValueType evaluateGL(const ParticleSet& P,
                           ParticleSet::ParticleGradient_t& G,
@@ -271,6 +267,17 @@ public:
   std::unique_ptr<DiracDeterminantBatchedMultiWalkerResource<DET_ENGINE>> mw_res_;
 
   LogValueType get_log_value() const { return LogValue; }
+
+  static void mw_invertPsiM(const RefVectorWithLeader<WaveFunctionComponent>& wfc_list,
+                            const RefVector<const OffloadPinnedValueMatrix_t>& logdetT_list,
+                            const std::vector<bool>& compute_mask);
+
+  /// maximal number of delayed updates
+  int ndelay;
+
+  /// timers
+  NewTimer &D2HTimer, &H2DTimer;
+
 private:
   /// compute G adn L assuming psiMinv, dpsiM, d2psiM are ready for use
   void computeGL(ParticleSet::ParticleGradient_t& G, ParticleSet::ParticleLaplacian_t& L) const;
@@ -278,23 +285,8 @@ private:
   /// invert logdetT(psiM), result is in the engine.
   void invertPsiM(DiracDeterminantBatchedMultiWalkerResource<DET_ENGINE>& mw_res, OffloadPinnedValueMatrix_t& logdetT);
 
-  // static void mw_invertPsiM(const RefVectorWithLeader<WaveFunctionComponent>& wfc_list,
-  //                           const RefVector<const ValueMatrix_t>& logdetT_list);
-
-  static void mw_invertPsiM(const RefVectorWithLeader<WaveFunctionComponent>& wfc_list,
-                            const RefVector<const OffloadPinnedValueMatrix_t>& logdetT_list);
-  // {
-  //   DiracDeterminantDetails::mw_invertPsiM<DET_ENGINE>(wfc_list, logdetT_list);
-  // }
-
   /// Resize all temporary arrays required for force computation.
   void resizeScratchObjectsForIonDerivs();
-
-  /// maximal number of delayed updates
-  int ndelay;
-
-  /// timers
-  NewTimer &D2HTimer, &H2DTimer;
 
   // make this class unit tests friendly without the need of setup resources.
   void guardMultiWalkerRes()
@@ -313,7 +305,6 @@ private:
   //  friend class qmcplusplus::DiracDeterminantDetails;
   friend struct qmcplusplus::testing::SetupDiracDetResources;
   friend class qmcplusplus::testing::DiracDeterminantBatchedTest;
-  friend class qmcplusplus::DiracDeterminantDetails<DiracDeterminantBatched<DET_ENGINE>, DET_ENGINE>;
 };
 
 

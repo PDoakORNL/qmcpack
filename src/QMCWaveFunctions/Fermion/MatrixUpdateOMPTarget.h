@@ -170,7 +170,8 @@ public:
 
   static void mw_invertTranspose(const RefVectorWithLeader<This_t>& engines,
                                  const RefVector<const OffloadPinnedValueMatrix_t>& logdetT_list,
-                                 OffloadPinnedLogValueVector_t& log_values)
+                                 OffloadPinnedLogValueVector_t& log_values,
+                                 const std::vector<bool>& compute_mask)
   {
     auto& engine_leader = engines.getLeader();
     auto& det_inverter  = engine_leader.get_det_inverter();
@@ -185,7 +186,7 @@ public:
       PRAGMA_OFFLOAD("omp target update to(a_inv_ptr[:a_inv_refs.back().get().size()])")
     }
     PRAGMA_OFFLOAD("omp taskwait")
-    det_inverter.mw_invertTranspose(logdetT_list, a_inv_refs, log_values);
+    det_inverter.mw_invertTranspose(*(engine_leader.mw_mem_),logdetT_list, a_inv_refs, log_values, compute_mask);
   }
 
   template<typename GT>

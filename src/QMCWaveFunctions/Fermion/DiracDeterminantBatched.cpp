@@ -10,7 +10,7 @@
 // File created by: Ye Luo, yeluo@anl.gov, Argonne National Laboratory
 //////////////////////////////////////////////////////////////////////////////////////
 
-
+#include <algorithm>
 #include "DiracDeterminantBatched.h"
 #include "Numerics/DeterminantOperators.h"
 #include "CPU/BLAS.hpp"
@@ -59,12 +59,12 @@ void DiracDeterminantBatched<DET_ENGINE>::invertPsiM(DiracDeterminantBatchedMult
   auto& engine_psiMinv = det_engine_.get_nonconst_psiMinv();
   dummy_vmt.attachReference(engine_psiMinv.data(), engine_psiMinv.rows(), engine_psiMinv.cols());
 #endif
-
 }
 
 template<typename DET_ENGINE>
 void DiracDeterminantBatched<DET_ENGINE>::mw_invertPsiM(const RefVectorWithLeader<WaveFunctionComponent>& wfc_list,
-                                                        const RefVector<const OffloadPinnedValueMatrix_t>& logdetT_list)
+                                                        const RefVector<const OffloadPinnedValueMatrix_t>& logdetT_list,
+                                                        const std::vector<bool>& compute_mask)
 {
   auto& wfc_leader = wfc_list.getCastedLeader<DiracDeterminantBatched<DET_ENGINE>>();
   ScopedTimer inverse_timer(wfc_leader.InverseTimer);
@@ -79,11 +79,11 @@ void DiracDeterminantBatched<DET_ENGINE>::mw_invertPsiM(const RefVectorWithLeade
   {
     auto& det = wfc_list.getCastedElement<DiracDeterminantBatched<DET_ENGINE>>(iw);
     engine_list.push_back(det.get_det_engine());
-    wfc_leader.mw_res_->log_values[iw] = {0.0,0.0};
+    wfc_leader.mw_res_->log_values[iw] = {0.0, 0.0};
     //typename decltype(mw_res_)::element_type{}; // Logdet.LogValue;
   }
 
-  DET_ENGINE::mw_invertTranspose(engine_list, logdetT_list, wfc_leader.mw_res_->log_values);
+  DET_ENGINE::mw_invertTranspose(engine_list, logdetT_list, wfc_leader.mw_res_->log_values, compute_mask);
   for (int iw = 0; iw < nw; ++iw)
   {
     auto& det    = wfc_list.getCastedElement<DiracDeterminantBatched<DET_ENGINE>>(iw);
@@ -100,16 +100,13 @@ void DiracDeterminantBatched<DET_ENGINE>::mw_invertPsiM(const RefVectorWithLeade
 #endif
 }
 
-template<>
-void DiracDeterminantDetails<
-    DiracDeterminantBatched<MatrixUpdateOMPTarget<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>>,
-    MatrixUpdateOMPTarget<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>>::
-    mw_recomputeDispatch(const RefVectorWithLeader<WaveFunctionComponent>& wfc_list,
+template<typename DET_ENGINE>
+void DiracDeterminantBatched<DET_ENGINE>::
+    mw_recompute(const RefVectorWithLeader<WaveFunctionComponent>& wfc_list,
                          const RefVectorWithLeader<ParticleSet>& p_list,
-                         const std::vector<bool>& recompute_mask)
+                         const std::vector<bool>& recompute_mask) const
 {
-  using DetEngine  = MatrixUpdateOMPTarget<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>;
-  auto& wfc_leader = wfc_list.getCastedLeader<DiracDeterminantBatched<DetEngine>>();
+  auto& wfc_leader = wfc_list.getCastedLeader<DiracDeterminantBatched<DET_ENGINE>>();
   using DDBT       = std::decay_t<decltype(wfc_leader)>;
   const auto nw    = wfc_list.size();
   RefVectorWithLeader<WaveFunctionComponent> wfc_filtered_list(wfc_list.getLeader());
@@ -119,6 +116,10 @@ void DiracDeterminantDetails<
   RefVector<typename DDBT::GradMatrix_t> dpsiM_list;
   RefVector<typename DDBT::ValueMatrix_t> d2psiM_list;
 
+  for( bool bit : recompute_mask)
+    if(!bit)
+      return;
+  
   wfc_filtered_list.reserve(nw);
   p_filtered_list.reserve(nw);
   phi_list.reserve(nw);
@@ -127,22 +128,19 @@ void DiracDeterminantDetails<
   d2psiM_list.reserve(nw);
   std::vector<typename DDBT::ValueMatrix_t> psiM_temp_views;
   psiM_temp_views.reserve(nw);
-
+  
   for (int iw = 0; iw < nw; iw++)
     if (recompute_mask[iw])
     {
       wfc_filtered_list.push_back(wfc_list[iw]);
       p_filtered_list.push_back(p_list[iw]);
-      auto& det = wfc_list.getCastedElement<DiracDeterminantBatched<DetEngine>>(iw);
+      auto& det = wfc_list.getCastedElement<DiracDeterminantBatched<DET_ENGINE>>(iw);
       phi_list.push_back(*det.Phi);
       psiM_temp_views.emplace_back(det.psiM_temp.data(), det.psiM_temp.rows(), det.psiM_temp.cols());
       psiM_temp_list.push_back(psiM_temp_views.back());
       dpsiM_list.push_back(det.dpsiM);
       d2psiM_list.push_back(det.d2psiM);
     }
-
-  if (!wfc_filtered_list.size())
-    return;
 
   {
     ScopedTimer spo_timer(wfc_leader.SPOVGLTimer);
@@ -153,16 +151,28 @@ void DiracDeterminantDetails<
   { // transfer dpsiM, d2psiM, psiMinv to device
     ScopedTimer d2h(wfc_leader.H2DTimer);
 
-    RefVector<const typename DDBT::OffloadPinnedValueMatrix_t> const_psiM_temp_list;
+    // This bit is strange in that aren't they on the device?  Did we just have to round trip because
+    // their association with particular walkers
+    // is only clear if we do?
+    RefVector<const OffloadPinnedValueMatrix_t> const_psiM_temp_list;
     for (int iw = 0; iw < wfc_filtered_list.size(); iw++)
     {
-      auto& det          = wfc_filtered_list.getCastedElement<DiracDeterminantBatched<DetEngine>>(iw);
+      auto& det          = wfc_filtered_list.getCastedElement<DiracDeterminantBatched<DET_ENGINE>>(iw);
       auto* psiM_vgl_ptr = det.psiM_vgl.data();
       size_t stride      = wfc_leader.psiM_vgl.capacity();
       PRAGMA_OFFLOAD("omp target update to(psiM_vgl_ptr[stride:stride*4]) nowait")
       const_psiM_temp_list.push_back(det.psiM_temp);
     }
-    DiracDeterminantBatched<DetEngine>::mw_invertPsiM(wfc_filtered_list, const_psiM_temp_list);
+    RefVector<const OffloadPinnedValueMatrix_t> psiM_temp_full_list;
+    psiM_temp_full_list.reserve(nw);
+    for (int iw = 0; iw < nw; iw++)
+      {
+        auto& det          = wfc_list.getCastedElement<DiracDeterminantBatched<DET_ENGINE>>(iw);
+        psiM_temp_full_list.push_back(det.psiM_temp);
+      }
+
+    DiracDeterminantBatched<DET_ENGINE>::mw_invertPsiM(wfc_list, const_psiM_temp_list, recompute_mask);
+    // These shouldn't be in the code without an explanation of which task would need to synchronize here.
     PRAGMA_OFFLOAD("omp taskwait")
   }
 }

@@ -235,7 +235,6 @@ void computeGetri_batched(cublasHandle_t& h_cublas,
                    "cuBLAS::getri_batched failed in computeInverseAndDetLog_batched");
 }
 
-
 void computeLUDiag_batched(cudaStream_t& hstream,
                            const int n,
                            const int lda,

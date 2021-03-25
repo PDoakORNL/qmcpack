@@ -437,7 +437,8 @@ public:
 
   static void mw_invertTranspose(const RefVectorWithLeader<MatrixDelayedUpdateCUDA<T, T_FP>>& engines,
                                  const RefVector<const OffloadPinnedValueMatrix_t>& logdetT_list,
-                                 OffloadPinnedLogValueVector_t& log_values)
+                                 OffloadPinnedLogValueVector_t& log_values,
+                                 const std::vector<bool>& compute_mask)
   {
     auto& engine_leader = engines.getLeader();
 
@@ -453,7 +454,7 @@ public:
       PRAGMA_OFFLOAD("omp target update to(a_inv_ptr[:a_inv_refs.back().get().size()])")
         }
     PRAGMA_OFFLOAD("omp taskwait")
-      engine_leader.get_det_inverter().mw_invertTranspose(*(engine_leader.cuda_handles_), logdetT_list, a_inv_refs, log_values);
+      engine_leader.get_det_inverter().mw_invertTranspose(*(engine_leader.cuda_handles_), logdetT_list, a_inv_refs, log_values, compute_mask);
   }
 
   // prepare invRow and compute the old gradients.

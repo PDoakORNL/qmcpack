@@ -100,7 +100,6 @@ IF(OHMMS_DIM MATCHES 3)
     SET(WFSSRCS_CUDA
       detail/CUDA_legacy/determinant_update.cu
       detail/CUDA_legacy/delayed_update.cu
-      Fermion/DiracDeterminantCUDA.cpp
       Fermion/SlaterDetCUDA.cpp
       TrialWaveFunction_CUDA.cpp
       )
@@ -181,12 +180,6 @@ IF(OHMMS_DIM MATCHES 3)
   ENDIF(NOT QMC_COMPLEX)
 
 ENDIF(OHMMS_DIM MATCHES 3)
-
-IF(ENABLE_OFFLOAD AND ENABLE_CUDA)
-  SET(FERMION_SRCS ${FERMION_SRCS}
-      Fermion/DiracDeterminantBatchedCUDA.cpp
-      )
-ENDIF()
 
 SET(FERMION_SRCS ${FERMION_SRCS}
   Fermion/DiracDeterminant.cpp

@@ -188,12 +188,14 @@ public:
    *  used directly.
    */
   template<typename TMAT, typename TREAL>
-  inline void mw_invertTranspose(CUDALinearAlgebraHandles& cuda_handles,
+  inline void mw_invertTranspose(Resource& resource,
                                  const RefVector<const OffloadPinnedMatrix<TMAT>>& a_mats,
                                  RefVector<OffloadPinnedMatrix<TMAT>>& inv_a_mats,
-                                 OffloadPinnedVector<std::complex<TREAL>>& log_values)
+                                 OffloadPinnedVector<std::complex<TREAL>>& log_values,
+                                 const std::vector<bool>& compute_mask)
   {
     assert(log_values.size() == a_mats.size());
+    auto& cuda_handles = dynamic_cast<CUDALinearAlgebraHandles&>(resource);
     int nw        = a_mats.size();
     const int n   = a_mats[0].get().rows();
     const int lda = a_mats[0].get().cols();

@@ -17,7 +17,7 @@
 #include "OhmmsPETE/OhmmsMatrix.h"
 #include "OMPTarget/OMPallocator.hpp"
 #include "Platforms/PinnedAllocator.h"
-#include "Platforms/CUDA/CUDALinearAlgebraHandles.h"
+#include "DiracMatrix.h"
 #include "type_traits/scalar_traits.h"
 #include "type_traits/template_types.hpp"
 #include "Message/OpenMP.h"
@@ -26,93 +26,14 @@
 
 namespace qmcplusplus
 {
-namespace DMCOMPT
-{
-inline void Xgetrf(int n, int m, float* restrict a, int lda, int* restrict piv)
-{
-  int status;
-  sgetrf(n, m, a, lda, piv, status);
-}
 
-inline void Xgetri(int n, float* restrict a, int lda, int* restrict piv, float* restrict work, int& lwork)
-{
-  int status;
-  sgetri(n, a, lda, piv, work, lwork, status);
-}
-
-inline void Xgetrf(int n, int m, std::complex<float>* restrict a, int lda, int* restrict piv)
-{
-  int status;
-  cgetrf(n, m, a, lda, piv, status);
-}
-
-/** inversion of a float matrix after lu factorization*/
-inline void Xgetri(int n,
-                   std::complex<float>* restrict a,
-                   int lda,
-                   int* restrict piv,
-                   std::complex<float>* restrict work,
-                   int& lwork)
-{
-  int status;
-  cgetri(n, a, lda, piv, work, lwork, status);
-}
-
-inline void Xgetrf(int n, int m, double* restrict a, int lda, int* restrict piv)
-{
-  int status;
-  dgetrf(n, m, a, lda, piv, status);
-}
-
-inline void Xgetri(int n, double* restrict a, int lda, int* restrict piv, double* restrict work, int& lwork)
-{
-  int status;
-  dgetri(n, a, lda, piv, work, lwork, status);
-}
-
-inline void Xgetrf(int n, int m, std::complex<double>* restrict a, int lda, int* restrict piv)
-{
-  int status;
-  zgetrf(n, m, a, lda, piv, status);
-}
-
-/** inversion of a std::complex<double> matrix after lu factorization*/
-inline void Xgetri(int n,
-                   std::complex<double>* restrict a,
-                   int lda,
-                   int* restrict piv,
-                   std::complex<double>* restrict work,
-                   int& lwork)
-{
-  int status;
-  zgetri(n, a, lda, piv, work, lwork, status);
-}
-
-
-template<typename TIN, typename TOUT>
-inline void TansposeSquare(const TIN* restrict in, TOUT* restrict out, size_t n, size_t lda)
-{
-#pragma omp simd
-  for (size_t i = 0; i < n; ++i)
-    for (size_t j = 0; j < n; ++j)
-      out[i * lda + j] = in[i + j * lda];
-}
-
-template<typename T, typename T_FP>
-inline void computeLogDet(const T* restrict diag, int n, const int* restrict pivot, std::complex<T_FP>& logdet)
-{
-  logdet = std::complex<T_FP>();
-  for (size_t i = 0; i < n; i++)
-    logdet += std::log(std::complex<T_FP>((pivot[i] == i + 1) ? diag[i] : -diag[i]));
-}
-
-} // namespace DMCOMPT
 /** helper class to compute matrix inversion and the log value of determinant
  *  of a batch of DiracMatrixes.
  * @tparam T_FP the datatype used in the actual computation of matrix inversion
  *  
  *  There is one per crowd not one per MatrixUpdateEngine.
- *  this prevents needing to deal with the resources.
+ *  this puts ownership of the scratch resources in a sensible place.
+ *  Even for CPU this is better.
  */
 template<typename T_FP>
 class DiracMatrixComputeOMPTarget : public Resource
@@ -131,12 +52,11 @@ class DiracMatrixComputeOMPTarget : public Resource
 
   aligned_vector<T_FP> m_work_;
   int lwork_;
-  //Unlike for the DirecMatrix.h this is going to be contiguous vectors for each walker of size lda.
-  //OffloadPinnedVector<int> m_pivots_;
-  // Contiguous Matrices for each walker, n^2 elements
+  //Unlike DiracMatrix.h these are contiguous packed representations of the Matrices
+  // Contiguous Matrices for each walker, n^2 * nw  elements
   OffloadPinnedVector<T_FP> psiM_fp_;
-  OffloadPinnedVector<T_FP> LU_diags_fp_;
   OffloadPinnedVector<T_FP> logdets_fp_;
+  OffloadPinnedVector<T_FP> LU_diags_fp_;
   OffloadPinnedVector<int> pivots_;
   OffloadPinnedVector<int> infos_;
 
@@ -156,7 +76,7 @@ class DiracMatrixComputeOMPTarget : public Resource
       T_FP tmp;
       FullPrecReal lw;
       auto psi_M_ptr = psi_Ms.data() + iw * n * n;
-      DMCOMPT::Xgetri(lda, psi_M_ptr, lda, pivots_.data() + iw * n, &tmp, lwork_);
+      Xgetri(lda, psi_M_ptr, lda, pivots_.data() + iw * n, &tmp, lwork_);
       convert(tmp, lw);
       lwork_ = static_cast<int>(lw);
       m_work_.resize(lwork_);
@@ -176,7 +96,7 @@ class DiracMatrixComputeOMPTarget : public Resource
     lwork_ = -1;
     T_FP tmp;
     FullPrecReal lw;
-    DMCOMPT::Xgetri(lda, psi_M.data(), lda, pivots_.data(), &tmp, lwork_);
+    Xgetri(lda, psi_M.data(), lda, pivots_.data(), &tmp, lwork_);
     convert(tmp, lw);
     lwork_ = static_cast<int>(lw);
     m_work_.resize(lwork_);
@@ -194,12 +114,12 @@ class DiracMatrixComputeOMPTarget : public Resource
     BlasThreadingEnv knob(getNextLevelNumThreads());
     if (lwork_ < lda)
       reset(invMat, n, lda);
-    DMCOMPT::Xgetrf(n, n, invMat.data(), lda, pivots_.data());
+    Xgetrf(n, n, invMat.data(), lda, pivots_.data());
     for(int i=0; i<n; i++)
       LU_diags_fp_[i] = invMat.data()[i*lda+i];
     log_value = {0.0,0.0};
-    DMCOMPT::computeLogDet(LU_diags_fp_.data(), n, pivots_.data(), log_value);
-    DMCOMPT::Xgetri(n, invMat.data(), lda, pivots_.data(), m_work_.data(), lwork_);
+    computeLogDet(LU_diags_fp_.data(), n, pivots_.data(), log_value);
+    Xgetri(n, invMat.data(), lda, pivots_.data(), m_work_.data(), lwork_);
   }
 
   
@@ -218,13 +138,13 @@ class DiracMatrixComputeOMPTarget : public Resource
     for (int iw = 0; iw < nw; ++iw)
     {
       T_FP* LU_M = psi_Ms.data() + iw * n * n;
-      DMCOMPT::Xgetrf(n, n, LU_M, lda, pivots_.data() + iw * n);
+      Xgetrf(n, n, LU_M, lda, pivots_.data() + iw * n);
       for (int i = 0; i < n; i++)
         *(LU_diags_fp_.data() + iw * n + i) = LU_M[i * lda + i];
       std::complex<TREAL> log_value{0.0, 0.0};
-      DMCOMPT::computeLogDet(LU_diags_fp_.data() + iw * n, n, pivots_.data() + iw * n, log_value);
+      computeLogDet(LU_diags_fp_.data() + iw * n, n, pivots_.data() + iw * n, log_value);
       log_values[iw] = log_value;
-      DMCOMPT::Xgetri(n, LU_M, lda, pivots_.data() + iw * n, m_work_.data(), lwork_);
+      Xgetri(n, LU_M, lda, pivots_.data() + iw * n, m_work_.data(), lwork_);
     }
   }
 
@@ -280,9 +200,11 @@ public:
    *  \todo measure if using the a_mats without a copy to contiguous vector is better.
    */
   template<typename TMAT, typename TREAL>
-  inline void mw_invertTranspose(const RefVector<const OffloadPinnedMatrix<TMAT>>& a_mats,
+  inline void mw_invertTranspose(Resource& resource,
+                                 const RefVector<const OffloadPinnedMatrix<TMAT>>& a_mats,
                                  const RefVector<OffloadPinnedMatrix<TMAT>>& inv_a_mats,
-                                 OffloadPinnedVector<std::complex<TREAL>>& log_values)
+                                 OffloadPinnedVector<std::complex<TREAL>>& log_values,
+                                 const std::vector<bool>& recompute)
   {
     int nw           = a_mats.size();
     const size_t n   = a_mats[0].get().rows();
@@ -300,6 +222,8 @@ public:
       simd::remapCopyMatrix(psiM_fp_.data() + nsqr * iw, n, lda, inv_a_mats[iw].get().data(), n, ldb);
     }
   }
+
+  
 };
 } // namespace qmcplusplus
 

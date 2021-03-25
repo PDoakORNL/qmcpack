@@ -19,7 +19,7 @@ void DiracDeterminantDetails<DiracDeterminantBatched<MatrixDelayedUpdateCUDA<QMC
   using DetEngine  = MatrixDelayedUpdateCUDA<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>;
   auto& wfc_leader = wfc_list.getCastedLeader<DiracDeterminantBatched<DetEngine>>();
   const auto nw    = wfc_list.size();
-  using DDBT       = std::decay_t<decltype(wfc_leader)>;
+
   std::vector<DDBT::ValueMatrix_t> psiM_temp_host_list;
   {
     ScopedTimer spo_timer(wfc_leader.SPOVGLTimer);
@@ -43,7 +43,7 @@ void DiracDeterminantDetails<DiracDeterminantBatched<MatrixDelayedUpdateCUDA<QMC
 
     wfc_leader.Phi->mw_evaluate_notranspose(phi_list, p_list, wfc_leader.FirstIndex, wfc_leader.LastIndex,
                                             makeRefVector<DDBT::ValueMatrix_t>(psiM_temp_host_list), dpsiM_list,
-                                            d2psiM_list);
+                                            d2psiM_list, compute_mask);
   }
   RefVector<const DDBT::OffloadPinnedValueMatrix_t> psiM_temp_list;
   psiM_temp_list.reserve(nw);
