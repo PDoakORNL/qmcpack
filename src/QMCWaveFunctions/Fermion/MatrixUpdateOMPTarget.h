@@ -15,7 +15,7 @@
 #include "OMPTarget/OffloadAlignedAllocators.hpp"
 #include "OhmmsPETE/OhmmsVector.h"
 #include "OhmmsPETE/OhmmsMatrix.h"
-#include "QMCWaveFunctions/Fermion/DiracMatrix.h"
+#include "Fermion/DiracMatrixComputeOMPTarget.hpp"
 #include "OMPTarget/ompBLAS.hpp"
 #include "OMPTarget/ompReduction.hpp"
 #include "ResourceCollection.h"
@@ -60,14 +60,22 @@ struct MatrixUpdateOMPTargetMultiWalkerMem : public Resource
 template<typename T, typename T_FP>
 class MatrixUpdateOMPTarget
 {
+public:
   using This_t = MatrixUpdateOMPTarget<T, T_FP>;
+  template<typename DT>
+  using OffloadAllocator = OMPallocator<DT, aligned_allocator<DT>>;
+  template<typename DT>
+  using OffloadPinnedAllocator        = OMPallocator<DT, PinnedAlignedAllocator<DT>>;
+  using OffloadValueVector_t          = Vector<T, OffloadAllocator<T>>;
+  using OffloadPinnedLogValueVector_t = Vector<std::complex<T_FP>, OffloadPinnedAllocator<std::complex<T_FP>>>;
+  using OffloadPinnedValueVector_t    = Vector<T, OffloadPinnedAllocator<T>>;
+  using OffloadPinnedValueMatrix_t    = Matrix<T, OffloadPinnedAllocator<T>>;
 
-  using OffloadValueVector_t       = Vector<T, OffloadAllocator<T>>;
-  using OffloadPinnedValueVector_t = Vector<T, OffloadPinnedAllocator<T>>;
-  using OffloadPinnedValueMatrix_t = Matrix<T, OffloadPinnedAllocator<T>>;
+  using DiracMatrixCompute = DiracMatrixComputeOMPTarget<T_FP>;
 
-  /// matrix inversion engine
-  DiracMatrix<T_FP> detEng;
+private:
+  /// matrix inversion engine this crowd scope resouce and only the leader engine gets it
+  UPtr<DiracMatrixCompute> det_inverter_;
   /// inverse transpose of psiM(j,i) \f$= \psi_j({\bf r}_i)\f$
   OffloadPinnedValueMatrix_t psiMinv;
   /// scratch space for rank-1 update
@@ -107,12 +115,15 @@ public:
   /** resize the internal storage
    * @param norb number of electrons/orbitals
    * @param delay, maximum delay 0<delay<=norb
+   *
+   * Wow does this seem wrong. After this psiMinv can report nothing useful about its actual dimensions.
    */
   inline void resize(int norb, int delay) { psiMinv.resize(norb, getAlignedSize<T>(norb)); }
 
   void createResource(ResourceCollection& collection) const
   {
     collection.addResource(std::make_unique<MatrixUpdateOMPTargetMultiWalkerMem<T>>());
+    collection.addResource(std::make_unique<DiracMatrixComputeOMPTarget<T_FP>>());
   }
 
   void acquireResource(ResourceCollection& collection)
@@ -122,52 +133,60 @@ public:
       throw std::runtime_error(
           "MatrixUpdateOMPTarget::acquireResource dynamic_cast MatrixUpdateOMPTargetMultiWalkerMem failed");
     mw_mem_.reset(res_ptr);
+    auto det_eng_ptr = dynamic_cast<DiracMatrixComputeOMPTarget<T_FP>*>(collection.lendResource().release());
+    if (!det_eng_ptr)
+      throw std::runtime_error(
+          "MatrixDelayedUpdateCUDA::acquireResource dynamic_cast to DiracMatrixComputeCUDA<T_FP>* failed");
+    det_inverter_.reset(det_eng_ptr);
   }
 
-  void releaseResource(ResourceCollection& collection) { collection.takebackResource(std::move(mw_mem_)); }
+  void releaseResource(ResourceCollection& collection)
+  {
+    collection.takebackResource(std::move(mw_mem_));
+    collection.takebackResource(std::move(det_inverter_));
+  }
 
-  OffloadPinnedValueMatrix_t& get_psiMinv() { return psiMinv; }
+  const OffloadPinnedValueMatrix_t& get_psiMinv() const { return psiMinv; }
+  OffloadPinnedValueMatrix_t& get_nonconst_psiMinv() { return psiMinv; }
 
   inline T* getRow_psiMinv_offload(int row_id) { return psiMinv.device_data() + row_id * psiMinv.cols(); }
 
   /** compute the inverse of the transpose of matrix logdetT, result is in psiMinv
-   * @param logdetT orbital value matrix
+   * @param logdetT orbital value matrix (this has trustworth dimensions)
    * @param LogValue log(det(logdetT))
+   *
+   * note psiMinv has had its dimensions messed with.  rows have been padded to alignment adding colums.
    */
-  template<typename TREAL>
-  inline void invert_transpose(const Matrix<T>& logdetT, std::complex<TREAL>& LogValue)
+  inline void invert_transpose(OffloadPinnedValueMatrix_t& logdetT, OffloadPinnedLogValueVector_t& log_values)
   {
     auto& Ainv = psiMinv;
-    Matrix<T> Ainv_host_view(Ainv.data(), Ainv.rows(), Ainv.cols());
-    detEng.invert_transpose(logdetT, Ainv_host_view, LogValue);
+    auto& log_value = log_values[0];
+    det_inverter_->invert_transpose(logdetT, Ainv, log_value);
     T* Ainv_ptr = Ainv.data();
     PRAGMA_OFFLOAD("omp target update to(Ainv_ptr[:Ainv.size()])")
+    // needed?
+    PRAGMA_OFFLOAD("omp taskwait")
   }
 
-  template<typename TREAL>
-  static void mw_invert_transpose(const RefVectorWithLeader<This_t>& engines,
-                                  const RefVector<const Matrix<T>>& logdetT_list,
-                                  const RefVector<std::complex<TREAL>>& LogValues)
+  static void mw_invertTranspose(const RefVectorWithLeader<This_t>& engines,
+                                 const RefVector<const OffloadPinnedValueMatrix_t>& logdetT_list,
+                                 OffloadPinnedLogValueVector_t& log_values,
+                                 const std::vector<bool>& compute_mask)
   {
     auto& engine_leader = engines.getLeader();
-    // make this class unit tests friendly without the need of setup resources.
-    if (!engine_leader.mw_mem_)
-    {
-      app_warning() << "MatrixUpdateOMPTarget : This message should not be seen in production (performance bug) runs "
-                       "but only unit tests (expected)."
-                    << std::endl;
-      engine_leader.mw_mem_ = std::make_unique<MatrixUpdateOMPTargetMultiWalkerMem<T>>();
-    }
+    auto& det_inverter  = engine_leader.get_det_inverter();
+
+    RefVector<OffloadPinnedValueMatrix_t> a_inv_refs;
+    a_inv_refs.reserve(engines.size());
 
     for (int iw = 0; iw < engines.size(); iw++)
     {
-      auto& Ainv = engines[iw].psiMinv;
-      Matrix<T> Ainv_host_view(Ainv.data(), Ainv.rows(), Ainv.cols());
-      engine_leader.detEng.invert_transpose(logdetT_list[iw].get(), Ainv_host_view, LogValues[iw].get());
-      T* Ainv_ptr = Ainv.data();
-      PRAGMA_OFFLOAD("omp target update to(Ainv_ptr[:Ainv.size()])")
+      a_inv_refs.emplace_back(engines[iw].psiMinv);
+      const T* a_inv_ptr = a_inv_refs.back().get().data();
+      PRAGMA_OFFLOAD("omp target update to(a_inv_ptr[:a_inv_refs.back().get().size()])")
     }
     PRAGMA_OFFLOAD("omp taskwait")
+    det_inverter.mw_invertTranspose(*(engine_leader.mw_mem_),logdetT_list, a_inv_refs, log_values, compute_mask);
   }
 
   template<typename GT>
@@ -254,6 +273,8 @@ public:
     }
   }
 
+  /** The potential for mayhem here without a unit test is great.
+   */
   static void mw_updateRow(const RefVectorWithLeader<This_t>& engines,
                            int rowchanged,
                            const std::vector<T*>& psiM_g_list,
@@ -392,7 +413,7 @@ public:
     return row_ptr_list;
   }
 
-  static void mw_transferAinv_D2H(const RefVectorWithLeader<This_t>& engines)
+  static void mw_transferAinv_D2H(const RefVector<This_t>& engines)
   {
     for (This_t& engine : engines)
     {
@@ -400,7 +421,17 @@ public:
       PRAGMA_OFFLOAD("omp target update from(ptr[:engine.psiMinv.size()])")
     }
   }
+
+  DiracMatrixComputeOMPTarget<T_FP>& get_det_inverter()
+  {
+    if (det_inverter_)
+      return *det_inverter_;
+    throw std::logic_error("attempted to get null det_inverter_, this is developer logic error");
+  }
 };
+
+extern template class MatrixUpdateOMPTarget<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>;
+
 } // namespace qmcplusplus
 
 #endif // QMCPLUSPLUS_MATRIX_UPDATE_H
