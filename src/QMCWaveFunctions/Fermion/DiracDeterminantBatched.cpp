@@ -63,7 +63,7 @@ void DiracDeterminantBatched<DET_ENGINE>::invertPsiM(DiracDeterminantBatchedMult
 
 template<typename DET_ENGINE>
 void DiracDeterminantBatched<DET_ENGINE>::mw_invertPsiM(const RefVectorWithLeader<WaveFunctionComponent>& wfc_list,
-                                                        const RefVector<const OffloadPinnedValueMatrix_t>& logdetT_list,
+                                                        RefVector<const OffloadPinnedValueMatrix_t>& logdetT_list,
                                                         const std::vector<bool>& compute_mask)
 {
   auto& wfc_leader = wfc_list.getCastedLeader<DiracDeterminantBatched<DET_ENGINE>>();
@@ -193,6 +193,7 @@ void DiracDeterminantBatched<DET_ENGINE>::resize(int nel, int morb)
   LastIndex   = FirstIndex + nel;
   NumPtcls    = nel;
   NumOrbitals = norb;
+
 
   det_engine_.resize(norb, ndelay);
 
