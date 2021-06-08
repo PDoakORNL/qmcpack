@@ -200,8 +200,9 @@ public:
    *  \todo measure if using the a_mats without a copy to contiguous vector is better.
    */
   template<typename TMAT, typename TREAL>
-  inline void mw_invertTranspose(RefVector<OffloadPinnedMatrix<TMAT>>& a_mats,
-                                 RefVector<OffloadPinnedMatrix<TMAT>>& inv_a_mats,
+  inline void mw_invertTranspose(Resource& resource,
+                                 const RefVector<const OffloadPinnedMatrix<TMAT>>& a_mats,
+                                 const RefVector<OffloadPinnedMatrix<TMAT>>& inv_a_mats,
                                  OffloadPinnedVector<std::complex<TREAL>>& log_values,
                                  const std::vector<bool>& recompute)
   {

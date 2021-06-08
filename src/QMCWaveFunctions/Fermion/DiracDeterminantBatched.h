@@ -1,10 +1,11 @@
-//////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
 // Copyright (c) 2021 QMCPACK developers.
 //
 // File developed by: Ye Luo, yeluo@anl.gov, Argonne National Laboratory
+//                    Peter Doak, doakpw@ornl.gov, Oak Ridge National Laboratory
 //
 // File created by: Ye Luo, yeluo@anl.gov, Argonne National Laboratory
 //////////////////////////////////////////////////////////////////////////////////////
@@ -16,6 +17,7 @@
 #ifndef QMCPLUSPLUS_DIRACDETERMINANTBATCHED_H
 #define QMCPLUSPLUS_DIRACDETERMINANTBATCHED_H
 
+#include "Configuration.h"
 #include "QMCWaveFunctions/Fermion/DiracDeterminantBase.h"
 #include "QMCWaveFunctions/Fermion/MatrixUpdateOMPTarget.h"
 #if defined(ENABLE_CUDA) && defined(ENABLE_OFFLOAD)
@@ -23,16 +25,28 @@
 #endif
 #include "Platforms/PinnedAllocator.h"
 #include "OMPTarget/OMPallocator.hpp"
+#include "DiracDeterminantDetails.hpp"
 
 namespace qmcplusplus
 {
+namespace testing
+{
+class DiracDeterminantBatchedTest;
+struct SetupDiracDetResources;
+} // namespace testing
+
+template<typename DET_ENGINE>
 struct DiracDeterminantBatchedMultiWalkerResource : public Resource
 {
   using ValueType = QMCTraits::ValueType;
   using GradType  = QMCTraits::GradType;
+  using Real      = QMCTraits::RealType;
   template<typename DT>
   using OffloadPinnedAllocator = OMPallocator<DT, PinnedAlignedAllocator<DT>>;
   using OffloadVGLVector_t     = VectorSoaContainer<ValueType, QMCTraits::DIM + 2, OffloadPinnedAllocator<ValueType>>;
+  // I don't think its a good idea create a hard dependency all the way back to WaveFunctionComponent for this.
+  using LogValue                    = std::complex<Real>;
+  using OffloadPinnedLogValueVector = Vector<LogValue, OffloadPinnedAllocator<LogValue>>;
 
   DiracDeterminantBatchedMultiWalkerResource() : Resource("DiracDeterminantBatched") {}
 
@@ -42,7 +56,7 @@ struct DiracDeterminantBatchedMultiWalkerResource : public Resource
 
   Resource* makeClone() const override { return new DiracDeterminantBatchedMultiWalkerResource(*this); }
 
-
+  OffloadPinnedLogValueVector log_values;
   /// value, grads, laplacian of single-particle orbital for particle-by-particle update and multi walker [5][nw*norb]
   OffloadVGLVector_t phi_vgl_v;
   // multi walker of ratio
@@ -51,7 +65,7 @@ struct DiracDeterminantBatchedMultiWalkerResource : public Resource
   std::vector<GradType> grad_new_local;
 };
 
-template<typename DET_ENGINE = MatrixUpdateOMPTarget<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>>
+template<typename DET_ENGINE>
 class DiracDeterminantBatched : public DiracDeterminantBase
 {
 public:
@@ -62,13 +76,15 @@ public:
   using HessMatrix_t  = SPOSet::HessMatrix_t;
   using HessVector_t  = SPOSet::HessVector_t;
   using HessType      = SPOSet::HessType;
-
-  using mValueType = QMCTraits::QTFull::ValueType;
-  using mGradType  = TinyVector<mValueType, DIM>;
+  using Real          = QMCTraits::RealType;
+  using mValueType    = QMCTraits::QTFull::ValueType;
+  using mGradType     = TinyVector<mValueType, DIM>;
+  using DetEngine_t   = DET_ENGINE;
 
   template<typename DT>
   using OffloadPinnedAllocator        = OMPallocator<DT, PinnedAlignedAllocator<DT>>;
   using OffloadPinnedValueVector_t    = Vector<ValueType, OffloadPinnedAllocator<ValueType>>;
+  using OffloadPinnedLogValueVector_t = Vector<LogValueType, OffloadPinnedAllocator<LogValueType>>;
   using OffloadPinnedValueMatrix_t    = Matrix<ValueType, OffloadPinnedAllocator<ValueType>>;
   using OffloadPinnedPsiValueVector_t = Vector<PsiValueType, OffloadPinnedAllocator<PsiValueType>>;
   using OffloadVGLVector_t            = VectorSoaContainer<ValueType, DIM + 2, OffloadPinnedAllocator<ValueType>>;
@@ -179,8 +195,12 @@ public:
                       const RefVector<ParticleSet::ParticleGradient_t>& G_list,
                       const RefVector<ParticleSet::ParticleLaplacian_t>& L_list) const override;
 
-  void recompute(const ParticleSet& P) override;
+  void recompute(DiracDeterminantBatchedMultiWalkerResource<DET_ENGINE>& mw_res, const ParticleSet& P);
 
+  void mw_recompute(const RefVectorWithLeader<WaveFunctionComponent>& wfc_list,
+                    const RefVectorWithLeader<ParticleSet>& p_list,
+                    const std::vector<bool>& recompute) const override;
+  
   LogValueType evaluateGL(const ParticleSet& P,
                           ParticleSet::ParticleGradient_t& G,
                           ParticleSet::ParticleLaplacian_t& L,
@@ -205,25 +225,16 @@ public:
    * This interface is exposed only to SlaterDet and its derived classes
    * can overwrite to clone itself correctly.
    */
-  DiracDeterminantBatched* makeCopy(std::shared_ptr<SPOSet>&& spo) const override;
+  DiracDeterminantBase* makeCopy(std::shared_ptr<SPOSet>&& spo) const override;
 
   void evaluateRatiosAlltoOne(ParticleSet& P, std::vector<ValueType>& ratios) override;
 
-  /// return  for testing
-  auto& getPsiMinv() const { return psiMinv; }
-
-  /** inverse transpose of psiM(j,i) \f$= \psi_j({\bf r}_i)\f$ memory view
-   * Actual memory is owned by det_engine_
-   * Only NumOrbitals x NumOrbitals subblock has meaningful data
-   * The number of rows is equal to NumOrbitals
-   * The number of columns in each row is padded to a multiple of QMC_SIMD_ALIGNMENT
-   */
-  ValueMatrix_t psiMinv;
+  auto& get_det_engine() { return det_engine_; }
 
   /// memory for psiM, dpsiM and d2psiM. [5][norb*norb]
   OffloadVGLVector_t psiM_vgl;
   /// psiM(j,i) \f$= \psi_j({\bf r}_i)\f$. partial memory view of psiM_vgl
-  ValueMatrix_t psiM_temp;
+  OffloadPinnedValueMatrix_t psiM_temp;
   /// dpsiM(i,j) \f$= \nabla_i \psi_j({\bf r}_i)\f$. partial memory view of psiM_vgl
   GradMatrix_t dpsiM;
   /// d2psiM(i,j) \f$= \nabla_i^2 \psi_j({\bf r}_i)\f$. partial memory view of psiM_vgl
@@ -234,6 +245,7 @@ public:
   HessMatrix_t grad_grad_source_psiM;
 
   GradMatrix_t phi_alpha_Minv, grad_phi_Minv;
+
   ValueMatrix_t lapl_phi_Minv;
   HessMatrix_t grad_phi_alpha_Minv;
 
@@ -243,27 +255,38 @@ public:
   GradVector_t dpsiV;
   ValueVector_t d2psiV;
 
+  /// Log values for invert_transpose results
+  //OffloadPinnedLogValueVector_t log_values;
+
   /// delayed update engine
   DET_ENGINE det_engine_;
 
   // psi(r')/psi(r) during a PbyP move
   PsiValueType curRatio;
 
-  std::unique_ptr<DiracDeterminantBatchedMultiWalkerResource> mw_res_;
+  std::unique_ptr<DiracDeterminantBatchedMultiWalkerResource<DET_ENGINE>> mw_res_;
+
+  LogValueType get_log_value() const { return LogValue; }
+
+  static void mw_invertPsiM(const RefVectorWithLeader<WaveFunctionComponent>& wfc_list,
+                            const RefVector<const OffloadPinnedValueMatrix_t>& logdetT_list,
+                            const std::vector<bool>& compute_mask);
+
+  /// maximal number of delayed updates
+  int ndelay;
+
+  /// timers
+  NewTimer &D2HTimer, &H2DTimer;
 
 private:
   /// compute G adn L assuming psiMinv, dpsiM, d2psiM are ready for use
   void computeGL(ParticleSet::ParticleGradient_t& G, ParticleSet::ParticleLaplacian_t& L) const;
 
   /// invert logdetT(psiM), result is in the engine.
-  void invertPsiM(const ValueMatrix_t& logdetT);
+  void invertPsiM(DiracDeterminantBatchedMultiWalkerResource<DET_ENGINE>& mw_res, OffloadPinnedValueMatrix_t& logdetT);
 
-  static void mw_invertPsiM(const RefVectorWithLeader<WaveFunctionComponent>& wfc_list,
-                            const RefVector<const ValueMatrix_t>& logdetT_list);
-
-  void mw_recompute(const RefVectorWithLeader<WaveFunctionComponent>& wfc_list,
-                    const RefVectorWithLeader<ParticleSet>& p_list,
-                    const std::vector<bool>& recompute) const override;
+  /// Resize all temporary arrays required for force computation.
+  void resizeScratchObjectsForIonDerivs();
 
   // make this class unit tests friendly without the need of setup resources.
   void guardMultiWalkerRes()
@@ -274,25 +297,17 @@ private:
           << "WARNING DiracDeterminantBatched : This message should not be seen in production (performance bug) runs "
              "but only unit tests (expected)."
           << std::endl;
-      mw_res_ = std::make_unique<DiracDeterminantBatchedMultiWalkerResource>();
+      mw_res_ = std::make_unique<DiracDeterminantBatchedMultiWalkerResource<DET_ENGINE>>();
+      mw_res_->log_values.resize(1);
     }
   }
 
-  /// Resize all temporary arrays required for force computation.
-  void resizeScratchObjectsForIonDerivs();
-
-  /// maximal number of delayed updates
-  int ndelay;
-
-  /// timers
-  NewTimer &D2HTimer, &H2DTimer;
+  //  friend class qmcplusplus::DiracDeterminantDetails;
+  friend struct qmcplusplus::testing::SetupDiracDetResources;
+  friend class qmcplusplus::testing::DiracDeterminantBatchedTest;
 };
 
-extern template class DiracDeterminantBatched<>;
-#if defined(ENABLE_CUDA) && defined(ENABLE_OFFLOAD)
-extern template class DiracDeterminantBatched<
-    MatrixDelayedUpdateCUDA<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>>;
-#endif
+
 
 } // namespace qmcplusplus
 #endif
