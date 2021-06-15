@@ -201,7 +201,7 @@ public:
    */
   template<typename TMAT, typename TREAL>
   inline void mw_invertTranspose(Resource& resource,
-                                 const RefVector<const OffloadPinnedMatrix<TMAT>>& a_mats,
+                                 RefVector<const OffloadPinnedMatrix<TMAT>>& a_mats,
                                  const RefVector<OffloadPinnedMatrix<TMAT>>& inv_a_mats,
                                  OffloadPinnedVector<std::complex<TREAL>>& log_values,
                                  const std::vector<bool>& recompute)

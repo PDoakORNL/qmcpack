@@ -87,7 +87,6 @@ private:
 
   // multi walker memory buffers
   std::unique_ptr<MatrixUpdateOMPTargetMultiWalkerMem<T>> mw_mem_;
-
   void resize_fill_constant_arrays(size_t nw)
   {
     if (mw_mem_->cone_vec.size() < nw)
@@ -171,7 +170,7 @@ public:
   }
 
   static void mw_invertTranspose(const RefVectorWithLeader<This_t>& engines,
-                                 const RefVector<const OffloadPinnedValueMatrix_t>& logdetT_list,
+                                 RefVector<const OffloadPinnedValueMatrix_t>& logdetT_list,
                                  OffloadPinnedLogValueVector_t& log_values,
                                  const std::vector<bool>& compute_mask)
   {

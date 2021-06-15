@@ -11,6 +11,7 @@
 
 #include "ResourceCollection.h"
 #include <iostream>
+#include <algorithm>
 #include <Host/OutputManager.h>
 
 namespace qmcplusplus
@@ -21,6 +22,13 @@ ResourceCollection::ResourceCollection(const ResourceCollection& ref) : name_(re
 {
   for (auto& res : ref.collection_)
     addResource(std::unique_ptr<Resource>(res->makeClone()), true);
+}
+
+ResourceCollection::~ResourceCollection()
+{
+  std::reverse(collection_.begin(), collection_.end());
+  for(auto& resource : collection_)
+    resource.reset(nullptr);
 }
 
 void ResourceCollection::printResources() const
@@ -39,7 +47,7 @@ size_t ResourceCollection::addResource(std::unique_ptr<Resource>&& res, bool nop
   res->index_in_collection_ = index;
   if (!noprint)
     app_debug_stream() << "Multi walker shared resource \"" << res->getName() << "\" created in resource collection \""
-                << name_ << "\" index " << index << std::endl;
+                       << name_ << "\" index " << index << std::endl;
   collection_.emplace_back(std::move(res));
   return index;
 }
