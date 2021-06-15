@@ -269,7 +269,7 @@ public:
   LogValueType get_log_value() const { return LogValue; }
 
   static void mw_invertPsiM(const RefVectorWithLeader<WaveFunctionComponent>& wfc_list,
-                            const RefVector<const OffloadPinnedValueMatrix_t>& logdetT_list,
+                            RefVector<const OffloadPinnedValueMatrix_t>& logdetT_list,
                             const std::vector<bool>& compute_mask);
 
   /// maximal number of delayed updates

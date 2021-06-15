@@ -23,6 +23,8 @@
 
 #include "QMCWaveFunctions/Fermion/MultiSlaterDeterminant.h"
 #include "QMCWaveFunctions/Fermion/MultiSlaterDeterminantFast.h"
+#include "QMCWaveFunctions/Fermion/MatrixUpdateOMPTarget.h"
+
 #if defined(QMC_CUDA)
 #include "QMCWaveFunctions/Fermion/DiracDeterminantCUDA.h"
 #endif
@@ -506,7 +508,7 @@ bool SlaterDetBuilder::putDeterminant(xmlNodePtr cur, int spin_group)
         app_summary() << "      Running on an accelerator via OpenMP offload. Only SM1 update is supported. "
                          "delay_rank is ignored."
                       << std::endl;
-        adet = new DiracDeterminantBatched<>(std::move(psi_clone), firstIndex);
+        adet = new DiracDeterminantBatched<MatrixUpdateOMPTarget<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>>(std::move(psi_clone), firstIndex);
       }
     }
     else

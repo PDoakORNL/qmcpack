@@ -12,6 +12,8 @@
 #ifndef QMCPLUSPLUS_DIRAC_MATRIX_COMPUTE_CUDA_H
 #define QMCPLUSPLUS_DIRAC_MATRIX_COMPUTE_CUDA_H
 
+#include <type_traits>
+
 #include "OhmmsPETE/OhmmsMatrix.h"
 #ifdef ENABLE_OFFLOAD
 #include "OMPTarget/OMPallocator.hpp"
@@ -92,7 +94,7 @@ class DiracMatrixComputeCUDA : public Resource
    */
   template<typename TMAT, typename TREAL>
   inline void mw_computeInvertAndLog(cublasHandle_t h_cublas,
-                                  RefVector<OffloadPinnedMatrix<TMAT>>& a_mats,
+                                  RefVector<const OffloadPinnedMatrix<TMAT>>& a_mats,
                                   RefVector<OffloadPinnedMatrix<TMAT>>& inv_a_mats,
                                   const int n,
                                   const int lda,
@@ -125,7 +127,7 @@ class DiracMatrixComputeCUDA : public Resource
       // On the device Here we transpose to a_mat;
       cublasErrorCheck(cuBLAS::geam(h_cublas, CUBLAS_OP_T, CUBLAS_OP_N, n, n, dev_one.getDevicePtr(),
                                     inv_a_mats[iw].get().device_data(), lda, dev_zero.getDevicePtr(),
-                                    a_mats[iw].get().device_data(), lda, a_mats[iw].get().device_data(), lda),
+                                    const_cast<TMAT*>(a_mats[iw].get().device_data()), lda, const_cast<TMAT*>(a_mats[iw].get().device_data()), lda),
                        "cuBLAS::geam failed.");
     }
     pivots_.resize(n * nw);
@@ -283,7 +285,7 @@ public:
   template<typename TMAT, typename TREAL>
   inline std::enable_if_t<!std::is_same<T_FP, TMAT>::value> mw_invertTranspose(
       Resource& resource,
-      RefVector<OffloadPinnedMatrix<TMAT>>& a_mats,
+      RefVector<const OffloadPinnedMatrix<TMAT>>& a_mats,
       RefVector<OffloadPinnedMatrix<TMAT>>& inv_a_mats,
       OffloadPinnedVector<std::complex<TREAL>>& log_values,
       const std::vector<bool>& compute_mask)
@@ -325,7 +327,7 @@ public:
   template<typename TMAT, typename TREAL>
   inline std::enable_if_t<std::is_same<T_FP, TMAT>::value> mw_invertTranspose(
       Resource& resource,
-      RefVector<OffloadPinnedMatrix<TMAT>>& a_mats,
+      RefVector<const OffloadPinnedMatrix<TMAT>>& a_mats,
       RefVector<OffloadPinnedMatrix<TMAT>>& inv_a_mats,
       OffloadPinnedVector<std::complex<TREAL>>& log_values,
       const std::vector<bool>& compute_mask)

@@ -2,7 +2,7 @@
 #// This file is distributed under the University of Illinois/NCSA Open Source License.
 #// See LICENSE file in top directory for details.
 #//
-#// Copyright (c) 2021 Jeongnim Kim and QMCPACK developers.
+#// Copyright (c) 2021 QMCPACK developers.
 #//
 #// File developed by: Bryan Clark, bclark@Princeton.edu, Princeton University
 #//                    Ken Esler, kpesler@gmail.com, University of Illinois at Urbana-Champaign
@@ -150,6 +150,7 @@ set(FERMION_SRCS
     ${FERMION_SRCS}
     Fermion/DiracDeterminant.cpp
     Fermion/DiracDeterminantBatched.cpp
+    Fermion/MatrixUpdateOMPTarget.cpp
     Fermion/SlaterDet.cpp
     Fermion/SlaterDetBuilder.cpp
     Fermion/MultiSlaterDeterminant.cpp

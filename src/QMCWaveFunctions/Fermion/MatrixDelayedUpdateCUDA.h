@@ -441,7 +441,7 @@ public:
   }
 
   static void mw_invertTranspose(const RefVectorWithLeader<MatrixDelayedUpdateCUDA<T, T_FP>>& engines,
-                                 const RefVector<const OffloadPinnedValueMatrix_t>& logdetT_list,
+                                 RefVector<const OffloadPinnedValueMatrix_t>& logdetT_list,
                                  OffloadPinnedLogValueVector_t& log_values,
                                  const std::vector<bool>& compute_mask)
   {
