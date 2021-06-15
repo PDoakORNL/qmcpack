@@ -116,6 +116,7 @@ void DiracDeterminantBatched<DET_ENGINE>::
   RefVector<typename DDBT::GradMatrix_t> dpsiM_list;
   RefVector<typename DDBT::ValueMatrix_t> d2psiM_list;
 
+  // This seems wrong, why would you return if just one is not recomputed!
   for( bool bit : recompute_mask)
     if(!bit)
       return;
@@ -171,9 +172,9 @@ void DiracDeterminantBatched<DET_ENGINE>::
         psiM_temp_full_list.push_back(det.psiM_temp);
       }
 
-    DiracDeterminantBatched<DET_ENGINE>::mw_invertPsiM(wfc_list, const_psiM_temp_list, recompute_mask);
     // These shouldn't be in the code without an explanation of which task would need to synchronize here.
     PRAGMA_OFFLOAD("omp taskwait")
+    DiracDeterminantBatched<DET_ENGINE>::mw_invertPsiM(wfc_list, const_psiM_temp_list, recompute_mask);
   }
 }
 
@@ -193,7 +194,6 @@ void DiracDeterminantBatched<DET_ENGINE>::resize(int nel, int morb)
   LastIndex   = FirstIndex + nel;
   NumPtcls    = nel;
   NumOrbitals = norb;
-
 
   det_engine_.resize(norb, ndelay);
 

@@ -259,6 +259,7 @@ public:
     invM_fp_.resize(n * lda);
     std::fill(log_values.begin(), log_values.end(), std::complex<TREAL>{0.0, 0.0});
     // making sure we know the log_values are zero'd on the device.
+    assert(hstream_ == cuda_handles.hstream);
     cudaErrorCheck(cudaMemcpyAsync(log_values.device_data(), log_values.data(),
                                    log_values.size() * sizeof(std::complex<TREAL>), cudaMemcpyHostToDevice,
                                    cuda_handles.hstream),
@@ -292,6 +293,7 @@ public:
   {
     assert(log_values.size() == a_mats.size());
     auto& cuda_handles = dynamic_cast<CUDALinearAlgebraHandles&>(resource);
+    assert(hstream_ == cuda_handles.hstream);
     int nw             = a_mats.size();
     const int n        = a_mats[0].get().rows();
     const int lda      = a_mats[0].get().cols();
@@ -334,6 +336,7 @@ public:
   {
     assert(log_values.size() == a_mats.size());
     auto& cuda_handles = dynamic_cast<CUDALinearAlgebraHandles&>(resource);
+    assert(hstream_ == cuda_handles.hstream);
     const int n        = a_mats[0].get().rows();
     const int lda      = a_mats[0].get().cols();
     const int ldb      = inv_a_mats[0].get().cols();

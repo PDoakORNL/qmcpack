@@ -142,7 +142,9 @@ private:
     cudaErrorCheck(cudaStreamSynchronize(cuda_handles_->hstream), "cudaStreamSynchronize failed!");
   }
 
-  // ensure no previous delay left
+  /** ensure no previous delay left.
+   *  This looks like it should be an assert
+   */
   inline void guard_no_delay() const
   {
     if (delay_count != 0)
@@ -400,22 +402,11 @@ public:
     if (!cuda_handles_)
     {
       throw std::logic_error("Null cuda_handles_, Even for testing proper resource creation and acquisition must be made.");
-      // app_warning() << "MatrixDelayedUpdateCUDA local cuda_handles_ made : This message should not be seen in "
-      //                  "production (performance bug) runs "
-      //                  "but only unit tests (expected)."
-      //               << std::endl;
-      // cuda_handles_ = std::make_unique<CUDALinearAlgebraHandles>();
     }
     
     if (!det_inverter_)
     {
       throw std::logic_error("Null det_inverter_, Even for testing proper resource creation and acquisition must be made.");
-      // app_warning() << "MatrixDelayedUpdateCUDA local det_inverter_ made : This message should not be seen in "
-      //                  "production (performance bug) runs "
-      //                  "but only unit tests (expected)."
-      //               << std::endl;
-
-      // det_inverter_ = std::make_unique<DiracMatrixComputeCUDA<T_FP>>();
     }
   }
     
@@ -440,7 +431,7 @@ public:
     // mw_invertTranspose(engines, log_dets, log_values);
   }
 
-  static void mw_invertTranspose(const RefVectorWithLeader<MatrixDelayedUpdateCUDA<T, T_FP>>& engines,
+  static void mw_invertTranspose(RefVectorWithLeader<MatrixDelayedUpdateCUDA<T, T_FP>>& engines,
                                  RefVector<const OffloadPinnedValueMatrix_t>& logdetT_list,
                                  OffloadPinnedLogValueVector_t& log_values,
                                  const std::vector<bool>& compute_mask)

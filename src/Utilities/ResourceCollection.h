@@ -26,6 +26,9 @@ class ResourceCollection
 public:
   ResourceCollection(const std::string& name);
   ResourceCollection(const ResourceCollection&);
+  /** Custom destructor I don't think std::vector guarantees order of element destruction
+   */
+  ~ResourceCollection();
   const std::string& getName() const { return name_; }
   size_t size() const { return collection_.size(); }
   void printResources() const;
