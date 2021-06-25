@@ -1020,14 +1020,14 @@ void DiracDeterminantBatched<DET_ENGINE>::releaseResource(ResourceCollection& co
   det_engine_.releaseResource(collection);
 }
 
-template struct DiracDeterminantBatchedMultiWalkerResource<
-    MatrixUpdateOMPTarget<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>>;
-template class DiracDeterminantBatched<MatrixUpdateOMPTarget<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>>;
-
-#if defined(ENABLE_CUDA) && defined(ENABLE_OFFLOAD)
+#if defined(ENABLE_CUDA)
 template struct DiracDeterminantBatchedMultiWalkerResource<
     MatrixDelayedUpdateCUDA<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>>;
 template class DiracDeterminantBatched<MatrixDelayedUpdateCUDA<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>>;
+#elif defined(ENABLE_OFFLOAD)
+template struct DiracDeterminantBatchedMultiWalkerResource<
+    MatrixUpdateOMPTarget<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>>;
+template class DiracDeterminantBatched<MatrixUpdateOMPTarget<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>>;
 #endif
 
 } // namespace qmcplusplus

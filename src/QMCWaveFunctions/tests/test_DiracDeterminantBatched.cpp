@@ -41,11 +41,9 @@ using LogValueType = std::complex<QMCTraits::QTFull::RealType>;
 using PsiValueType = QMCTraits::QTFull::ValueType;
 
 #if defined(ENABLE_OFFLOAD)
-#if defined(ENABLE_CUDA)
-typedef DiracDeterminantBatched<MatrixDelayedUpdateCUDA<ValueType, QMCTraits::QTFull::ValueType>> DetType;
-#else
 typedef DiracDeterminantBatched<MatrixUpdateOMPTarget<ValueType, QMCTraits::QTFull::ValueType>> DetType;
-#endif
+#elif defined(ENABLE_CUDA)
+typedef DiracDeterminantBatched<MatrixDelayedUpdateCUDA<ValueType, QMCTraits::QTFull::ValueType>> DetType;
 #else
 typedef DiracDeterminantBatched<> DetType;
 #endif
@@ -250,10 +248,10 @@ TEST_CASE("DiracDeterminantBatched_second", "[wavefunction][fermion]")
 
   auto& mw_res = ddbt.get_mw_res(ddb);
 
-#if defined(ENABLE_CUDA) && defined(ENABLE_OFFLOAD)
+#if defined(ENABLE_CUDA)
   dm.invert_transpose(ddbt.getHandles(ddb), scratchT, a_update1, mw_res.log_values);
   det_update1 = mw_res.log_values[0];
-#else
+#elif defined(ENABLE_OFFLOAD)
   dm.invert_transpose(scratchT, a_update1, det_update1);
 #endif
 
@@ -275,10 +273,9 @@ TEST_CASE("DiracDeterminantBatched_second", "[wavefunction][fermion]")
   simd::transpose(a_update2.data(), a_update2.rows(), a_update2.cols(), scratchT.data(), scratchT.rows(),
                   scratchT.cols());
 
-#if defined(ENABLE_CUDA) && defined(ENABLE_OFFLOAD)
+#if defined(ENABLE_CUDA) || defined(ENABLE_OFFLOAD)
   dm.invert_transpose(ddbt.getHandles(ddb), scratchT, a_update2, mw_res.log_values);
   det_update2 = mw_res.log_values[0];
-
 #else
   dm.invert_transpose(scratchT, a_update2, det_update2);
 #endif
@@ -298,7 +295,7 @@ TEST_CASE("DiracDeterminantBatched_second", "[wavefunction][fermion]")
   simd::transpose(a_update3.data(), a_update3.rows(), a_update3.cols(), scratchT.data(), scratchT.rows(),
                   scratchT.cols());
 
-  #if defined(ENABLE_CUDA) && defined(ENABLE_OFFLOAD)
+#if defined(ENABLE_CUDA) || defined(ENABLE_OFFLOAD)
   dm.invert_transpose(ddbt.getHandles(ddb), scratchT, a_update3, mw_res.log_values);
   det_update3 = mw_res.log_values[0];
 #else
@@ -317,7 +314,7 @@ TEST_CASE("DiracDeterminantBatched_second", "[wavefunction][fermion]")
   ddb.acceptMove(elec, 2);
 
   simd::transpose(orig_a.data(), orig_a.rows(), orig_a.cols(), scratchT.data(), scratchT.rows(), scratchT.cols());
-#if defined(ENABLE_CUDA) && defined(ENABLE_OFFLOAD)
+#if defined(ENABLE_CUDA) || defined(ENABLE_OFFLOAD)
   dm.invert_transpose(ddbt.getHandles(ddb), scratchT, orig_a, mw_res.log_values);
   det_update3 = mw_res.log_values[0];
 #else
@@ -413,7 +410,7 @@ TEST_CASE("DiracDeterminantBatched_delayed_update", "[wavefunction][fermion]")
   simd::transpose(a_update1.data(), a_update1.rows(), a_update1.cols(), scratchT.data(), scratchT.rows(),
                   scratchT.cols());
   LogValueType det_update1;
-#if defined(ENABLE_CUDA) && defined(ENABLE_OFFLOAD)
+#if defined(ENABLE_CUDA) || defined(ENABLE_OFFLOAD)
   dm.invert_transpose(ddbt.getHandles(ddc), scratchT, a_update1, mw_res.log_values);
   det_update1 = mw_res.log_values[0];
 #else
@@ -444,7 +441,7 @@ TEST_CASE("DiracDeterminantBatched_delayed_update", "[wavefunction][fermion]")
                   scratchT.cols());
   LogValueType det_update2;
 
-  #if defined(ENABLE_CUDA) && defined(ENABLE_OFFLOAD)
+  #if defined(ENABLE_CUDA) || defined(ENABLE_OFFLOAD)
   dm.invert_transpose(ddbt.getHandles(ddc), scratchT, a_update2, mw_res.log_values);
   det_update2 = mw_res.log_values[0];
 #else
@@ -469,7 +466,7 @@ TEST_CASE("DiracDeterminantBatched_delayed_update", "[wavefunction][fermion]")
   simd::transpose(a_update3.data(), a_update3.rows(), a_update3.cols(), scratchT.data(), scratchT.rows(),
                   scratchT.cols());
   LogValueType det_update3;
-  #if defined(ENABLE_CUDA) && defined(ENABLE_OFFLOAD)
+  #if defined(ENABLE_CUDA) || defined(ENABLE_OFFLOAD)
   dm.invert_transpose(ddbt.getHandles(ddc), scratchT, a_update3, mw_res.log_values);
   det_update3 = mw_res.log_values[0];
 #else
@@ -491,7 +488,7 @@ TEST_CASE("DiracDeterminantBatched_delayed_update", "[wavefunction][fermion]")
 
   // fresh invert orig_a
   simd::transpose(orig_a.data(), orig_a.rows(), orig_a.cols(), scratchT.data(), scratchT.rows(), scratchT.cols());
-#if defined(ENABLE_CUDA) && defined(ENABLE_OFFLOAD)
+#if defined(ENABLE_CUDA) || defined(ENABLE_OFFLOAD)
   dm.invert_transpose(ddbt.getHandles(ddc), scratchT, orig_a, mw_res.log_values);
   det_update3 = mw_res.log_values[0];
 #else

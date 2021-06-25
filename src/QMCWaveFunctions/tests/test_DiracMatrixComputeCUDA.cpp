@@ -23,6 +23,7 @@
 #include "Platforms/PinnedAllocator.h"
 #include "Platforms/CUDA/CUDALinearAlgebraHandles.h"
 #include "Platforms/tests/CUDA/test_device_value_kernels.hpp"
+#include "Platforms/OMPTarget/OffloadAlignedAllocators.hpp"
 
 // Legacy CPU inversion for temporary testing
 #include "QMCWaveFunctions/Fermion/DiracMatrix.h"
@@ -30,13 +31,13 @@
 
 namespace qmcplusplus
 {
-#ifdef ENABLE_OFFLOAD
-  template<typename T>
-  using OffloadPinnedAllocator = OMPallocator<T, PinnedAlignedAllocator<T>>;
-#elif ENABLE_CUDA
-  template<typename T>
-  using OffloadPinnedAllocator = DualAllocator<T, CUDAAllocator<T>, PinnedAlignedAllocator<T>>;
-#endif
+// #ifdef ENABLE_OFFLOAD
+//   template<typename T>
+//   using OffloadPinnedAllocator = OMPallocator<T, PinnedAlignedAllocator<T>>;
+// #elif ENABLE_CUDA
+//   template<typename T>
+//   using OffloadPinnedAllocator = DualAllocator<T, CUDAAllocator<T>, PinnedAlignedAllocator<T>>;
+// #endif
 
 template<typename T>
 using OffloadPinnedMatrix = Matrix<T, OffloadPinnedAllocator<T>>;

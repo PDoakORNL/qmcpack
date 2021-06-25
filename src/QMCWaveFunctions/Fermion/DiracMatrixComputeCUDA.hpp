@@ -15,11 +15,12 @@
 #include <type_traits>
 
 #include "OhmmsPETE/OhmmsMatrix.h"
-#ifdef ENABLE_OFFLOAD
-#include "OMPTarget/OMPallocator.hpp"
-#elif ENABLE_CUDA
-#include "DualAllocator.hpp"
-#endif
+#include "OMPTarget/OffloadAlignedAllocators.hpp"
+// #ifdef ENABLE_OFFLOAD
+// #include "OMPTarget/OMPallocator.hpp"
+// #elif ENABLE_CUDA
+// #include "DualAllocator.hpp"
+// #endif
 #include "Platforms/PinnedAllocator.h"
 #include "Platforms/CUDA/CUDALinearAlgebraHandles.h"
 #include "Platforms/CUDA/cuBLAS.hpp"
@@ -45,13 +46,13 @@ class DiracMatrixComputeCUDA : public Resource
   // Why not just use QMCTraits::FullPrecRealType?
   using FullPrecReal = typename scalar_traits<T_FP>::real_type;
 
-#ifdef ENABLE_OFFLOAD
-  template<typename T>
-  using OffloadPinnedAllocator = OMPallocator<T, PinnedAlignedAllocator<T>>;
-#elif ENABLE_CUDA
-  template<typename T>
-  using OffloadPinnedAllocator = DualAllocator<T, CUDAAllocator<T>, PinnedAlignedAllocator<T>>;
-#endif
+// #ifdef ENABLE_OFFLOAD
+//   template<typename T>
+//   using OffloadPinnedAllocator = OMPallocator<T, PinnedAlignedAllocator<T>>;
+// #elif ENABLE_CUDA
+//   template<typename T>
+//   using OffloadPinnedAllocator = DualAllocator<T, CUDAAllocator<T>, PinnedAlignedAllocator<T>>;
+// #endif
 
   template<typename T>
   using OffloadPinnedMatrix = Matrix<T, OffloadPinnedAllocator<T>>;

@@ -19,9 +19,10 @@
 
 #include "Configuration.h"
 #include "QMCWaveFunctions/Fermion/DiracDeterminantBase.h"
-#include "QMCWaveFunctions/Fermion/MatrixUpdateOMPTarget.h"
-#if defined(ENABLE_CUDA) && defined(ENABLE_OFFLOAD)
+#if defined(ENABLE_CUDA)
 #include "QMCWaveFunctions/Fermion/MatrixDelayedUpdateCUDA.h"
+#elif defined(ENABLE_OFFLOAD)
+#include "QMCWaveFunctions/Fermion/MatrixUpdateOMPTarget.h"
 #endif
 #include "Platforms/PinnedAllocator.h"
 #include "OMPTarget/OMPallocator.hpp"
