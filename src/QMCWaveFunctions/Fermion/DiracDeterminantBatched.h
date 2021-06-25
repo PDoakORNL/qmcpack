@@ -26,7 +26,6 @@
 #endif
 #include "Platforms/PinnedAllocator.h"
 #include "OMPTarget/OMPallocator.hpp"
-#include "DiracDeterminantDetails.hpp"
 
 namespace qmcplusplus
 {
