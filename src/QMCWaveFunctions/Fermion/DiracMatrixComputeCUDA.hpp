@@ -46,13 +46,13 @@ class DiracMatrixComputeCUDA : public Resource
   // Why not just use QMCTraits::FullPrecRealType?
   using FullPrecReal = typename scalar_traits<T_FP>::real_type;
 
-// #ifdef ENABLE_OFFLOAD
-//   template<typename T>
-//   using OffloadPinnedAllocator = OMPallocator<T, PinnedAlignedAllocator<T>>;
-// #elif ENABLE_CUDA
-//   template<typename T>
-//   using OffloadPinnedAllocator = DualAllocator<T, CUDAAllocator<T>, PinnedAlignedAllocator<T>>;
-// #endif
+  // #ifdef ENABLE_OFFLOAD
+  //   template<typename T>
+  //   using OffloadPinnedAllocator = OMPallocator<T, PinnedAlignedAllocator<T>>;
+  // #elif ENABLE_CUDA
+  //   template<typename T>
+  //   using OffloadPinnedAllocator = DualAllocator<T, CUDAAllocator<T>, PinnedAlignedAllocator<T>>;
+  // #endif
 
   template<typename T>
   using OffloadPinnedMatrix = Matrix<T, OffloadPinnedAllocator<T>>;
@@ -95,11 +95,11 @@ class DiracMatrixComputeCUDA : public Resource
    */
   template<typename TMAT, typename TREAL>
   inline void mw_computeInvertAndLog(cublasHandle_t h_cublas,
-                                  RefVector<const OffloadPinnedMatrix<TMAT>>& a_mats,
-                                  RefVector<OffloadPinnedMatrix<TMAT>>& inv_a_mats,
-                                  const int n,
-                                  const int lda,
-                                  OffloadPinnedVector<std::complex<TREAL>>& log_values)
+                                     RefVector<const OffloadPinnedMatrix<TMAT>>& a_mats,
+                                     RefVector<OffloadPinnedMatrix<TMAT>>& inv_a_mats,
+                                     const int n,
+                                     const int lda,
+                                     OffloadPinnedVector<std::complex<TREAL>>& log_values)
   {
     // This is probably dodgy
     int nw = log_values.size();
@@ -128,7 +128,8 @@ class DiracMatrixComputeCUDA : public Resource
       // On the device Here we transpose to a_mat;
       cublasErrorCheck(cuBLAS::geam(h_cublas, CUBLAS_OP_T, CUBLAS_OP_N, n, n, dev_one.getDevicePtr(),
                                     inv_a_mats[iw].get().device_data(), lda, dev_zero.getDevicePtr(),
-                                    const_cast<TMAT*>(a_mats[iw].get().device_data()), lda, const_cast<TMAT*>(a_mats[iw].get().device_data()), lda),
+                                    const_cast<TMAT*>(a_mats[iw].get().device_data()), lda,
+                                    const_cast<TMAT*>(a_mats[iw].get().device_data()), lda),
                        "cuBLAS::geam failed.");
     }
     pivots_.resize(n * nw);
@@ -156,7 +157,7 @@ class DiracMatrixComputeCUDA : public Resource
                    "cudaMemcpyAsync log_values failed!");
     cudaErrorCheck(cudaStreamSynchronize(hstream), "cudaStreamSynchronize failed!");
     // restore the pointer mode for this cublas handle.
-    cublasErrorCheck(cublasSetPointerMode(h_cublas, previous_pointer_mode), "cublasSetPointerMode failed");    
+    cublasErrorCheck(cublasSetPointerMode(h_cublas, previous_pointer_mode), "cublasSetPointerMode failed");
   }
 
 
@@ -172,11 +173,11 @@ class DiracMatrixComputeCUDA : public Resource
    */
   template<typename TREAL>
   inline void mw_computeInvertAndLog(cublasHandle_t h_cublas,
-                                  OffloadPinnedVector<TREAL>& psi_Ms,
-                                  OffloadPinnedVector<TREAL>& inv_Ms,
-                                  const int n,
-                                  const int lda,
-                                  OffloadPinnedVector<std::complex<TREAL>>& log_values)
+                                     OffloadPinnedVector<TREAL>& psi_Ms,
+                                     OffloadPinnedVector<TREAL>& inv_Ms,
+                                     const int n,
+                                     const int lda,
+                                     OffloadPinnedVector<std::complex<TREAL>>& log_values)
   {
     // This is probably dodgy
     int nw = log_values.size();
@@ -228,13 +229,11 @@ class DiracMatrixComputeCUDA : public Resource
   }
 
 public:
-  DiracMatrixComputeCUDA(cudaStream_t hstream) : Resource("DiracMatrixComputeCUDA"), hstream_(hstream)
-  {
-  }
+  DiracMatrixComputeCUDA(cudaStream_t hstream) : Resource("DiracMatrixComputeCUDA"), hstream_(hstream) {}
 
-  DiracMatrixComputeCUDA(const DiracMatrixComputeCUDA& other, cudaStream_t hstream) : Resource(other.getName()), hstream_(hstream)
-  {
-  }
+  DiracMatrixComputeCUDA(const DiracMatrixComputeCUDA& other, cudaStream_t hstream)
+      : Resource(other.getName()), hstream_(hstream)
+  {}
 
   Resource* makeClone(cudaStream_t hstream) const { return new DiracMatrixComputeCUDA(*this, hstream); }
   Resource* makeClone() const override { return new DiracMatrixComputeCUDA(*this, this->hstream_); }
@@ -249,11 +248,12 @@ public:
    *  There is no optimization (yet) for TMAT same type as TREAL
    */
   template<typename TMAT, typename TREAL>
-  void invert_transpose(CUDALinearAlgebraHandles& cuda_handles,
+  void invert_transpose(Resource& resource,
                         OffloadPinnedMatrix<TMAT>& a_mat,
                         OffloadPinnedMatrix<TMAT>& inv_a_mat,
                         OffloadPinnedVector<std::complex<TREAL>>& log_values)
   {
+    auto& cuda_handles = dynamic_cast<CUDALinearAlgebraHandles&>(resource);
     const int n   = a_mat.rows();
     const int lda = a_mat.cols();
     psiM_fp_.resize(n * lda);
@@ -295,11 +295,11 @@ public:
     assert(log_values.size() == a_mats.size());
     auto& cuda_handles = dynamic_cast<CUDALinearAlgebraHandles&>(resource);
     assert(hstream_ == cuda_handles.hstream);
-    int nw             = a_mats.size();
-    const int n        = a_mats[0].get().rows();
-    const int lda      = a_mats[0].get().cols();
-    const int ldb      = inv_a_mats[0].get().cols();
-    size_t nsqr        = n * n;
+    int nw        = a_mats.size();
+    const int n   = a_mats[0].get().rows();
+    const int lda = a_mats[0].get().cols();
+    const int ldb = inv_a_mats[0].get().cols();
+    size_t nsqr   = n * n;
     psiM_fp_.resize(n * lda * nw);
     invM_fp_.resize(n * lda * nw);
     std::fill(log_values.begin(), log_values.end(), std::complex<TREAL>{0.0, 0.0});
@@ -326,6 +326,8 @@ public:
 
   /** Batched inversion and calculation of log determinants.
    *  When TMAT is full precision we can use the a_mat and inv_mat directly
+   *  Side effect of this is after this call a_mats contains the LU factorization
+   *  matrix.
    */
   template<typename TMAT, typename TREAL>
   inline std::enable_if_t<std::is_same<T_FP, TMAT>::value> mw_invertTranspose(
@@ -338,10 +340,10 @@ public:
     assert(log_values.size() == a_mats.size());
     auto& cuda_handles = dynamic_cast<CUDALinearAlgebraHandles&>(resource);
     assert(hstream_ == cuda_handles.hstream);
-    const int n        = a_mats[0].get().rows();
-    const int lda      = a_mats[0].get().cols();
-    const int ldb      = inv_a_mats[0].get().cols();
-    size_t nsqr        = n * n;
+    const int n   = a_mats[0].get().rows();
+    const int lda = a_mats[0].get().cols();
+    const int ldb = inv_a_mats[0].get().cols();
+    size_t nsqr   = n * n;
     mw_computeInvertAndLog(cuda_handles.h_cublas, a_mats, inv_a_mats, n, lda, log_values);
   }
 };

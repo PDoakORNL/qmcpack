@@ -21,7 +21,8 @@
 #include "QMCWaveFunctions/Fermion/DiracDeterminantBase.h"
 #if defined(ENABLE_CUDA)
 #include "QMCWaveFunctions/Fermion/MatrixDelayedUpdateCUDA.h"
-#elif defined(ENABLE_OFFLOAD)
+#endif
+#if defined(ENABLE_OFFLOAD)
 #include "QMCWaveFunctions/Fermion/MatrixUpdateOMPTarget.h"
 #endif
 #include "Platforms/PinnedAllocator.h"
@@ -112,6 +113,8 @@ public:
 
   ///reset the size: with the number of particles and number of orbtials
   void resize(int nel, int morb);
+
+  void mw_resize(const RefVectorWithLeader<WaveFunctionComponent>& wfc_list, int nel, int morb);
 
   void registerData(ParticleSet& P, WFBufferType& buf) override;
 
@@ -287,20 +290,6 @@ private:
 
   /// Resize all temporary arrays required for force computation.
   void resizeScratchObjectsForIonDerivs();
-
-  // make this class unit tests friendly without the need of setup resources.
-  void guardMultiWalkerRes()
-  {
-    if (!mw_res_)
-    {
-      std::cerr
-          << "WARNING DiracDeterminantBatched : This message should not be seen in production (performance bug) runs "
-             "but only unit tests (expected)."
-          << std::endl;
-      mw_res_ = std::make_unique<DiracDeterminantBatchedMultiWalkerResource<DET_ENGINE>>();
-      mw_res_->log_values.resize(1);
-    }
-  }
 
   //  friend class qmcplusplus::DiracDeterminantDetails;
   friend struct qmcplusplus::testing::SetupDiracDetResources;

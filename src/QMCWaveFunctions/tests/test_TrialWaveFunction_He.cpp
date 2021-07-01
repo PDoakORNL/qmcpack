@@ -22,6 +22,7 @@
 #include "QMCWaveFunctions/Fermion/SlaterDet.h"
 #include "QMCWaveFunctions/Jastrow/RadialJastrowBuilder.h"
 #include "QMCWaveFunctions/WaveFunctionFactory.h"
+#include "Utilities/ResourceCollection.h"
 
 namespace qmcplusplus
 {
@@ -239,6 +240,9 @@ TEST_CASE("TrialWaveFunction flex_evaluateDeltaLogSetup", "[wavefunction]")
   WaveFunctionComponent* orb2 = psi.getOrbitals()[1]->makeClone(elec2);
   psi2.addComponent(orb2);
 
+  ResourceCollection res_col("og collection");
+  psi.createResource(res_col);
+  psi.acquireResource(res_col);
 
   // Prepare to compare using list with one wavefunction and particleset
 
@@ -311,10 +315,20 @@ TEST_CASE("TrialWaveFunction flex_evaluateDeltaLogSetup", "[wavefunction]")
   std::vector<RealType> logpsi_fixed_list2(nentry);
   std::vector<RealType> logpsi_opt_list2(nentry);
 
+  res_col.rewind();
+  psi.releaseResource(res_col);
+  res_col.rewind();
+  psi2.acquireResource(res_col);
+  
   RealType logpsi_fixed_r1b;
   RealType logpsi_opt_r1b;
   psi2.evaluateDeltaLog(elec1, logpsi_fixed_r1b, logpsi_opt_r1b, fixedG1, fixedL1);
 
+  res_col.rewind();
+  psi2.releaseResource(res_col);
+  res_col.rewind();
+  psi.acquireResource(res_col);
+  
   CHECK(logpsi_fixed_r1 == Approx(logpsi_fixed_r1b));
   CHECK(logpsi_opt_r1 == Approx(logpsi_opt_r1b));
 
@@ -334,6 +348,11 @@ TEST_CASE("TrialWaveFunction flex_evaluateDeltaLogSetup", "[wavefunction]")
   ParticleSet::ParticleLaplacian_t fixedL2;
   fixedG2.resize(nelec);
   fixedL2.resize(nelec);
+
+  res_col.rewind();
+  psi.releaseResource(res_col);
+  res_col.rewind();
+  psi2.acquireResource(res_col);
 
   psi2.setLogPsi(0.0);
   psi2.evaluateDeltaLog(elec2, logpsi_fixed_r2, logpsi_opt_r2, fixedG2, fixedL2);
@@ -393,11 +412,22 @@ TEST_CASE("TrialWaveFunction flex_evaluateDeltaLogSetup", "[wavefunction]")
   RefVector<ParticleSet::ParticleGradient_t> dummyG_list;
   RefVector<ParticleSet::ParticleLaplacian_t> dummyL_list;
 
+  res_col.rewind();
+  psi2.releaseResource(res_col);
+  res_col.rewind();
+  psi.acquireResource(res_col);
+
+  
   std::vector<RealType> logpsi_variable_list(nentry);
   TrialWaveFunction::mw_evaluateDeltaLog(wf_list, p_list, logpsi_variable_list, dummyG_list, dummyL_list, false);
 
   RealType logpsi1 = psi.evaluateDeltaLog(p_list[0], false);
   CHECK(logpsi1 == Approx(logpsi_variable_list[0]));
+
+  res_col.rewind();
+  psi.releaseResource(res_col);
+  res_col.rewind();
+  psi2.acquireResource(res_col);
 
   RealType logpsi2 = psi2.evaluateDeltaLog(p_list[1], false);
   CHECK(logpsi2 == Approx(logpsi_variable_list[1]));
@@ -411,11 +441,21 @@ TEST_CASE("TrialWaveFunction flex_evaluateDeltaLogSetup", "[wavefunction]")
 
   std::vector<RealType> logpsi_variable_list2(nentry);
 
+  res_col.rewind();
+  psi2.releaseResource(res_col);
+  res_col.rewind();
+  psi.acquireResource(res_col);
+  
   TrialWaveFunction::mw_evaluateDeltaLog(wf_list, p_list, logpsi_variable_list2, dummyG_list2, dummyL_list2, true);
 
   RealType logpsi1b = psi.evaluateDeltaLog(p_list[0], true);
   CHECK(logpsi1b == Approx(logpsi_variable_list2[0]));
 
+  res_col.rewind();
+  psi.releaseResource(res_col);
+  res_col.rewind();
+  psi2.acquireResource(res_col);
+  
   RealType logpsi2b = psi2.evaluateDeltaLog(p_list[1], true);
   CHECK(logpsi2b == Approx(logpsi_variable_list2[1]));
 }

@@ -14,6 +14,7 @@
 #include "DiracDeterminantBatched.h"
 #include "Numerics/DeterminantOperators.h"
 #include "CPU/BLAS.hpp"
+#include "OhmmsPETE/OhmmsMatrix.h"
 #include "Numerics/MatrixOperators.h"
 #include "CPU/SIMD/simd.hpp"
 
@@ -101,10 +102,9 @@ void DiracDeterminantBatched<DET_ENGINE>::mw_invertPsiM(const RefVectorWithLeade
 }
 
 template<typename DET_ENGINE>
-void DiracDeterminantBatched<DET_ENGINE>::
-    mw_recompute(const RefVectorWithLeader<WaveFunctionComponent>& wfc_list,
-                         const RefVectorWithLeader<ParticleSet>& p_list,
-                         const std::vector<bool>& recompute_mask) const
+void DiracDeterminantBatched<DET_ENGINE>::mw_recompute(const RefVectorWithLeader<WaveFunctionComponent>& wfc_list,
+                                                       const RefVectorWithLeader<ParticleSet>& p_list,
+                                                       const std::vector<bool>& recompute_mask) const
 {
   auto& wfc_leader = wfc_list.getCastedLeader<DiracDeterminantBatched<DET_ENGINE>>();
   using DDBT       = std::decay_t<decltype(wfc_leader)>;
@@ -116,11 +116,11 @@ void DiracDeterminantBatched<DET_ENGINE>::
   RefVector<typename DDBT::GradMatrix_t> dpsiM_list;
   RefVector<typename DDBT::ValueMatrix_t> d2psiM_list;
 
-  // This seems wrong, why would you return if just one is not recomputed!
-  for( bool bit : recompute_mask)
-    if(!bit)
+  // This makes all the filtering such below redundant!
+  for (bool bit : recompute_mask)
+    if (!bit)
       return;
-  
+
   wfc_filtered_list.reserve(nw);
   p_filtered_list.reserve(nw);
   phi_list.reserve(nw);
@@ -129,7 +129,7 @@ void DiracDeterminantBatched<DET_ENGINE>::
   d2psiM_list.reserve(nw);
   std::vector<typename DDBT::ValueMatrix_t> psiM_temp_views;
   psiM_temp_views.reserve(nw);
-  
+
   for (int iw = 0; iw < nw; iw++)
     if (recompute_mask[iw])
     {
@@ -156,13 +156,15 @@ void DiracDeterminantBatched<DET_ENGINE>::
     // their association with particular walkers
     // is only clear if we do?
     RefVector<const OffloadPinnedValueMatrix_t> const_psiM_temp_list;
+    UPtrVector<OffloadPinnedValueMatrix_t> const_psiM_temp;
     for (int iw = 0; iw < wfc_filtered_list.size(); iw++)
     {
       auto& det          = wfc_filtered_list.getCastedElement<DiracDeterminantBatched<DET_ENGINE>>(iw);
       auto* psiM_vgl_ptr = det.psiM_vgl.data();
       size_t stride      = wfc_leader.psiM_vgl.capacity();
       PRAGMA_OFFLOAD("omp target update to(psiM_vgl_ptr[stride:stride*4]) nowait")
-      const_psiM_temp_list.push_back(det.psiM_temp);
+        const_psiM_temp.emplace_back(std::make_unique<OffloadPinnedValueMatrix_t>(psiM_vgl, psiM_vgl.getNonConstData(), det.psiM_temp.rows(), det.psiM_temp.cols()));
+      const_psiM_temp_list.push_back(*const_psiM_temp[iw]);
     }
     RefVector<const OffloadPinnedValueMatrix_t> psiM_temp_full_list;
     psiM_temp_full_list.reserve(nw);
@@ -187,6 +189,33 @@ void DiracDeterminantBatched<DET_ENGINE>::resize(int nel, int morb)
     norb = nel; // for morb == -1 (default)
   psiM_vgl.resize(nel * norb);
   // attach pointers VGL
+  psiM_temp.attachReference(psiM_vgl, psiM_vgl.data(0), nel, norb);
+  dpsiM.attachReference(reinterpret_cast<GradType*>(psiM_vgl.data(1)), nel, norb);
+  d2psiM.attachReference(psiM_vgl.data(4), nel, norb);
+
+  LastIndex   = FirstIndex + nel;
+  NumPtcls    = nel;
+  NumOrbitals = norb;
+
+  det_engine_.resize(norb, ndelay);
+
+  auto& engine_psiMinv = det_engine_.get_psiMinv();
+  psiV.resize(NumOrbitals);
+  psiV_host_view.attachReference(psiV.data(), NumOrbitals);
+  dpsiV.resize(NumOrbitals);
+  d2psiV.resize(NumOrbitals);
+}
+
+template<typename DET_ENGINE>
+void DiracDeterminantBatched<DET_ENGINE>::mw_resize(const RefVectorWithLeader<WaveFunctionComponent>& wfc_list,
+                                                    int nel,
+                                                    int morb)
+{
+  int norb = morb;
+  if (norb <= 0)
+    norb = nel; // for morb == -1 (default)
+  psiM_vgl.resize(nel * norb);
+  // attach pointers VGL
   psiM_temp.attachReference(psiM_vgl.data(0), nel, norb);
   dpsiM.attachReference(reinterpret_cast<GradType*>(psiM_vgl.data(1)), nel, norb);
   d2psiM.attachReference(psiM_vgl.data(4), nel, norb);
@@ -203,6 +232,7 @@ void DiracDeterminantBatched<DET_ENGINE>::resize(int nel, int morb)
   dpsiV.resize(NumOrbitals);
   d2psiV.resize(NumOrbitals);
 }
+
 
 template<typename DET_ENGINE>
 typename DiracDeterminantBatched<DET_ENGINE>::GradType DiracDeterminantBatched<DET_ENGINE>::evalGrad(ParticleSet& P,
@@ -643,7 +673,6 @@ void DiracDeterminantBatched<DET_ENGINE>::mw_calcRatio(const RefVectorWithLeader
                                                        int iat,
                                                        std::vector<PsiValueType>& ratios) const
 {
-  assert(this == &wfc_list.getLeader());
   auto& wfc_leader = wfc_list.getCastedLeader<DiracDeterminantBatched<DET_ENGINE>>();
   // wfc_leader.guardMultiWalkerRes();
   auto& mw_res         = *wfc_leader.mw_res_;
@@ -1024,7 +1053,8 @@ void DiracDeterminantBatched<DET_ENGINE>::releaseResource(ResourceCollection& co
 template struct DiracDeterminantBatchedMultiWalkerResource<
     MatrixDelayedUpdateCUDA<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>>;
 template class DiracDeterminantBatched<MatrixDelayedUpdateCUDA<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>>;
-#elif defined(ENABLE_OFFLOAD)
+#endif
+#if defined(ENABLE_OFFLOAD)
 template struct DiracDeterminantBatchedMultiWalkerResource<
     MatrixUpdateOMPTarget<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>>;
 template class DiracDeterminantBatched<MatrixUpdateOMPTarget<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>>;

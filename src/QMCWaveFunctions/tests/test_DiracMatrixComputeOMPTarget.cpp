@@ -48,7 +48,8 @@ TEST_CASE("DiracMatrixComputeOMPTarget_different_batch_sizes", "[wavefunction][f
   inv_mat_a.resize(4, 4);
   DiracMatrixComputeOMPTarget<double> dmc_omp;
 
-  dmc_omp.invert_transpose(mat_a, inv_mat_a, log_values[0]);
+  DummyResource dummy;
+  dmc_omp.invert_transpose(dummy, mat_a, inv_mat_a, log_values);
 
 
   OffloadPinnedMatrix<double> mat_b;

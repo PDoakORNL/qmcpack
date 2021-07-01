@@ -159,15 +159,16 @@ public:
    * @tparam TREAL real type
    */
   template<typename TMAT, typename TREAL>
-  inline std::enable_if_t<std::is_same<T_FP, TMAT>::value> invert_transpose(const OffloadPinnedMatrix<TMAT>& a_mat,
+  inline std::enable_if_t<std::is_same<T_FP, TMAT>::value> invert_transpose(Resource& resource,
+                                                                            const OffloadPinnedMatrix<TMAT>& a_mat,
                                                                             OffloadPinnedMatrix<TMAT>& inv_a_mat,
-                                                                            std::complex<TREAL>& log_value)
+                                                                            OffloadPinnedVector<std::complex<TREAL>>& log_values)
   {
     const int n   = a_mat.rows();
     const int lda = a_mat.cols();
     const int ldb = inv_a_mat.cols();
     simd::transpose(a_mat.data(), n, lda, inv_a_mat.data(), n, ldb);
-    computeInvertAndLog(inv_a_mat, n, ldb, log_value);
+    computeInvertAndLog(inv_a_mat, n, ldb, log_values[0]);
   }
 
   /** compute the inverse of the transpose of matrix A and its determinant value in log
@@ -176,17 +177,19 @@ public:
    * @tparam TREAL real type
    */
   template<typename TMAT, typename TREAL>
-  inline std::enable_if_t<!std::is_same<T_FP, TMAT>::value> invert_transpose(const OffloadPinnedMatrix<TMAT>& a_mat,
+  inline std::enable_if_t<!std::is_same<T_FP, TMAT>::value> invert_transpose(Resource& resource,
+                                                                             const OffloadPinnedMatrix<TMAT>& a_mat,
                                                                              OffloadPinnedMatrix<TMAT>& inv_a_mat,
-                                                                             std::complex<TREAL>& log_value)
+                                                                             OffloadPinnedVector<std::complex<TREAL>>& log_values)
   {
+    
     const int n   = a_mat.rows();
     const int lda = a_mat.cols();
     const int ldb = inv_a_mat.cols();
     
     psiM_fp_.resize(n * lda);
     simd::transpose(a_mat.data(), n, lda, psiM_fp_.data(), n, lda);
-    computeInvertAndLog(psiM_fp_, n, lda, log_value);
+    computeInvertAndLog(psiM_fp_, n, lda, log_values[0]);
 
     //Matrix<TMAT> data_ref_matrix;
     //maybe n, lda

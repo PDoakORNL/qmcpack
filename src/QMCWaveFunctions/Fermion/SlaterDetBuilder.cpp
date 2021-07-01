@@ -23,8 +23,6 @@
 
 #include "QMCWaveFunctions/Fermion/MultiSlaterDeterminant.h"
 #include "QMCWaveFunctions/Fermion/MultiSlaterDeterminantFast.h"
-#include "QMCWaveFunctions/Fermion/MatrixUpdateOMPTarget.h"
-
 #if defined(QMC_CUDA)
 #include "QMCWaveFunctions/Fermion/DiracDeterminantCUDA.h"
 #endif

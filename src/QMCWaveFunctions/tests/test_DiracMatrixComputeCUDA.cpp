@@ -108,6 +108,7 @@ TEST_CASE("DiracMatrixComputeCUDA_different_batch_sizes", "[wavefunction][fermio
   RefVector<OffloadPinnedMatrix<double>> inv_a_mats{inv_mat_a, inv_mat_a2};
 
   log_values.resize(2);
+  // mat_a comes back with the LU matrix
   dmcc.mw_invertTranspose(*cuda_handles, a_mats, inv_a_mats, log_values, {true, true});
 
   check_matrix_result = checkMatrix(inv_mat_a, mat_b);
@@ -129,6 +130,9 @@ TEST_CASE("DiracMatrixComputeCUDA_different_batch_sizes", "[wavefunction][fermio
   RefVector<const OffloadPinnedMatrix<double>> a_mats3{mat_a, mat_a2, mat_a3};
   RefVector<OffloadPinnedMatrix<double>> inv_a_mats3{inv_mat_a, inv_mat_a2, inv_mat_a3};
 
+  std::copy_n(A.data(), 16, mat_a.data());
+  std::copy_n(A.begin(), 16, mat_a2.data());
+  
   log_values.resize(3);
   dmcc.mw_invertTranspose(*cuda_handles, a_mats3, inv_a_mats3, log_values, {true, true});
 

@@ -161,8 +161,8 @@ public:
   inline void invert_transpose(OffloadPinnedValueMatrix_t& logdetT, OffloadPinnedLogValueVector_t& log_values)
   {
     auto& Ainv = psiMinv;
-    auto& log_value = log_values[0];
-    det_inverter_->invert_transpose(logdetT, Ainv, log_value);
+    DummyResource dummy_resource;
+    det_inverter_->invert_transpose(dummy_resource, logdetT, Ainv, log_values);
     T* Ainv_ptr = Ainv.data();
     PRAGMA_OFFLOAD("omp target update to(Ainv_ptr[:Ainv.size()])")
     // needed?

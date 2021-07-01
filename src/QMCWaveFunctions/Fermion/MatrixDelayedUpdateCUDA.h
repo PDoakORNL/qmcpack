@@ -63,7 +63,7 @@ struct MatrixDelayedUpdateCUDAMultiWalkerMem : public Resource
   OffloadValueVector_t mw_temp;
   // scratch space for keeping one row of Ainv
   OffloadValueVector_t mw_rcopy;
-  
+
   MatrixDelayedUpdateCUDAMultiWalkerMem() : Resource("MatrixDelayedUpdateCUDAMultiWalkerMem") {}
 
   MatrixDelayedUpdateCUDAMultiWalkerMem(const MatrixDelayedUpdateCUDAMultiWalkerMem&)
@@ -134,7 +134,7 @@ private:
   /// matrix inversion engine this a crowd scope resource and only the leader engine gets it
   UPtr<DiracMatrixCompute> det_inverter_;
   /**}@ */
-  
+
   std::unique_ptr<MatrixDelayedUpdateCUDAMultiWalkerMem<T>> mw_mem_;
 
   inline void waitStream()
@@ -325,8 +325,6 @@ private:
     }
   }
 
-  Handles& getHandles() { return *cuda_handles_; }
-
 public:
   /// default constructor
   MatrixDelayedUpdateCUDA() : invRow_id(-1), delay_count(0) {}
@@ -356,7 +354,7 @@ public:
     auto clah_ptr = std::make_unique<CUDALinearAlgebraHandles>();
     auto dmcc_ptr = std::make_unique<DiracMatrixComputeCUDA<T_FP>>(clah_ptr->hstream);
     collection.addResource(std::move(clah_ptr));
-    collection.addResource(std::move(dmcc_ptr));    
+    collection.addResource(std::move(dmcc_ptr));
     collection.addResource(std::make_unique<MatrixDelayedUpdateCUDAMultiWalkerMem<T>>());
   }
 
@@ -385,6 +383,8 @@ public:
     collection.takebackResource(std::move(mw_mem_));
   }
 
+  Handles& getHandles() { return *cuda_handles_; }
+
   /** Why do you need to modify another classes data member?
    */
   inline const OffloadPinnedValueMatrix_t& get_psiMinv() const { return psiMinv; }
@@ -398,19 +398,20 @@ public:
    */
   inline void checkResourcesForTest()
   {
-
     if (!cuda_handles_)
     {
-      throw std::logic_error("Null cuda_handles_, Even for testing proper resource creation and acquisition must be made.");
+      throw std::logic_error(
+          "Null cuda_handles_, Even for testing proper resource creation and acquisition must be made.");
     }
-    
+
     if (!det_inverter_)
     {
-      throw std::logic_error("Null det_inverter_, Even for testing proper resource creation and acquisition must be made.");
+      throw std::logic_error(
+          "Null det_inverter_, Even for testing proper resource creation and acquisition must be made.");
     }
   }
-    
-  
+
+
   /** compute the inverse of the transpose of matrix logdetT, result is in psiMinv
    *
    *  This does not get called constantly so get real benchmark data that redirection to mw
@@ -421,8 +422,7 @@ public:
 
   inline void invert_transpose(OffloadPinnedValueMatrix_t& log_det, OffloadPinnedLogValueVector_t& log_values)
   {
-    checkResourcesForTest();
-    guard_no_delay();
+    guard_no_delay(); 
     det_inverter_->invert_transpose(*cuda_handles_, log_det, psiMinv, log_values);
     // RefVectorWithLeader<MatrixDelayedUpdateCUDA<T, T_FP>> engines(*this);
     // RefVector<OffloadPinnedValueMatrix_t> log_dets;
@@ -448,9 +448,10 @@ public:
       T* a_inv_ptr = a_inv_refs.back().get().data();
       // This seems likely to be inefficient
       PRAGMA_OFFLOAD("omp target update to(a_inv_ptr[:a_inv_refs.back().get().size()])")
-        }
+    }
     PRAGMA_OFFLOAD("omp taskwait")
-      engine_leader.get_det_inverter().mw_invertTranspose(*(engine_leader.cuda_handles_), logdetT_list, a_inv_refs, log_values, compute_mask);
+    engine_leader.get_det_inverter().mw_invertTranspose(*(engine_leader.cuda_handles_), logdetT_list, a_inv_refs,
+                                                        log_values, compute_mask);
   }
 
   // prepare invRow and compute the old gradients.
