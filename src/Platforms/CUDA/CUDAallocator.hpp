@@ -244,25 +244,14 @@ struct CUDALockedPageAllocator : public ULPHA
   {
     static_assert(std::is_same<T, value_type>::value, "CUDALockedPageAllocator and ULPHA data types must agree!");
     value_type* pt = ULPHA::allocate(n);
-    if( std::is_same<T, char>::value)
-      std::cout << "registering memory size " << static_cast<std::size_t>(n) << " at " << std::hex << reinterpret_cast<void*>(pt) << std::endl;
-    else
-      std::cout << "registering memory size " << n << " at " << std::hex << pt << std::endl;
     cudaErrorCheck(cudaHostRegister(pt, n * sizeof(T), cudaHostRegisterDefault),
                    "cudaHostRegister failed in CUDALockedPageAllocator!");
-    cudaErrorCheck(cudaDeviceSynchronize(), "cudaDeviceSynchronize failed in CUDALockedpageallocator deallocate!");
-
     return pt;
   }
 
   void deallocate(value_type* pt, std::size_t n)
   {
     static_assert(std::is_same<T, value_type>::value, "CUDALockedPageAllocator and ULPHA data types must agree!");
-    if( std::is_same<T, char>::value)
-      std::cout << "Unregistering memory size " << static_cast<std::size_t>(n) << " at " << std::hex << reinterpret_cast<void*>(pt) << std::endl;
-    else
-      std::cout << "Unregistering memory size " << n << " at " << std::hex << pt << std::endl;
-    //    cudaErrorCheck(cudaDeviceSynchronize(), "cudaDeviceSynchronize failed in CUDALockedpageallocator deallocate!");
     cudaErrorCheck(cudaHostUnregister(pt), "cudaHostUnregister failed in CUDALockedPageAllocator!");
     ULPHA::deallocate(pt, n);
   }
