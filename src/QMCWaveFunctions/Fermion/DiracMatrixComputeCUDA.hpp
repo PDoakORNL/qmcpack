@@ -82,7 +82,6 @@ class DiracMatrixComputeCUDA : public Resource
    *  \param[in]      lda         leading dimension of each matrix					
    *  \param[out]     log_values  log determinant value for each matrix, batch_size = log_values.size()
    *
-   *  This is the prefered interface for calling computeInvertAndLog when the VALUE_FP and VALUE_FP are equal.
    *  On Volta so far little seems to be achieved by having the mats continuous.
    */
   inline void mw_computeInvertAndLog(CUDALinearAlgebraHandles& cuda_handles,
