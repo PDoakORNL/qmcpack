@@ -19,6 +19,7 @@ set(QMCEST_SRC
     EstimatorInput.cpp
     SpinDensityInput.cpp
     EstimatorManagerBase.cpp
+    EstimatorManagerInput.cpp
     EstimatorManagerNew.cpp
     EstimatorManagerCrowd.cpp
     CollectablesEstimator.cpp

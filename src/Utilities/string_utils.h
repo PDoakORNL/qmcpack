@@ -169,6 +169,6 @@ inline bool operator==(const astring& lhs, const astring& rhs)
 {
   return lhs.s == rhs.s;
 }
-} // namespace qmcplusplus
 
+} // namespace qmcplusplus
 #endif

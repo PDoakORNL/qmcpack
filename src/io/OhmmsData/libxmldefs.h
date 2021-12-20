@@ -24,22 +24,48 @@
 #include <vector>
 #include <algorithm>
 #include <typeinfo>
+#include "Utilities/ModernStringUtils.hpp"
 #include "XMLParsingString.h"
 
+/**\file
+ * A collection of put/get functions to read from or write to a xmlNode defined in libxml2.
+ *
+ * QMCPACK doesn't make anything of XML being basically a UTF-8 standard. 
+ * libxml2 uses unsigned char* and I think assumes UTF-8 but we make many _c_ casts to char*.
+ *
+ * \todo We seem to deal with this in an okay way, it's not unworkable to put UTF-8 code points
+ *       into std::string. But it is not unreasonable to expect that user supplied strings, i.e. names etc.
+ *       could be non ascii and we should both support that and not have any issues with it.
+ */
+
+/** unsafe xmlChar to char* cast
+ *  certainly not typesafe, a bit of a debate otherwise.
+ *  if we agree these are UTF-8 bytes its fine going into std::string.
+ *  however the use of tolower is a smell.
+ */
+inline char* unsafeXMLCharCast(xmlChar* c)
+{
+  return static_cast<char*>(static_cast<void *>(c));
+}
+
+/** unsafe xmlChar to const char* cast
+ */
+inline const char* unsafeXMLCharCast(const xmlChar * c)
+{
+  return static_cast<const char*>(static_cast<const void *>(c));
+}
+
+/** \todo why is this templated?
+ *  bothering with the _CharT and then C casting to const char* is a smell
+ */
 template<typename _CharT>
 inline void getNodeName(std::basic_string<_CharT>& cname, xmlNodePtr cur)
 {
-  cname = (const char*)cur->name;
-  for (int i = 0; i < cname.size(); i++)
-    cname[i] = tolower(cname[i]);
-  //std::transform(cname.begin(), cname.end(), cname.begin(), std::tolower);
+  cname = unsafeXMLCharCast(cur->name);
+  cname = qmcplusplus::strToLower(cname);
 }
 
-/**\file libxmldefs.h
- *\brief A collection of put/get functions to read from or write to a xmlNode defined in libxml2.
- *
- */
-/*!\brief assign a value from a node. Use specialization for classes.
+/** assign a value from a node. Use specialization for classes.
  *\param a reference to a value to be assigned
  *\param cur current node
  *\return true if successful

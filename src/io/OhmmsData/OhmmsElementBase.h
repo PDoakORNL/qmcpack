@@ -21,7 +21,7 @@
 #include "config.h"
 #endif
 
-#include "OhmmsData/libxmldefs.h"
+#include "io/OhmmsData/libxmldefs.h"
 
 /**\class OhmmsElementBase
  *\brief Abstract class to provide xml-compatible I/O interfaces for the derived classes.
