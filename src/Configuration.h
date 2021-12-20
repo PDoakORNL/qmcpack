@@ -20,8 +20,8 @@
 #include <vector>
 #include <map>
 #include "type_traits/QMCTypes.h"
-#include "OhmmsData/OhmmsElementBase.h"
-#include "OhmmsData/RecordProperty.h"
+#include "io/OhmmsData/OhmmsElementBase.h"
+#include "io/OhmmsData/RecordProperty.h"
 #include "Particle/Lattice/CrystalLattice.h"
 #include "Particle/ParticleBase/ParticleAttrib.h"
 #include "Platforms/Host/OutputManager.h"
