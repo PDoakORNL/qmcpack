@@ -48,7 +48,7 @@ EstimatorManagerNew::EstimatorManagerNew(Communicate* c)
 template<class T, class R>
 constexpr bool has(const R& this_one)
 {
-  return std::holds_alternative<std::reference_wrapper<T>>(this_one);
+  return std::holds_alternative<T>(this_one);
 }
 
 // template<class T, class R>
@@ -63,7 +63,7 @@ bool EstimatorManagerNew::tryConstructEstimator(EstimatorInput& input, F&& f, Ar
   using EstInputType = T;
   if (has<EstInputType>(input))
   {
-    operator_ests_.emplace_back(f(std::get<RefW<EstInputType>>(input).get(), std::forward<Args>(args)...));
+    operator_ests_.emplace_back(f(std::get<EstInputType>(input), std::forward<Args>(args)...));
     return true;
   }
   else

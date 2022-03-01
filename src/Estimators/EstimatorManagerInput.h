@@ -22,7 +22,6 @@
 #include <vector>
 #include <variant>
 #include <libxml/tree.h>
-#include "io/InputNode.hpp"
 
 namespace qmcplusplus
 {
@@ -31,7 +30,7 @@ class SpinDensityInput;
 class MomentumDistributionInput;
 class OneBodyDensityMatricesInput;
 
-using EstimatorInput = std::variant<RefW<SpinDensityInput>, RefW<MomentumDistributionInput>, RefW<OneBodyDensityMatricesInput>>;
+using EstimatorInput = std::variant<SpinDensityInput, MomentumDistributionInput, OneBodyDensityMatricesInput>;
 
 /** These are the estimator input types EstimatorManagerInput delegates to.
  *  We of course know all the estimator types at compile time and it is useful to have type safety for their usage.
@@ -56,22 +55,19 @@ public:
   EstimatorManagerInput() = default;
   EstimatorManagerInput(EstimatorManagerInput&& emi) = default;
   EstimatorManagerInput(xmlNodePtr cur);
-  EstimatorInputs& get_estimator_inputs() { return estimator_inputs; };
+  EstimatorInputs& get_estimator_inputs() { return estimator_inputs_; };
 private:
   /** read <Estimators> node
    */
   void readXML(xmlNodePtr cur);
 
   /// this is a vector of variants for typesafe access to the estimator inputs
-  EstimatorInputs estimator_inputs;
-  /// this is a type erased ownership vector for the estimator inputs
-  UPtrVector<InputNode> estimator_input_storage;
+  EstimatorInputs estimator_inputs_;
 
   template<typename T, typename... Args>
   void appendEstimatorInput(Args&&... args)
   {
-    estimator_input_storage.push_back(std::make_unique<T>(std::forward<Args>(args)...));
-    estimator_inputs.push_back(static_cast<T&>(*estimator_input_storage.back()));
+    estimator_inputs_.emplace_back(std::in_place_type<T>, std::forward<Args>(args)...);;
   }
 
   friend class testing::EstimatorManagerInputTests;

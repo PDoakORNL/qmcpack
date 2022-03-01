@@ -30,9 +30,6 @@ namespace qmcplusplus
  */
 
 template<typename T>
-using RefW = std::reference_wrapper<T>;
-
-template<typename T>
 using RefVector = std::vector<std::reference_wrapper<T>>;
 
 template<typename T>

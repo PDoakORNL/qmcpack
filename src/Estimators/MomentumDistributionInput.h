@@ -12,7 +12,6 @@
 #define QMCPLUSPLUS_MOMENTUMDISTRIBUTIONINPUT_H
 
 #include "InputSection.h"
-#include "io/InputNode.hpp"
 
 namespace qmcplusplus
 {
@@ -21,7 +20,7 @@ class MomentumDistribution;
 
 /** Native representation for Momentum Distribution Estimators inputs
  */
-class MomentumDistributionInput : public InputNode
+class MomentumDistributionInput
 {
 public:
   using Consumer = MomentumDistribution;

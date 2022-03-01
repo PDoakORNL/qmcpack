@@ -2,7 +2,7 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2021 QMCPACK developers.
+// Copyright (c) 2022 QMCPACK developers.
 //
 // File developed by: Peter Doak, doakpw@ornl.gov, Oak Ridge National Laboratory
 //
@@ -14,9 +14,6 @@
 
 #include "Configuration.h"
 #include "InputSection.h"
-
-// This should not imply linkage to io
-#include "io/InputNode.hpp"
 
 namespace qmcplusplus
 {
@@ -30,7 +27,7 @@ class OneBodyDensityMatrices;
   
 /** Native representation for DensityMatrices1B Estimator's inputs
  */
-class OneBodyDensityMatricesInput : public InputNode
+class OneBodyDensityMatricesInput
 {
 public:
   using Consumer = OneBodyDensityMatrices;
