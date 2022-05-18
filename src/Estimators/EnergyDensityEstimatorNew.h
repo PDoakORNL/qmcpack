@@ -2,10 +2,11 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2016 Jeongnim Kim and QMCPACK developers.
+// Copyright (c) 2022 QMCPACK developers.
 //
 // File developed by: Jaron T. Krogel, krogeljt@ornl.gov, Oak Ridge National Laboratory
 //                    Mark A. Berrill, berrillma@ornl.gov, Oak Ridge National Laboratory
+//                    Peter Doak, doakpw@ornl.gov, Oak Ridge National Laboratory
 //
 // File created by: Jaron T. Krogel, krogeljt@ornl.gov, Oak Ridge National Laboratory
 //////////////////////////////////////////////////////////////////////////////////////
@@ -13,8 +14,9 @@
 
 #ifndef QMCPLUSPLUS_ENERGY_DENSITY_ESTIMATOR_H
 #define QMCPLUSPLUS_ENERGY_DENSITY_ESTIMATOR_H
-#include "QMCHamiltonians/OperatorBase.h"
+#include "OperatorEstBase.h"
 #include "OhmmsPETE/OhmmsMatrix.h"
+#include "QMCWaveFunctions/WaveFunctionTypes.hpp"
 #include "QMCHamiltonians/ReferencePoints.h"
 #include "QMCHamiltonians/SpaceGrid.h"
 #include <map>
@@ -22,17 +24,24 @@
 
 namespace qmcplusplus
 {
-class EnergyDensityEstimator : public OperatorBase, public PtclOnLatticeTraits
+  
+class EnergyDensityEstimator : public OperatorEstBase, public PtclOnLatticeTraits
 {
 public:
+  using WFT = WaveFunctionTypes<QMCTraits::RealType, QMCTraits::FullPrecRealType>;
+  using Real = WFT::Real;
+  
   using Point  = ReferencePoints::Point;
   using PSPool = std::map<std::string, const std::unique_ptr<ParticleSet>>;
 
   EnergyDensityEstimator(const PSPool& PSP, const std::string& defaultKE);
   ~EnergyDensityEstimator() override;
 
-  void resetTargetParticleSet(ParticleSet& P) override;
-  Return_t evaluate(ParticleSet& P) override;
+  void accumulate(const RefVector<MCPWalker>& walkers,
+                  const RefVector<ParticleSet>& psets,
+                  const RefVector<TrialWaveFunction>& wfns,
+                  RandomGenerator& rng) override;
+  
   void addObservables(PropertySetType& plist) {}
   void addObservables(PropertySetType& plist, BufferType& olist) override;
   void registerCollectables(std::vector<ObservableHelper>& h5desc, hid_t gid) const override;
@@ -50,8 +59,6 @@ public:
   void write_Collectables(std::string& label, int& cnt, ParticleSet& P);
 
 private:
-  //original xml
-  xmlNodePtr input_xml;
   //system information
   std::string defKE;
   const PSPool& psetpool;
@@ -95,6 +102,9 @@ private:
   void set_ptcl(void);
   void unset_ptcl(void);
 
+  std::vector<Real> weight_samples_;
+  std::vector<Real> position_samples_;
+  std::vector<Real> 
   TraceSample<TraceReal>* w_trace;
   TraceSample<TraceReal>* Td_trace;
   CombinedTraceSample<TraceReal>* Vd_trace;
