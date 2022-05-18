@@ -26,7 +26,13 @@ conventions if you use clang-format.  The mechanics of clang-format setup and us
 https://github.com/QMCPACK/qmcpack/wiki/Source-formatting.
 
 The clang-format file found at ``qmcpack/src/.clang-format`` should be run over all code touched in a PR before a pull request is
-prepared. We also encourage developers to run clang-tidy with the ``qmcpack/src/.clang-tidy`` configuration over all new code.
+prepared. This is easily accomplished from the root of the repo while in your PR branch with the one line bash script
+
+::
+
+   git diff --name-only develop | grep -P '(cu|cpp|hpp|h)$' | xargs -n 1 clang-format -i
+
+We also encourage developers to run clang-tidy with the ``qmcpack/src/.clang-tidy`` configuration over all new code.
 
 As much as possible, try to break up refactoring, reformatting, feature, and bugs into separate, small PRs. Aim for something that
 would take a reviewer no more than an hour. In this way we can maintain a good collective development velocity.
