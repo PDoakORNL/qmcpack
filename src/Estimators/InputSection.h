@@ -60,6 +60,7 @@ protected:
   std::unordered_map<std::string, std::any> default_values; // default values for optional variables
   // NOLINTEND(readability-indentifier-naming)
 
+  std::vector<xmlNodePtr> delegate_nodes_;
 private:
   // Storage for variable values read from XML, etc.
   std::unordered_map<std::string, std::any> values_;
