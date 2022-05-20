@@ -8,12 +8,12 @@
 //                    Mark A. Berrill, berrillma@ornl.gov, Oak Ridge National Laboratory
 //                    Peter Doak, doakpw@ornl.gov, Oak Ridge National Laboratory
 //
-// File created by: Jaron T. Krogel, krogeljt@ornl.gov, Oak Ridge National Laboratory
+// File refactored from: EnergyDensityEstimator.h
 //////////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef QMCPLUSPLUS_ENERGY_DENSITY_ESTIMATOR_H
-#define QMCPLUSPLUS_ENERGY_DENSITY_ESTIMATOR_H
+#ifndef QMCPLUSPLUS_ENERGY_DENSITY_ESTIMATOR_NEW_H
+#define QMCPLUSPLUS_ENERGY_DENSITY_ESTIMATOR_NEW_H
 #include "OperatorEstBase.h"
 #include "OhmmsPETE/OhmmsMatrix.h"
 #include "QMCWaveFunctions/WaveFunctionTypes.hpp"
@@ -25,7 +25,7 @@
 namespace qmcplusplus
 {
   
-class EnergyDensityEstimator : public OperatorEstBase, public PtclOnLatticeTraits
+class EnergyDensityEstimatorNew : public OperatorEstBase, public PtclOnLatticeTraits
 {
 public:
   using WFT = WaveFunctionTypes<QMCTraits::RealType, QMCTraits::FullPrecRealType>;
@@ -34,6 +34,10 @@ public:
   using Point  = ReferencePoints::Point;
   using PSPool = std::map<std::string, const std::unique_ptr<ParticleSet>>;
 
+  EnergyDensityEstimator(EnergyDensityInput&& edi,
+			 const ParticleSet& pset_target,
+			 const QMCHamiltonian& ham);
+  
   EnergyDensityEstimator(const PSPool& PSP, const std::string& defaultKE);
   ~EnergyDensityEstimator() override;
 
@@ -57,7 +61,8 @@ public:
   void write_EDValues(void);
   void write_nonzero_domains(const ParticleSet& P);
   void write_Collectables(std::string& label, int& cnt, ParticleSet& P);
-
+  void registerListeners(QMCHamiltonian& hamiltonian);
+  
 private:
   //system information
   std::string defKE;
@@ -102,20 +107,17 @@ private:
   void set_ptcl(void);
   void unset_ptcl(void);
 
-  std::vector<Real> weight_samples_;
+  /// Should be a per walker quantity
+  std::vector<std::vector<Real>> weight_samples_;
+
+  /// per walker per particle kinetic energy
+  std::vector<std::vector<Real>> kinetic_samples_;
+
+  std::vector<Vector<Read>> local_potential_samples_;
+  
   std::vector<Real> position_samples_;
-  std::vector<Real> 
-  TraceSample<TraceReal>* w_trace;
-  TraceSample<TraceReal>* Td_trace;
-  CombinedTraceSample<TraceReal>* Vd_trace;
-  CombinedTraceSample<TraceReal>* Vs_trace;
-
-  void getRequiredTraces(TraceManager& tm) override;
-
-  void contributeScalarQuantities() override {}
-  void checkoutScalarQuantities(TraceManager& tm) override {}
-  void collectScalarQuantities() override {}
-  void deleteScalarQuantities() override {}
+  std::vector<Vector<Real>> vd_samples_;
+  std::vector<Vector<Real>> vs_samples_;  
 };
 
 

@@ -18,6 +18,7 @@
 
 
 #include "type_traits/template_types.hpp"
+#include "Message/UniformCommunicateError.h"
 #include <functional>
 #include <vector>
 #include <variant>

@@ -12,20 +12,28 @@
 
 #include "catch.hpp"
 
+#include "QMCHamiltonians/CoulombPBCAA.h"
+#include <algorithm>
+#include <numeric>
+#include <stdio.h>
+#include <string>
+
 #include "OhmmsData/Libxml2Doc.h"
 #include "OhmmsPETE/OhmmsMatrix.h"
 #include "Particle/ParticleSet.h"
-#include "QMCHamiltonians/CoulombPBCAA.h"
 #include <ResourceCollection.h>
 #include "QMCWaveFunctions/TrialWaveFunction.h"
-
-#include <stdio.h>
-#include <string>
+#include "Listener.hpp"
+#include "Configuration.h"
 
 using std::string;
 
 namespace qmcplusplus
 {
+
+using QMCT = QMCTraits;
+using Real = QMCT::RealType;
+
 TEST_CASE("Coulomb PBC A-A", "[hamiltonian]")
 {
   const double vmad_sc               = -1.4186487397403098;
@@ -266,4 +274,91 @@ TEST_CASE("Coulomb PBC A-A BCC 3 particles", "[hamiltonian]")
   test_CoulombPBCAA_3p(DynamicCoordinateKind::DC_POS);
   test_CoulombPBCAA_3p(DynamicCoordinateKind::DC_POS_OFFLOAD);
 }
+
+auto getParticularListener(Matrix<Real>& local_pots) {
+  return  [&local_pots](const int walker_index, const Vector<Real>& inputV) {
+    std::copy_n(inputV.begin(),  inputV.size(), local_pots[walker_index]);
+  };
+}
+
+TEST_CASE("CoulombAAListener", "[hamiltonian]")
+{
+  LRCoulombSingleton::CoulombHandler = 0;
+
+  CrystalLattice<OHMMS_PRECISION, OHMMS_DIM> lattice;
+  lattice.BoxBConds = true; // periodic
+  lattice.R.diagonal(1.0);
+  lattice.reset();
+
+  const SimulationCell simulation_cell(lattice);
+  ParticleSet elec(simulation_cell);
+
+  elec.setName("elec");
+  elec.create({2});
+  elec.R[0][0] = 0.0;
+  elec.R[0][1] = 0.5;
+  elec.R[0][2] = 0.0;
+  elec.R[1][0] = 0.0;
+  elec.R[1][1] = 0.0;
+  elec.R[1][2] = 0.0;
+
+  SpeciesSet& tspecies       = elec.getSpeciesSet();
+  int upIdx                  = tspecies.addSpecies("u");
+  int chargeIdx              = tspecies.addAttribute("charge");
+  int massIdx                = tspecies.addAttribute("mass");
+  tspecies(chargeIdx, upIdx) = -1;
+  tspecies(massIdx, upIdx)   = 1.0;
+
+  elec.createSK();
+  elec.update();
+  elec.turnOnPerParticleSK();
+
+  ParticleSet elec2(elec);
+
+  elec2.R[0][0] = 0.0;
+  elec2.R[0][1] = 0.5;
+  elec2.R[0][2] = 0.1;
+  elec2.R[1][0] = 0.6;
+  elec2.R[1][1] = 0.05;
+  elec2.R[1][2] = -0.1;
+  elec2.update();
+  
+  CoulombPBCAA caa(elec, true, false, false);
+  CoulombPBCAA caa2(elec2, true, false, false);
+  RefVector<OperatorBase> caas{caa, caa2};
+  RefVectorWithLeader<OperatorBase> o_list(caa, caas);
+  // Self-energy correction, no background charge for e-e interaction
+  double consts = caa.evalConsts();
+  CHECK(consts == Approx(-6.3314780332));
+  RefVector<ParticleSet> ptcls{elec, elec2};
+  RefVectorWithLeader<ParticleSet> p_list(elec, ptcls);
+
+  TrialWaveFunction psi, psi_clone;
+  RefVectorWithLeader<TrialWaveFunction> twf_list(psi, {psi, psi_clone});
+
+  Matrix<Real> local_pots(2);
+  Matrix<Real> local_pots2(2);
+
+  ResourceCollection caa_res("test_caa_res");
+  caa.createResource(caa_res);
+  ResourceCollectionTeamLock<OperatorBase> caa_lock(caa_res, o_list);
+
+  ResourceCollection pset_res("test_pset_res");
+  elec.createResource(pset_res);
+  ResourceCollectionTeamLock<ParticleSet> pset_lock(pset_res, p_list);
+  
+  std::vector<ListenerVector<Real>> listeners;
+  listeners.emplace_back("localpotential", getParticularListener(local_pots));
+  listeners.emplace_back("localpotential", getParticularListener(local_pots2));
+
+  ParticleSet::mw_update(p_list);
+  caa.mw_evaluate(o_list, twf_list, p_list, listeners);
+  CHECK( caa.getValue() == Approx(-2.9332312765));
+  CHECK( caa2.getValue() == Approx(-3.4537460926));
+  // Check that the sum of the particle energies == the total
+  CHECK( std::accumulate(local_pots.begin(), local_pots.begin() + local_pots.cols(), 0.0) == Approx(-2.9332312765));
+  CHECK( std::accumulate(local_pots[1], local_pots[1] + local_pots.cols(), 0.0) == Approx(-3.4537460926));
+  
+}
+
 } // namespace qmcplusplus

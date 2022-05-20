@@ -19,11 +19,14 @@
  */
 #ifndef QMCPLUSPLUS_HAMILTONIAN_H
 #define QMCPLUSPLUS_HAMILTONIAN_H
+
+#include <string_view>
 #include "QMCHamiltonians/NonLocalECPotential.h"
 #include "QMCHamiltonians/L2Potential.h"
 #include "Configuration.h"
 #include "QMCDrivers/WalkerProperties.h"
 #include "QMCHamiltonians/OperatorBase.h"
+#include "QMCHamiltonians/Listener.hpp"
 #if !defined(REMOVE_TRACEMANAGER)
 #include "Estimators/TraceManager.h"
 #endif
@@ -130,6 +133,16 @@ public:
    * Add observable_helper information for the data stored in ParticleSet::mcObservables.
    */
   void registerCollectables(std::vector<ObservableHelper>& h5desc, hid_t gid) const;
+
+  /** Listener Registration
+   */
+  void registerListener(Listener<RealType> listener);
+  void registerListener(ListenerVar<RealType> listener);
+  void registerListener(ListenerVector<RealType> listener);
+  void registerListener(ListenerCombined<RealType> listener);
+
+  void checkQuantityAvailable(std::string_view var_tag);
+  
   ///retrun the starting index
   inline int startIndex() const { return myIndex; }
   ///return the size of observables
@@ -425,14 +438,16 @@ public:
                 std::vector<RealType>& energyVector,
                 std::vector<std::vector<NonLocalData>>& Txy);
 
-private:
+private:  
   /////////////////////
   // Vectorized data //
   /////////////////////
   std::vector<QMCHamiltonian::FullPrecRealType> LocalEnergyVector, AuxEnergyVector;
 #endif
-
 private:
+  std::vector<ListenerVector<RealType>> listeners_;
+  static constexpr std::array<std::string_view, 8> available_quantities_{"weight", "LocalEnergy","LocalPotential","Vq","Vc","Vqq","Vqc","Vcc"};
+  
   ///starting index
   int myIndex;
   ///starting index
@@ -467,6 +482,7 @@ private:
    */
   void resetObservables(int start, int ncollects);
 
+  void reportToListeners();
   // helper function for extracting a list of Hamiltonian components from a list of QMCHamiltonian::H.
   static RefVectorWithLeader<OperatorBase> extract_HC_list(const RefVectorWithLeader<QMCHamiltonian>& ham_list, int id);
 

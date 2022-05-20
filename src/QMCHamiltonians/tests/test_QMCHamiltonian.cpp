@@ -24,6 +24,8 @@ TEST_CASE("QMCHamiltonian::flex_evaluate", "[hamiltonian]")
   Communicate* comm;
   comm = OHMMS::Controller;
 
+  outputManager.pause();
+
   auto particle_pool     = MinimalParticlePool::make_diamondC_1x1x1(comm);
   auto wavefunction_pool = MinimalWaveFunctionPool::make_diamondC_1x1x1(comm, particle_pool);
   auto hamiltonian_pool  = MinimalHamiltonianPool::make_hamWithEE(comm, particle_pool, wavefunction_pool);
@@ -42,6 +44,30 @@ TEST_CASE("QMCHamiltonian::flex_evaluate", "[hamiltonian]")
   //std::vector<QMCHamiltonian::RealType> local_energies(QMCHamiltonian::flex_evaluate(makeRefVector<QMCHamiltonian>(hamiltonians), makeRefVector<ParticleSet>(elecs)));
 
   //TODO: Would be nice to check some values but I think the system needs a little more setup
+  outputManager.resume();
+
+}
+
+TEST_CASE("QMCHamiltonian::checkQuantityAvailable", "[hamiltonian]")
+{
+  Communicate* comm;
+  comm = OHMMS::Controller;
+
+  outputManager.pause();
+
+  auto particle_pool     = MinimalParticlePool::make_diamondC_1x1x1(comm);
+  auto wavefunction_pool = MinimalWaveFunctionPool::make_diamondC_1x1x1(comm, particle_pool);
+  auto hamiltonian_pool  = MinimalHamiltonianPool::make_hamWithEE(comm, particle_pool, wavefunction_pool);
+
+  TrialWaveFunction twf;
+
+  auto& ham = *hamiltonian_pool.getPrimary();
+  CHECK_THROWS(ham.checkQuantityAvailable("test_not_there"));
+  ham.checkQuantityAvailable("weight");
+  ham.checkQuantityAvailable("localenergy");
+  
+  outputManager.resume();
+      
 }
 
 } // namespace qmcplusplus

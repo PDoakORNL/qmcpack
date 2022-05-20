@@ -38,7 +38,6 @@ void EstimatorManagerCrowd::accumulate(const RefVector<MCPWalker>& walkers,
     operator_ests_[i]->accumulate(walkers, psets, wfns, rng);
 }
 
-
 void EstimatorManagerCrowd::startBlock(int steps)
 {
   for (auto& uope : operator_ests_)
