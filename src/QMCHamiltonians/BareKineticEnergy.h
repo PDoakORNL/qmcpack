@@ -18,6 +18,8 @@
 #define QMCPLUSPLUS_BAREKINETICENERGY_H
 
 #include "QMCHamiltonians/OperatorBase.h"
+#include <ResourceCollection.h>
+#include <ResourceHandle.h>
 
 namespace qmcplusplus
 {
@@ -84,6 +86,18 @@ public:
 
   Return_t evaluate(ParticleSet& P) override;
 
+  /**
+   * @brief Evaluate the contribution of this component of multiple walkers reporting
+   * to registerd listeners from Estimators.
+   * Take o_list and p_list update evaluation result variables in o_list?
+   * really should reduce vector of local_energies. matching the ordering and size of o list
+   * the this can be call for 1 or more QMCHamiltonians
+   */
+  void mw_evaluate(const RefVectorWithLeader<OperatorBase>& o_list,
+                   const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+                   const RefVectorWithLeader<ParticleSet>& p_list,
+                   const std::vector<ListenerVector<RealType>>& listeners) const override;
+
   /**@brief Function to compute the value, direct ionic gradient terms, and pulay terms for the local kinetic energy.
  *  
  *  This general function represents the OperatorBase interface for computing.  For an operator \hat{O}, this
@@ -138,6 +152,29 @@ public:
   // Nothing is done on GPU here, just copy into vector
   void addEnergy(MCWalkerConfiguration& W, std::vector<RealType>& LocalEnergy) override;
 #endif
+  /** initialize a shared resource and hand it to a collection
+   */
+  void createResource(ResourceCollection& collection) const override;
+
+  /** acquire a shared resource from a collection
+   */
+  void acquireResource(ResourceCollection& collection, const RefVectorWithLeader<OperatorBase>& o_list) const override;
+
+  /** return a shared resource to a collection
+   */
+  void releaseResource(ResourceCollection& collection, const RefVectorWithLeader<OperatorBase>& o_list) const override;
+private:
+  struct MultiWalkerResource : public Resource
+  {
+    MultiWalkerResource() : Resource("BareKineticEnergy") {}
+
+    Resource* makeClone() const override { return new MultiWalkerResource(*this); }
+
+    Vector<RealType> t_samples;
+    Vector<std::complex<RealType>> tcmp_samples;
+  };
+
+  ResourceHandle<MultiWalkerResource> mw_res_;
 };
 
 } // namespace qmcplusplus
