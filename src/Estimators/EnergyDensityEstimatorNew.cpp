@@ -2,17 +2,18 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2016 Jeongnim Kim and QMCPACK developers.
+// Copyright (c) 2022d QMCPACK developers.
 //
 // File developed by: Ye Luo, yeluo@anl.gov, Argonne National Laboratory
 //                    Jaron T. Krogel, krogeljt@ornl.gov, Oak Ridge National Laboratory
 //                    Mark A. Berrill, berrillma@ornl.gov, Oak Ridge National Laboratory
+//                    Peter W. Doak, doakpw@ornl.gov, Oak Ridge National Laboratory
 //
-// File created by: Ye Luo, yeluo@anl.gov, Argonne National Laboratory
+// File refactored from: EnergyDensityEstimator.cpp
 //////////////////////////////////////////////////////////////////////////////////////
 
 
-#include "EnergyDensityEstimator.h"
+#include "EnergyDensityEstimatorNew.h"
 #include "OhmmsData/AttributeSet.h"
 #include "LongRange/LRCoulombSingleton.h"
 #include "Particle/DistanceTable.h"
@@ -23,24 +24,18 @@
 
 namespace qmcplusplus
 {
-EnergyDensityEstimator::EnergyDensityEstimator(const PSPool& PSP, const std::string& defaultKE)
+EnergyDensityEstimatorNew::EnergyDensityEstimatorNew(const PSPool& PSP, const std::string& defaultKE)
     : psetpool(PSP), Pdynamic(0), Pstatic(0), w_trace(0), Td_trace(0), Vd_trace(0), Vs_trace(0)
 {
-  update_mode_.set(COLLECTABLE, 1);
   defKE      = defaultKE;
   nsamples   = 0;
   ion_points = false;
   nions      = -1;
-  request_.request_scalar("weight");
-  request_.request_array("Kinetic");
-  request_.request_array("LocalPotential");
 }
 
+EnergyDensityEstimatorNew::~EnergyDensityEstimatorNew() { delete_iter(spacegrids.begin(), spacegrids.end()); }
 
-EnergyDensityEstimator::~EnergyDensityEstimator() { delete_iter(spacegrids.begin(), spacegrids.end()); }
-
-
-bool EnergyDensityEstimator::put(xmlNodePtr cur, ParticleSet& Pdyn)
+bool EnergyDensityEstimatorNew::put(xmlNodePtr cur, ParticleSet& Pdyn)
 {
   Pdynamic = &Pdyn;
   return put(cur);
@@ -49,7 +44,7 @@ bool EnergyDensityEstimator::put(xmlNodePtr cur, ParticleSet& Pdyn)
 
 /** check xml elements
  */
-bool EnergyDensityEstimator::put(xmlNodePtr cur)
+bool EnergyDensityEstimatorNew::put(xmlNodePtr cur)
 {
   input_xml = cur;
   //initialize simple xml attributes
@@ -114,7 +109,7 @@ bool EnergyDensityEstimator::put(xmlNodePtr cur)
     {
       if (has_ref)
       {
-        APP_ABORT("EnergyDensityEstimator::put: EDE can only have one instance of reference_points.");
+        APP_ABORT("EnergyDensityEstimatorNew::put: EDE can only have one instance of reference_points.");
       }
       else
       {
@@ -156,13 +151,13 @@ bool EnergyDensityEstimator::put(xmlNodePtr cur)
   }
   if (stop == true)
   {
-    APP_ABORT("EnergyDensityEstimator::put");
+    APP_ABORT("EnergyDensityEstimatorNew::put");
   }
   return true;
 }
 
 
-void EnergyDensityEstimator::set_ptcl()
+void EnergyDensityEstimatorNew::set_ptcl()
 {
   ParticleSet& P = *Pstatic;
   SpeciesSet& species(P.getSpeciesSet());
@@ -183,42 +178,65 @@ void EnergyDensityEstimator::set_ptcl()
     P.applyMinimumImage(Rptcl);
 }
 
-void EnergyDensityEstimator::unset_ptcl()
+void EnergyDensityEstimatorNew::unset_ptcl()
 {
   Zptcl.clear();
   Rptcl.clear();
 }
 
 
-ParticleSet* EnergyDensityEstimator::get_particleset(std::string& psname)
+ParticleSet* EnergyDensityEstimatorNew::get_particleset(std::string& psname)
 {
   auto pit(psetpool.find(psname));
   if (pit == psetpool.end())
   {
     app_log() << "  ParticleSet " << psname << " does not exist" << std::endl;
-    APP_ABORT("EnergyDensityEstimator::put");
+    APP_ABORT("EnergyDensityEstimatorNew::put");
   }
   return pit->second.get();
 }
 
-
-void EnergyDensityEstimator::getRequiredTraces(TraceManager& tm)
+void EnergyDensityEstimatorNew::registerListeners(QMCHamiltonian& hamiltonian)
 {
-  bool write = omp_get_thread_num() == 0;
-  w_trace    = tm.get_real_trace("weight");
-  Td_trace   = tm.get_real_trace(*Pdynamic, "Kinetic");
-  Vd_trace   = tm.get_real_combined_trace(*Pdynamic, "LocalPotential");
-  if (Pstatic)
-    Vs_trace = tm.get_real_combined_trace(*Pstatic, "LocalPotential");
-  have_required_traces_ = true;
+  auto reportWeight = [this](const int walker_index, const std::vector<REAL>& weights) {
+    std::copy(weights.begin(), weights.end(), std::back_inserter(weight_samples_));
+  };
+  ListenerVar listen_weight("weight", reportWeight);
+  hamiltonian.registerListener(listen_weight);
+
+  auto reportKinetic = [this](const int walker_index, const std::vector<REAL>& kinetics) {
+    std::copy(kinetics.begin(), kinetics.end(), std::back_inserter(kindetic_samples_));
+  };
+  ListenerVar listen_kinetic("kinetic", reportKinetic);
+  hamiltonian.registerListener(listen_kinetic);
+
+  // For each walker called once per component with a element per particle.
+  auto reportVd = [this](const int walker_index, const std::string& name, Vector<Real> vds) {
+    while (walker_index >= vd_samples_.size())
+      vd_samples_.emplace_back(Vector<Real>(vds.size()));
+    auto& walker_vd_samp = vd_samples_[walker_index];
+    std::copy(vds.begin(), vds.end(), std::back_inserter(walker_vd_samp));
+  };
+  ListenerCombined listen_dynamic_potential("LocalPotential", reportVd);
+  hamiltonian.registerListener(listen_dynamic_potential);
+
+  // For each walker called once per component with a element per particle.
+  auto reportVs = [this](const int walker_index, const std::string& name, Vector<Real> vss) {
+    while (walker_index >= vs_samples_.size())
+      vs_samples_.emplace_back(Vector<Real>(vss.size()));
+    auto& walker_vs_samp = vs_samples_[walker_index];
+    std::copy(vss.begin(), vss.end(), std::back_inserter(walker_vs_samp));
+  };
+  ListenerCombined listen_static_potential("LocalPotential", reportVs);
+  hamiltonian.registerListener(listen_static_potential);
 }
 
 
-void EnergyDensityEstimator::write_description(std::ostream& os)
+void EnergyDensityEstimatorNew::write_description(std::ostream& os)
 {
-  os << "EnergyDensityEstimator::write_description" << std::endl;
+  os << "EnergyDensityEstimatorNew::write_description" << std::endl;
   os << std::endl;
-  os << "  EnergyDensityEstimator details" << std::endl;
+  os << "  EnergyDensityEstimatorNew details" << std::endl;
   os << std::endl;
   std::string indent = "    ";
   os << indent + "nparticles  = " << nparticles << std::endl;
@@ -231,30 +249,33 @@ void EnergyDensityEstimator::write_description(std::ostream& os)
     spacegrids[i]->write_description(os, indent);
   }
   os << std::endl;
-  os << "  end EnergyDensityEstimator details" << std::endl;
+  os << "  end EnergyDensityEstimatorNew details" << std::endl;
   os << std::endl;
-  os << "end EnergyDensityEstimator::write_description" << std::endl;
+  os << "end EnergyDensityEstimatorNew::write_description" << std::endl;
   return;
 }
 
 
-bool EnergyDensityEstimator::get(std::ostream& os) const
+bool EnergyDensityEstimatorNew::get(std::ostream& os) const
 {
   os << "EDM replace this " << std::endl;
-  APP_ABORT("EnergyDensityEstimator::get");
+  APP_ABORT("EnergyDensityEstimatorNew::get");
   return true;
 }
 
 
-void EnergyDensityEstimator::resetTargetParticleSet(ParticleSet& P)
+void EnergyDensityEstimatorNew::resetTargetParticleSet(ParticleSet& P)
 {
   //remains empty
 }
 
 
-//#define ENERGYDENSITY_CHECK
+void EnergyDensityEstimatorNew::
 
-EnergyDensityEstimator::Return_t EnergyDensityEstimator::evaluate(ParticleSet& P)
+    //#define ENERGYDENSITY_CHECK
+
+    EnergyDensityEstimatorNew::Return_t
+    EnergyDensityEstimatorNew::evaluate(ParticleSet& P)
 {
   if (have_required_traces_)
   {
@@ -287,9 +308,9 @@ EnergyDensityEstimator::Return_t EnergyDensityEstimator::evaluate(ParticleSet& P
     {
       // Vd_trace = LocalPotential
       // Side effect is all the different component->sample
-      // do a weighted accumlation in the the set of Vd_trace->sample 
+      // do a weighted accumlation in the the set of Vd_trace->sample
       Vd_trace->combine();
-      const ParticleSet& Ps            = *Pdynamic;
+      const ParticleSet& Ps = *Pdynamic;
       // Td_trace = Kinetic for PDynamic
       // Vs is the static particle local potential.
       const std::vector<TraceReal>& Ts = Td_trace->sample;
@@ -411,14 +432,14 @@ EnergyDensityEstimator::Return_t EnergyDensityEstimator::evaluate(ParticleSet& P
       cnt++;
     }
 #endif
-    //APP_ABORT("EnergyDensityEstimator::evaluate");
+    //APP_ABORT("EnergyDensityEstimatorNew::evaluate");
   }
 
   return 0.0;
 }
 
 
-void EnergyDensityEstimator::write_Collectables(std::string& label, int& cnt, ParticleSet& P)
+void EnergyDensityEstimatorNew::write_Collectables(std::string& label, int& cnt, ParticleSet& P)
 {
   //for(int v=0;v<nEDValues;v++){
   int ii    = spacegrids[0]->buffer_offset;
@@ -430,14 +451,14 @@ void EnergyDensityEstimator::write_Collectables(std::string& label, int& cnt, Pa
 }
 
 
-void EnergyDensityEstimator::write_EDValues(void)
+void EnergyDensityEstimatorNew::write_EDValues(void)
 {
   app_log() << "EDValues" << std::endl;
   for (int p = 0; p < nparticles; p++)
     fprintf(stdout, "  %d %e %e %e\n", p, EDValues(p, 0), EDValues(p, 1), EDValues(p, 2));
 }
 
-void EnergyDensityEstimator::write_nonzero_domains(const ParticleSet& P)
+void EnergyDensityEstimatorNew::write_nonzero_domains(const ParticleSet& P)
 {
   app_log() << "Nonzero domains" << std::endl;
   int nd = 1;
@@ -460,7 +481,7 @@ void EnergyDensityEstimator::write_nonzero_domains(const ParticleSet& P)
 }
 
 
-void EnergyDensityEstimator::addObservables(PropertySetType& plist, BufferType& collectables)
+void EnergyDensityEstimatorNew::addObservables(PropertySetType& plist, BufferType& collectables)
 {
   my_index_ = collectables.size();
   //allocate space for energy density outside of any spacegrid
@@ -483,7 +504,7 @@ void EnergyDensityEstimator::addObservables(PropertySetType& plist, BufferType& 
 }
 
 
-void EnergyDensityEstimator::registerCollectables(std::vector<ObservableHelper>& h5desc, hid_t gid) const
+void EnergyDensityEstimatorNew::registerCollectables(std::vector<ObservableHelper>& h5desc, hid_t gid) const
 {
   hid_t g = H5Gcreate2(gid, name_.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   h5desc.emplace_back("variables");
@@ -526,24 +547,24 @@ void EnergyDensityEstimator::registerCollectables(std::vector<ObservableHelper>&
   }
 }
 
-void EnergyDensityEstimator::setObservables(PropertySetType& plist)
+void EnergyDensityEstimatorNew::setObservables(PropertySetType& plist)
 {
   //remains empty
 }
 
-void EnergyDensityEstimator::setParticlePropertyList(PropertySetType& plist, int offset)
+void EnergyDensityEstimatorNew::setParticlePropertyList(PropertySetType& plist, int offset)
 {
   //remains empty
 }
 
 
-std::unique_ptr<OperatorBase> EnergyDensityEstimator::makeClone(ParticleSet& qp, TrialWaveFunction& psi)
+std::unique_ptr<OperatorBase> EnergyDensityEstimatorNew::makeClone(ParticleSet& qp, TrialWaveFunction& psi)
 {
   bool write = omp_get_thread_num() == 0;
   if (write)
-    app_log() << "EnergyDensityEstimator::makeClone" << std::endl;
+    app_log() << "EnergyDensityEstimatorNew::makeClone" << std::endl;
 
-  std::unique_ptr<EnergyDensityEstimator> edclone = std::make_unique<EnergyDensityEstimator>(psetpool, defKE);
+  std::unique_ptr<EnergyDensityEstimatorNew> edclone = std::make_unique<EnergyDensityEstimatorNew>(psetpool, defKE);
   edclone->put(input_xml, qp);
   //int thread = omp_get_thread_num();
   //app_log()<<thread<<"make edclone"<< std::endl;

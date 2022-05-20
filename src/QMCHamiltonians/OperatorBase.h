@@ -31,6 +31,7 @@
 #if !defined(REMOVE_TRACEMANAGER)
 #include "Estimators/TraceManager.h"
 #endif
+#include "QMCHamiltonians/Listener.hpp"
 #include "QMCWaveFunctions/OrbitalSetTraits.h"
 #include <bitset>
 #include <memory> // std::unique_ptr
@@ -245,6 +246,18 @@ public:
   virtual void mw_evaluate(const RefVectorWithLeader<OperatorBase>& o_list,
                            const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                            const RefVectorWithLeader<ParticleSet>& p_list) const;
+
+  /**
+   * @brief Evaluate the contribution of this component of multiple walkers reporting
+   * to registerd listeners from Estimators.
+   * Take o_list and p_list update evaluation result variables in o_list?
+   * really should reduce vector of local_energies. matching the ordering and size of o list
+   * the this can be call for 1 or more QMCHamiltonians
+   */
+  virtual void mw_evaluate(const RefVectorWithLeader<OperatorBase>& o_list,
+                           const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+                           const RefVectorWithLeader<ParticleSet>& p_list,
+			   const std::vector<ListenerVector<RealType>>& listeners) const;
 
   /**
    * @brief TODO: add docs

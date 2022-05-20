@@ -83,8 +83,9 @@ struct CoulombPBCAA : public OperatorBase, public ForceBase
 #if !defined(REMOVE_TRACEMANAGER)
   //single particle trace sample
   Array<TraceReal, 1>* V_sample;
-  Array<TraceReal, 1> V_const;
 #endif
+  Array<RealType, 1> v_sample;
+  Array<RealType, 1> V_const;
   ParticleSet& Ps;
 
 
@@ -100,6 +101,19 @@ struct CoulombPBCAA : public OperatorBase, public ForceBase
   void mw_evaluate(const RefVectorWithLeader<OperatorBase>& o_list,
                    const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                    const RefVectorWithLeader<ParticleSet>& p_list) const override;
+
+  /**
+   * @brief Evaluate the contribution of this component of multiple walkers reporting
+   * to registerd listeners from Estimators.
+   * Take o_list and p_list update evaluation result variables in o_list?
+   * really should reduce vector of local_energies. matching the ordering and size of o list
+   * the this can be call for 1 or more QMCHamiltonians
+   */
+  void mw_evaluate(const RefVectorWithLeader<OperatorBase>& o_list,
+                   const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+                   const RefVectorWithLeader<ParticleSet>& p_list,
+                   const std::vector<ListenerVector<RealType>>& listeners) const override;
+
 
   Return_t evaluateWithIonDerivs(ParticleSet& P,
                                  ParticleSet& ions,
@@ -178,14 +192,15 @@ private:
   /// Timer for offload part
   NewTimer& offload_timer_;
 
-struct CoulombPBCAAMultiWalkerResource : public Resource
-{
-  CoulombPBCAAMultiWalkerResource() : Resource("CoulombPBCAA") {}
+  struct CoulombPBCAAMultiWalkerResource : public Resource
+  {
+    CoulombPBCAAMultiWalkerResource() : Resource("CoulombPBCAA") {}
 
-  Resource* makeClone() const override { return new CoulombPBCAAMultiWalkerResource(*this); }
+    Resource* makeClone() const override { return new CoulombPBCAAMultiWalkerResource(*this); }
 
-  Vector<CoulombPBCAA::Return_t, OffloadPinnedAllocator<CoulombPBCAA::Return_t>> values_offload;
-};
+    Vector<CoulombPBCAA::Return_t, OffloadPinnedAllocator<CoulombPBCAA::Return_t>> values_offload;
+    Vector<RealType> v_sample;
+  };
 
   /// multiwalker shared resource
   ResourceHandle<CoulombPBCAAMultiWalkerResource> mw_res_;

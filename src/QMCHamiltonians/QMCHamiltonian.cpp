@@ -257,9 +257,22 @@ void QMCHamiltonian::registerCollectables(std::vector<ObservableHelper>& h5desc,
     auxH[i]->registerCollectables(h5desc, gid);
 }
 
-void QMCHamiltonian::registerListener(const QMCHamiltonianListener& listener) {
+// void QMCHamiltonian::registerListener(const QMCHamiltonianListener& listener) {
+// }
+
+void QMCHamiltonian::registerListener(ListenerVector<RealType> listener)
+{
+  checkQuantityAvailable(listener.get_name());
+  listeners_.push_back(listener);
 }
-  
+
+
+void QMCHamiltonian::checkQuantityAvailable(std::string_view var_tag)
+{
+  if (std::none_of(available_quantities_.begin(), available_quantities_.end(),
+                   [var_tag](std::string_view avail) { return lowerCase(var_tag) == lowerCase(avail); }))
+    throw std::runtime_error("Listener requires value that isn't available from the QMCHamiltonian");
+}
 
 #if !defined(REMOVE_TRACEMANAGER)
 void QMCHamiltonian::initialize_traces(TraceManager& tm, ParticleSet& P)
@@ -488,6 +501,15 @@ void QMCHamiltonian::finalize_traces()
 }
 #endif
 
+void QMCHamiltonian::reportToListeners() {
+  /** seems likely this should never be called if listeners is empty
+   */
+  if(listeners_.empty())
+    return;
+  for(auto& listener : listeners_) {
+  }
+}
+
 /** Evaluate all the Hamiltonians for the N-particle  configuration
  *@param P input configuration containing N particles
  *@return the local energy
@@ -568,11 +590,13 @@ std::vector<QMCHamiltonian::FullPrecRealType> QMCHamiltonian::mw_evaluate(
     ham.LocalEnergy = 0.0;
 
   const int num_ham_operators = ham_leader.H.size();
+    
   for (int i_ham_op = 0; i_ham_op < num_ham_operators; ++i_ham_op)
   {
     ScopedTimer h_timer(ham_leader.my_timers_[i_ham_op]);
     const auto HC_list(extract_HC_list(ham_list, i_ham_op));
 
+    // This comment badly breaks the 1st rule of comments..
     // // This lambda accomplishes two things
     // // 1. It makes clear T& and not std::reference_wrapper<T> is desired removing need for gets.
     // // 2. [] captures nothing insuring that we know these updates only depend on the three object involved.
@@ -586,7 +610,11 @@ std::vector<QMCHamiltonian::FullPrecRealType> QMCHamiltonian::mw_evaluate(
     //   op.setObservables(ham.Observables);
     //   op.setParticlePropertyList(pset.PropertyList, ham.myIndex);
     // };
-    ham_leader.H[i_ham_op]->mw_evaluate(HC_list, wf_list, p_list);
+
+    if(ham_leader.listeners_.size() > 0)
+      ham_leader.H[i_ham_op]->mw_evaluate(HC_list, wf_list, p_list, ham_leader.listeners_);
+    else
+      ham_leader.H[i_ham_op]->mw_evaluate(HC_list, wf_list, p_list);
     for (int iw = 0; iw < ham_list.size(); iw++)
       updateNonKinetic(HC_list[iw], ham_list[iw], p_list[iw]);
   }

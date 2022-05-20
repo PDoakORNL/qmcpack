@@ -26,7 +26,8 @@ set(HAM_SRCS
     test_PairCorrEstimator.cpp
     test_SkAllEstimator.cpp
     test_QMCHamiltonian.cpp
-    test_ObservableHelper.cpp)
+    test_ObservableHelper.cpp
+    test_Listener.cpp)
     
 
 if(QMC_CUDA)
