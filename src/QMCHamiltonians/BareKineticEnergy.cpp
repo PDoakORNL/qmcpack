@@ -428,7 +428,8 @@ void BareKineticEnergy::releaseResource(ResourceCollection& collection,
 void BareKineticEnergy::mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase>& o_list,
                                                const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                                                const RefVectorWithLeader<ParticleSet>& p_list,
-                                               const std::vector<ListenerVector<RealType>>& listeners) const
+                                               const std::vector<ListenerVector<RealType>>& listeners,
+                                               const std::vector<ListenerVector<RealType>>& ion_listeners) const
 {
   auto& o_leader = o_list.getCastedLeader<BareKineticEnergy>();
   auto& p_leader = p_list.getLeader();
@@ -443,7 +444,7 @@ void BareKineticEnergy::mw_evaluatePerParticle(const RefVectorWithLeader<Operato
   t_samp.resize(num_particles);
   tcmp_samp.resize(num_particles);
   const RealType clambda(-OneOver2M);
-  auto evaluate_walker_per_particle = [num_species, num_particles, name, &t_samp, &tcmp_samp,
+  auto evaluate_walker_per_particle = [num_particles, name, &t_samp, &tcmp_samp,
                                        clambda](const int walker_index, const BareKineticEnergy& bke,
                                                 const ParticleSet& pset,
                                                 const std::vector<ListenerVector<RealType>>& listeners) {

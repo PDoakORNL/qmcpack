@@ -55,6 +55,7 @@ CoulombPBCAA::CoulombPBCAA(ParticleSet& ref, bool active, bool computeForces, bo
     updateSource(ref);
   }
 
+  // Does this actually mean this is for ions?
   if (!is_active)
   {
     ref.update();
@@ -224,7 +225,8 @@ void CoulombPBCAA::mw_evaluate(const RefVectorWithLeader<OperatorBase>& o_list,
 void CoulombPBCAA::mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase>& o_list,
                                           const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                                           const RefVectorWithLeader<ParticleSet>& p_list,
-                                          const std::vector<ListenerVector<RealType>>& listeners) const
+                                          const std::vector<ListenerVector<RealType>>& listeners,
+					  const std::vector<ListenerVector<RealType>>& listeners_ions) const
 {
   auto& o_leader = o_list.getCastedLeader<CoulombPBCAA>();
   auto& p_leader = p_list.getLeader();
@@ -294,9 +296,8 @@ void CoulombPBCAA::mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase
     for (int i = 0; i < v_sample.size(); ++i)
       v_sample[i] += pp_consts[i];
     RealType value = Vsr + Vlr + Vc;
-    for (auto& listener : listeners)
-      if (listener.get_name() == "localpotential")
-        listener.report(walker_index, v_sample);
+    for (const ListenerVector<RealType>& listener : listeners)
+      listener.report(walker_index, v_sample);
     return value;
   };
 

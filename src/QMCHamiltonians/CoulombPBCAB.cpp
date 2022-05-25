@@ -254,7 +254,8 @@ CoulombPBCAB::Return_t CoulombPBCAB::evaluate_sp(ParticleSet& P)
 void CoulombPBCAB::mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase>& o_list,
                                           const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                                           const RefVectorWithLeader<ParticleSet>& p_list,
-                                          const std::vector<ListenerVector<RealType>>& listeners) const
+                                          const std::vector<ListenerVector<RealType>>& listeners,
+					  const std::vector<ListenerVector<RealType>>& ion_listeners) const
 {
   auto& o_leader = o_list.getCastedLeader<CoulombPBCAB>();
   auto& p_leader = p_list.getLeader();
@@ -264,19 +265,19 @@ void CoulombPBCAB::mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase
   auto& name                  = o_leader.name_;
   Vector<RealType>& ve_sample = o_leader.mw_res_->pp_samples_trg;
   Vector<RealType>& vi_sample = o_leader.mw_res_->pp_samples_src;
-  const auto& ve_consts        = o_leader.mw_res_->pp_consts_trg;
-  const auto& vi_consts        = o_leader.mw_res_->pp_consts_src;
+  const auto& ve_consts       = o_leader.mw_res_->pp_consts_trg;
+  const auto& vi_consts       = o_leader.mw_res_->pp_consts_src;
   auto num_species            = p_leader.getSpeciesSet().getTotalNum();
   ve_sample.resize(NptclB);
   vi_sample.resize(NptclA);
 
   // This lambda is mostly about getting a handle on what is being touched by the per particle evaluation.
-  auto evaluate_walker = [name, &ve_sample, &vi_sample,
-                          &ve_consts, &vi_consts](const int walker_index, const CoulombPBCAB& cpbcab, const ParticleSet& pset,
-                                     const std::vector<ListenerVector<RealType>>& listeners) -> RealType {
-    RealType Vsr  = 0.0;
-    RealType Vlr  = 0.0;
-    RealType Vc = cpbcab.myConst;
+  auto evaluate_walker = [name, &ve_sample, &vi_sample, &ve_consts,
+                          &vi_consts](const int walker_index, const CoulombPBCAB& cpbcab, const ParticleSet& pset,
+                                      const std::vector<ListenerVector<RealType>>& listeners, const std::vector<ListenerVector<RealType>>& ion_listeners) -> RealType {
+    RealType Vsr = 0.0;
+    RealType Vlr = 0.0;
+    RealType Vc  = cpbcab.myConst;
     std::fill(ve_sample.begin(), ve_sample.end(), 0.0);
     std::fill(vi_sample.begin(), vi_sample.end(), 0.0);
     auto& pset_source = cpbcab.getSourcePSet();
@@ -322,8 +323,8 @@ void CoulombPBCAB::mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase
           v1 = 0.0;
           for (int s = 0; s < num_species_source; s++)
             v1 += cpbcab.Zspec[s] * q *
-                cpbcab.AB->evaluate(pset_source.getSimulationCell().getKLists().kshell, RhoKA.rhok_r[s], RhoKA.rhok_i[s],
-                             RhoKB.eikr_r[i], RhoKB.eikr_i[i]);
+                cpbcab.AB->evaluate(pset_source.getSimulationCell().getKLists().kshell, RhoKA.rhok_r[s],
+                                    RhoKA.rhok_i[s], RhoKB.eikr_r[i], RhoKB.eikr_i[i]);
           ve_sample[i] += v1;
           Vlr += v1;
         }
@@ -334,8 +335,8 @@ void CoulombPBCAB::mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase
           v1 = 0.0;
           for (int s = 0; s < num_species_target; s++)
             v1 += cpbcab.Qspec[s] * q *
-	      cpbcab.AB->evaluate(pset.getSimulationCell().getKLists().kshell, RhoKB.rhok_r[s], RhoKB.rhok_i[s],
-                             RhoKA.eikr_r[i], RhoKA.eikr_i[i]);
+                cpbcab.AB->evaluate(pset.getSimulationCell().getKLists().kshell, RhoKB.rhok_r[s], RhoKB.rhok_i[s],
+                                    RhoKA.eikr_r[i], RhoKA.eikr_i[i]);
           vi_sample[i] += v1;
           Vlr += v1;
         }
@@ -346,13 +347,17 @@ void CoulombPBCAB::mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase
     for (int i = 0; i < vi_sample.size(); ++i)
       vi_sample[i] += vi_consts[i];
     RealType value = Vsr + Vlr + Vc;
+    for (const ListenerVector<RealType>& listener : listeners)
+      listener.report(walker_index, ve_sample);
+    for (const ListenerVector<RealType>& ion_listener : ion_listeners)
+      ion_listener.report(walker_index, vi_sample);
     return value;
   };
 
   for (int iw = 0; iw < o_list.size(); iw++)
   {
     auto& coulomb_ab  = o_list.getCastedElement<CoulombPBCAB>(iw);
-    coulomb_ab.value_ = evaluate_walker(iw, coulomb_ab, p_list[iw], listeners);
+    coulomb_ab.value_ = evaluate_walker(iw, coulomb_ab, p_list[iw], listeners, ion_listeners);
   }
 }
 
@@ -485,8 +490,9 @@ void CoulombPBCAB::initBreakup(ParticleSet& P)
   //      OHMMS::Controller->abort();
   //    }
   ////Test if the box sizes are same (=> kcut same for fixed dimcut)
-  kcdifferent = (std::abs(pset_ions_.getLattice().LR_kc - P.getLattice().LR_kc) > std::numeric_limits<RealType>::epsilon());
-  minkc       = std::min(pset_ions_.getLattice().LR_kc, P.getLattice().LR_kc);
+  kcdifferent =
+      (std::abs(pset_ions_.getLattice().LR_kc - P.getLattice().LR_kc) > std::numeric_limits<RealType>::epsilon());
+  minkc = std::min(pset_ions_.getLattice().LR_kc, P.getLattice().LR_kc);
   //AB->initBreakup(*PtclB);
   //initBreakup is called only once
   //AB = LRCoulombSingleton::getHandler(*PtclB);
@@ -684,14 +690,15 @@ CoulombPBCAB::Return_t CoulombPBCAB::evalSRwithForces(ParticleSet& P)
   return res;
 }
 
-void CoulombPBCAB::evalPerParticleConsts(std::vector<RealType>& pp_consts_src, std::vector<RealType>& pp_consts_trg) const
+void CoulombPBCAB::evalPerParticleConsts(std::vector<RealType>& pp_consts_src,
+                                         std::vector<RealType>& pp_consts_trg) const
 {
   int nelns = Peln.getTotalNum();
   int nions = pset_ions_.getTotalNum();
   pp_consts_trg.resize(nelns, 0.0);
   pp_consts_src.resize(nions, 0.0);
 
-  RealType vs_k0  = AB->evaluateSR_k0();
+  RealType vs_k0 = AB->evaluateSR_k0();
   RealType v1; //single particle energy
   for (int i = 0; i < nelns; ++i)
   {

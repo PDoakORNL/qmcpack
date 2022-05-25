@@ -43,7 +43,7 @@ public:
   std::function<void(const int walker_index, const Vector<REAL>&)> report;
   const std::string& get_name() const { return name_; }
 private:
-  const std::string name_;  
+  const std::string name_;
 };
 
 

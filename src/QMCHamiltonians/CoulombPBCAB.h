@@ -150,7 +150,8 @@ public:
   void mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase>& o_list,
                               const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                               const RefVectorWithLeader<ParticleSet>& p_list,
-                              const std::vector<ListenerVector<RealType>>& listeners) const override;
+                              const std::vector<ListenerVector<RealType>>& listeners,
+                              const std::vector<ListenerVector<RealType>>& ion_listeners) const override;
 
 
   Return_t evaluateWithIonDerivs(ParticleSet& P,
@@ -214,6 +215,7 @@ public:
   void releaseResource(ResourceCollection& collection, const RefVectorWithLeader<OperatorBase>& o_list) const override;
 
   void informOfPerParticleListener() override;
+
 private:
   ///source particle set
   ParticleSet& pset_ions_;
@@ -223,9 +225,9 @@ private:
     CoulombPBCABMultiWalkerResource() : Resource("CoulombPBCAB") {}
     Resource* makeClone() const override { return new CoulombPBCABMultiWalkerResource(*this); }
 
-    /// a walkers worth of per ion AB potential values 
+    /// a walkers worth of per ion AB potential values
     Vector<RealType> pp_samples_src;
-    /// a walkers worth of per electron AB potential values 
+    /// a walkers worth of per electron AB potential values
     Vector<RealType> pp_samples_trg;
     /// constant values for the source particles aka ions aka A
     std::vector<RealType> pp_consts_src;

@@ -2,7 +2,7 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2016 Jeongnim Kim and QMCPACK developers.
+// Copyright (c) 2022 QMCPACK developers.
 //
 // File developed by: Mark Dewing, markdewing@gmail.com, University of Illinois at Urbana-Champaign
 //
@@ -17,6 +17,7 @@
 #include "Particle/ParticleSet.h"
 #include "QMCHamiltonians/CoulombPBCAA.h"
 #include "LongRange/EwaldHandler3D.h"
+#include "TestListenerFunction.h"
 
 #include <stdio.h>
 #include <string>

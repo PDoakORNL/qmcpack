@@ -136,11 +136,11 @@ public:
 
   /** Listener Registration
    */
-  void registerListener(Listener<RealType> listener);
-  void registerListener(ListenerVar<RealType> listener);
-  void registerListener(ListenerVector<RealType> listener);
-  void registerListener(ListenerCombined<RealType> listener);
-
+  void registerKineticListener(ListenerVector<RealType> listener);
+  void registerLocalEnergyListener(ListenerVector<RealType> listener);
+  void registerLocalPotentialListener(ListenerVector<RealType> listener);
+  void registerLocalIonPotentialListener(ListenerVector<RealType> listener);
+  
   void informOperatorsOfListener();
   
   void checkQuantityAvailable(std::string_view var_tag);
@@ -416,7 +416,6 @@ public:
   static void updateNonKinetic(OperatorBase& op, QMCHamiltonian& ham, ParticleSet& pset);
   static void updateKinetic(OperatorBase& op, QMCHamiltonian& ham, ParticleSet& pset);
 
-
   /// initialize a shared resource and hand it to a collection
   void createResource(ResourceCollection& collection) const;
   /** acquire external resource
@@ -447,7 +446,11 @@ private:
   std::vector<QMCHamiltonian::FullPrecRealType> LocalEnergyVector, AuxEnergyVector;
 #endif
 private:
-  std::vector<ListenerVector<RealType>> listeners_;
+  std::vector<ListenerVector<RealType>> kinetic_listeners_;
+  std::vector<ListenerVector<RealType>> potential_listeners_;
+  std::vector<ListenerVector<RealType>> ion_kinetic_listeners_;
+  std::vector<ListenerVector<RealType>> ion_potential_listeners_;
+
   static constexpr std::array<std::string_view, 8> available_quantities_{"weight", "LocalEnergy","LocalPotential","Vq","Vc","Vqq","Vqc","Vcc"};
   
   ///starting index
