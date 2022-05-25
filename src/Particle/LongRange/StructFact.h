@@ -53,6 +53,7 @@ public:
   StructFact(const ParticleLayout& lattice, const KContainer& k_lists);
   /// desructor
   ~StructFact();
+  StructFact(const StructFact& sf) = default;
 
   /**  Update Rhok if all particles moved
    */

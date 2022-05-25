@@ -13,6 +13,7 @@
 #ifndef QMCPLUSPLUS_REFVECTORWITHLEADER_H
 #define QMCPLUSPLUS_REFVECTORWITHLEADER_H
 
+#include <cassert>
 #include <vector>
 #include <memory>
 
@@ -29,7 +30,7 @@ public:
     for (T& element : vec)
       this->push_back(element);
   }
-
+  
   T& getLeader() const { return leader_; }
 
   T& operator[](size_t i) const { return std::vector<std::reference_wrapper<T>>::operator[](i).get(); }

@@ -2,25 +2,26 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2016 Jeongnim Kim and QMCPACK developers.
+// Copyright (c) 2022 QMCPACK developers.
 //
 // File developed by: Ken Esler, kpesler@gmail.com, University of Illinois at Urbana-Champaign
 //                    Jeremy McMinnis, jmcminis@gmail.com, University of Illinois at Urbana-Champaign
 //                    Jeongnim Kim, jeongnim.kim@gmail.com, University of Illinois at Urbana-Champaign
 //                    Jaron T. Krogel, krogeljt@ornl.gov, Oak Ridge National Laboratory
 //                    Mark A. Berrill, berrillma@ornl.gov, Oak Ridge National Laboratory
+//                    Peter W. Doak, doakpw@ornl.gov, Oak Ridge National Laboratory
 //
 // File created by: Jeongnim Kim, jeongnim.kim@gmail.com, University of Illinois at Urbana-Champaign
 //////////////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef QMCPLUSPLUS_COULOMBPBCAA_TEMP_H
-#define QMCPLUSPLUS_COULOMBPBCAA_TEMP_H
+#ifndef QMCPLUSPLUS_COULOMBPBCAA_H
+#define QMCPLUSPLUS_COULOMBPBCAA_H
+#include <ResourceHandle.h>
 #include "QMCHamiltonians/OperatorBase.h"
 #include "QMCHamiltonians/ForceBase.h"
 #include "LongRange/LRCoulombSingleton.h"
 #include "Particle/DistanceTable.h"
-#include <ResourceHandle.h>
 
 namespace qmcplusplus
 {
@@ -77,15 +78,12 @@ struct CoulombPBCAA : public OperatorBase, public ForceBase
   bool ComputeForces;
   /// Flag for whether to use quasi-2D Ewald
   const bool quasi2d;
-  //     madelung constant
-  RealType MC0;
 
 #if !defined(REMOVE_TRACEMANAGER)
   //single particle trace sample
   Array<TraceReal, 1>* V_sample;
+  Array<TraceReal, 1> V_const;
 #endif
-  Array<RealType, 1> v_sample;
-  Array<RealType, 1> V_const;
   ParticleSet& Ps;
 
 
@@ -103,13 +101,10 @@ struct CoulombPBCAA : public OperatorBase, public ForceBase
                    const RefVectorWithLeader<ParticleSet>& p_list) const override;
 
   /**
-   * @brief Evaluate the contribution of this component of multiple walkers reporting
-   * to registerd listeners from Estimators.
-   * Take o_list and p_list update evaluation result variables in o_list?
-   * really should reduce vector of local_energies. matching the ordering and size of o list
-   * the this can be call for 1 or more QMCHamiltonians
+   * Evaluate the contribution of this component of multiple walkers per particle reporting
+   * to registered listeners from Estimators.
    */
-  void mw_evaluate(const RefVectorWithLeader<OperatorBase>& o_list,
+  void mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase>& o_list,
                    const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                    const RefVectorWithLeader<ParticleSet>& p_list,
                    const std::vector<ListenerVector<RealType>>& listeners) const override;
@@ -133,8 +128,8 @@ struct CoulombPBCAA : public OperatorBase, public ForceBase
 
   std::unique_ptr<OperatorBase> makeClone(ParticleSet& qp, TrialWaveFunction& psi) override;
 
-  void initBreakup(ParticleSet& P);
-
+  void informOfPerParticleListener() override;
+  
 #if !defined(REMOVE_TRACEMANAGER)
   void contributeParticleQuantities() override;
   void checkoutParticleQuantities(TraceManager& tm) override;
@@ -180,7 +175,10 @@ struct CoulombPBCAA : public OperatorBase, public ForceBase
    */
   void releaseResource(ResourceCollection& collection, const RefVectorWithLeader<OperatorBase>& o_list) const override;
 
+  RealType get_madelung_constant() const { return madelung_constant_; } 
 private:
+  RealType madelung_constant_;
+
   /// if true use offload
   const bool use_offload_;
   /// AA table ID
@@ -199,11 +197,25 @@ private:
     Resource* makeClone() const override { return new CoulombPBCAAMultiWalkerResource(*this); }
 
     Vector<CoulombPBCAA::Return_t, OffloadPinnedAllocator<CoulombPBCAA::Return_t>> values_offload;
+
+    /// a walkers worth of per particle coulomb AA potential values 
     Vector<RealType> v_sample;
+
+    /// constant values per particle for coulomb AA potential
+    std::vector<RealType> pp_consts;
   };
 
   /// multiwalker shared resource
   ResourceHandle<CoulombPBCAAMultiWalkerResource> mw_res_;
+
+  /** constructor code factored out
+   */
+  void initBreakup(ParticleSet& P);
+
+  /** Compute the const part of the per particle coulomb self interaction potential.
+   *  \param[out]  pp_consts   constant values for the particles self interaction
+   */
+  void evalPerParticleConsts(std::vector<RealType>& pp_consts) const;
 };
 
 } // namespace qmcplusplus

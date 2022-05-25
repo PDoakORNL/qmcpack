@@ -71,7 +71,7 @@ TEST_CASE("Coulomb PBC A-A", "[hamiltonian]")
   CHECK(val == Approx(vmad_sc));
 
   // supercell Madelung energy
-  val = caa.MC0;
+  val = caa.get_madelung_constant();
   CHECK(val == Approx(vmad_sc));
 }
 
@@ -116,7 +116,7 @@ TEST_CASE("Coulomb PBC A-A BCC H", "[hamiltonian]")
   CHECK(val == Approx(-0.9628996199)); // not validated
 
   // supercell Madelung energy
-  val = caa.MC0;
+  val = caa.get_madelung_constant();
   CHECK(val == Approx(vmad_sc));
 }
 
@@ -196,7 +196,7 @@ TEST_CASE("Coulomb PBC A-A BCC", "[hamiltonian]")
   double val = caa.evaluate(elec);
   CHECK(val == Approx(vmad_bcc));
 
-  val = caa.MC0;
+  val = caa.get_madelung_constant();
   CHECK(val == Approx(vmad_bcc));
 }
 
@@ -265,8 +265,8 @@ void test_CoulombPBCAA_3p(DynamicCoordinateKind kind)
   CHECK(caa.getValue() == Approx(-5.4954533536));
   CHECK(caa_clone.getValue() == Approx(-6.329373489));
 
-  CHECK(caa.MC0 == Approx(vmad_bcc));
-  CHECK(caa_clone.MC0 == Approx(vmad_bcc));
+  CHECK(caa.get_madelung_constant() == Approx(vmad_bcc));
+  CHECK(caa_clone.get_madelung_constant() == Approx(vmad_bcc));
 }
 
 TEST_CASE("Coulomb PBC A-A BCC 3 particles", "[hamiltonian]")
@@ -352,7 +352,7 @@ TEST_CASE("CoulombAAListener", "[hamiltonian]")
   listeners.emplace_back("localpotential", getParticularListener(local_pots2));
 
   ParticleSet::mw_update(p_list);
-  caa.mw_evaluate(o_list, twf_list, p_list, listeners);
+  caa.mw_evaluatePerParticle(o_list, twf_list, p_list, listeners);
   CHECK( caa.getValue() == Approx(-2.9332312765));
   CHECK( caa2.getValue() == Approx(-3.4537460926));
   // Check that the sum of the particle energies == the total

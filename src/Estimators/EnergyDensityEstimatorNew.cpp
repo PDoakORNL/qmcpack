@@ -27,6 +27,7 @@ namespace qmcplusplus
 EnergyDensityEstimatorNew::EnergyDensityEstimatorNew(const PSPool& PSP, const std::string& defaultKE)
     : psetpool(PSP), Pdynamic(0), Pstatic(0), w_trace(0), Td_trace(0), Vd_trace(0), Vs_trace(0)
 {
+  requires_listener_ = true;
   defKE      = defaultKE;
   nsamples   = 0;
   ion_points = false;
