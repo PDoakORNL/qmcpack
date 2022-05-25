@@ -263,9 +263,15 @@ void QMCHamiltonian::registerCollectables(std::vector<ObservableHelper>& h5desc,
 void QMCHamiltonian::registerListener(ListenerVector<RealType> listener)
 {
   checkQuantityAvailable(listener.get_name());
+  // This creates a state replication burder of unknown scope when operators are cloned.
+  informOperatorsOfListener();
   listeners_.push_back(listener);
 }
 
+void QMCHamiltonian::informOperatorsOfListener() {
+  for (int i = 0; i < H.size(); ++i)
+    H[i]->informOfPerParticleListener();
+}
 
 void QMCHamiltonian::checkQuantityAvailable(std::string_view var_tag)
 {
@@ -612,7 +618,7 @@ std::vector<QMCHamiltonian::FullPrecRealType> QMCHamiltonian::mw_evaluate(
     // };
 
     if(ham_leader.listeners_.size() > 0)
-      ham_leader.H[i_ham_op]->mw_evaluate(HC_list, wf_list, p_list, ham_leader.listeners_);
+      ham_leader.H[i_ham_op]->mw_evaluatePerParticle(HC_list, wf_list, p_list, ham_leader.listeners_);
     else
       ham_leader.H[i_ham_op]->mw_evaluate(HC_list, wf_list, p_list);
     for (int iw = 0; iw < ham_list.size(); iw++)

@@ -248,16 +248,18 @@ public:
                            const RefVectorWithLeader<ParticleSet>& p_list) const;
 
   /**
-   * @brief Evaluate the contribution of this component of multiple walkers reporting
-   * to registerd listeners from Estimators.
-   * Take o_list and p_list update evaluation result variables in o_list?
-   * really should reduce vector of local_energies. matching the ordering and size of o list
-   * the this can be call for 1 or more QMCHamiltonians
+   * @brief Evaluate the contribution of this component of multiple walkers per particle and report
+   * to registerd listeners from objects in Estimators
+   *
+   * this should take advantage of multiwalker resources (i.e. crowd scope) to reduce cost of estimators.
+   *
+   * This can be call for 1 or more QMCHamiltonians
+   * 
    */
-  virtual void mw_evaluate(const RefVectorWithLeader<OperatorBase>& o_list,
-                           const RefVectorWithLeader<TrialWaveFunction>& wf_list,
-                           const RefVectorWithLeader<ParticleSet>& p_list,
-			   const std::vector<ListenerVector<RealType>>& listeners) const;
+  virtual void mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase>& o_list,
+                                      const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+                                      const RefVectorWithLeader<ParticleSet>& p_list,
+                                      const std::vector<ListenerVector<RealType>>& listeners) const;
 
   /**
    * @brief TODO: add docs
@@ -447,6 +449,8 @@ public:
                          std::vector<RealType>& LocalEnergy,
                          std::vector<std::vector<NonLocalData>>& Txy);
 
+  virtual void informOfPerParticleListener() { has_listener_ = true; }
+  
   bool isClassical() const noexcept;
   bool isQuantum() const noexcept;
   bool isClassicalClassical() const noexcept;
@@ -574,7 +578,7 @@ protected:
    * Previously addObservables but it is renamed and a non-virtial function.
    */
   void addValue(PropertySetType& plist);
-
+  
 private:
 #if !defined(REMOVE_TRACEMANAGER)
   bool streaming_scalars_;
@@ -583,6 +587,11 @@ private:
   Array<RealType, 1>* value_sample_;
 #endif
 
+  /** Is there a per particle listener
+   *  sadly this is necessary due to state machines
+   */
+  bool has_listener_ = false;
+  
   ///quantum_domain_ of the (particle) operator, default = no_quantum_domain
   QuantumDomains quantum_domain_;
   ///energy domain of the operator (kinetic/potential), default = no_energy_domain

@@ -425,39 +425,39 @@ void BareKineticEnergy::releaseResource(ResourceCollection& collection,
   collection.takebackResource(std::move(O_leader.mw_res_));
 }
 
-void BareKineticEnergy::mw_evaluate(const RefVectorWithLeader<OperatorBase>& o_list,
-                                    const RefVectorWithLeader<TrialWaveFunction>& wf_list,
-                                    const RefVectorWithLeader<ParticleSet>& p_list,
-                                    const std::vector<ListenerVector<RealType>>& listeners) const
+void BareKineticEnergy::mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase>& o_list,
+                                               const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+                                               const RefVectorWithLeader<ParticleSet>& p_list,
+                                               const std::vector<ListenerVector<RealType>>& listeners) const
 {
   auto& o_leader = o_list.getCastedLeader<BareKineticEnergy>();
   auto& p_leader = p_list.getLeader();
   assert(this == &o_list.getLeader());
 
-  auto num_particles           = p_leader.getTotalNum();
-  auto& name                 = o_leader.name_;
-  Vector<RealType>& t_samp = o_leader.mw_res_->t_samples;
+  auto num_particles                        = p_leader.getTotalNum();
+  auto& name                                = o_leader.name_;
+  Vector<RealType>& t_samp                  = o_leader.mw_res_->t_samples;
   Vector<std::complex<RealType>>& tcmp_samp = o_leader.mw_res_->tcmp_samples;
-  
-  auto num_species           = p_leader.getSpeciesSet().getTotalNum();
+
+  auto num_species = p_leader.getSpeciesSet().getTotalNum();
   t_samp.resize(num_particles);
   tcmp_samp.resize(num_particles);
   const RealType clambda(-OneOver2M);
-  auto evaluate_walker_per_particle = [num_species, num_particles, name, &t_samp, &tcmp_samp, clambda
-                                      ](const int walker_index, const BareKineticEnergy& bke,
-                                                 const ParticleSet& pset,
-                                                 const std::vector<ListenerVector<RealType>>& listeners) {
+  auto evaluate_walker_per_particle = [num_species, num_particles, name, &t_samp, &tcmp_samp,
+                                       clambda](const int walker_index, const BareKineticEnergy& bke,
+                                                const ParticleSet& pset,
+                                                const std::vector<ListenerVector<RealType>>& listeners) {
     RealType value = 0;
     std::fill(t_samp.begin(), t_samp.end(), 0.0);
     std::fill(tcmp_samp.begin(), tcmp_samp.end(), 0.0);
 
-    std::complex<RealType> t1                     = 0.0; 
+    std::complex<RealType> t1 = 0.0;
     if (bke.SameMass)
       for (int i = 0; i < num_particles; i++)
       {
-        t1             = pset.L[i] + dot(pset.G[i], pset.G[i]);
-        t1             = clambda * t1;
-        t_samp[i]      = real(t1);
+        t1           = pset.L[i] + dot(pset.G[i], pset.G[i]);
+        t1           = clambda * t1;
+        t_samp[i]    = real(t1);
         tcmp_samp[i] = t1;
         value += real(t1);
       }
@@ -471,44 +471,61 @@ void BareKineticEnergy::mw_evaluate(const RefVectorWithLeader<OperatorBase>& o_l
           //t1 = mlambda*( pset.L[i] + dot(pset.G[i],pset.G[i]) );
           t1 = pset.L[i] + dot(pset.G[i], pset.G[i]);
           t1 *= mlambda;
-          t_samp[i]      = real(t1);
+          t_samp[i]    = real(t1);
           tcmp_samp[i] = t1;
           value += real(t1);
         }
       }
     }
-    for(auto& listener: listeners) {
-      if(listener.get_name() == "kinetic")
-	listener.report(walker_index, t_samp);
+    for (auto& listener : listeners)
+    {
+      if (listener.get_name() == "kinetic")
+        listener.report(walker_index, t_samp);
       // if(listener.get_name() == "kinetic_complex")
       // 	listener.report(walker_index, tcmp_samp);
     }
     return value;
   };
 
-    for (int iw = 0; iw < o_list.size(); iw++)
+  for (int iw = 0; iw < o_list.size(); iw++)
   {
     auto& bare_kinetic_energy  = o_list.getCastedElement<BareKineticEnergy>(iw);
-    bare_kinetic_energy.value_ = evaluate_walker_per_particle(iw, bare_kinetic_energy,p_list[iw], listeners);
+    bare_kinetic_energy.value_ = evaluate_walker_per_particle(iw, bare_kinetic_energy, p_list[iw], listeners);
   }
-
 }
-  
+
 #if !defined(REMOVE_TRACEMANAGER)
-  Return_t BareKineticEnergy::evaluate_sp(ParticleSet & P)
+Return_t BareKineticEnergy::evaluate_sp(ParticleSet& P)
+{
+  Array<RealType, 1>& T_samp                    = *T_sample;
+  Array<std::complex<RealType>, 1>& T_samp_comp = *T_sample_comp;
+  Array<std::complex<RealType>, 2>& p_samp      = *p_sample;
+  std::complex<RealType> t1                     = 0.0;
+  const RealType clambda(-OneOver2M);
+  value_ = 0.0;
+  if (SameMass)
   {
-    Array<RealType, 1>& T_samp                    = *T_sample;
-    Array<std::complex<RealType>, 1>& T_samp_comp = *T_sample_comp;
-    Array<std::complex<RealType>, 2>& p_samp      = *p_sample;
-    std::complex<RealType> t1                     = 0.0;
-    const RealType clambda(-OneOver2M);
-    value_ = 0.0;
-    if (SameMass)
+    for (int i = 0; i < P.getTotalNum(); i++)
     {
-      for (int i = 0; i < P.getTotalNum(); i++)
+      t1             = P.L[i] + dot(P.G[i], P.G[i]);
+      t1             = clambda * t1;
+      T_samp(i)      = real(t1);
+      T_samp_comp(i) = t1;
+      for (int d = 0; d < DIM; ++d)
+        p_samp(i, d) = P.G[i][d];
+      value_ += real(t1);
+    }
+  }
+  else
+  {
+    for (int s = 0; s < MinusOver2M.size(); ++s)
+    {
+      FullPrecRealType mlambda = MinusOver2M[s];
+      for (int i = P.first(s); i < P.last(s); ++i)
       {
-        t1             = P.L[i] + dot(P.G[i], P.G[i]);
-        t1             = clambda * t1;
+        //t1 = mlambda*( P.L[i] + dot(P.G[i],P.G[i]) );
+        t1 = P.L[i] + dot(P.G[i], P.G[i]);
+        t1 *= mlambda;
         T_samp(i)      = real(t1);
         T_samp_comp(i) = t1;
         for (int d = 0; d < DIM; ++d)
@@ -516,101 +533,84 @@ void BareKineticEnergy::mw_evaluate(const RefVectorWithLeader<OperatorBase>& o_l
         value_ += real(t1);
       }
     }
-    else
-    {
-      for (int s = 0; s < MinusOver2M.size(); ++s)
-      {
-        FullPrecRealType mlambda = MinusOver2M[s];
-        for (int i = P.first(s); i < P.last(s); ++i)
-        {
-          //t1 = mlambda*( P.L[i] + dot(P.G[i],P.G[i]) );
-          t1 = P.L[i] + dot(P.G[i], P.G[i]);
-          t1 *= mlambda;
-          T_samp(i)      = real(t1);
-          T_samp_comp(i) = t1;
-          for (int d = 0; d < DIM; ++d)
-            p_samp(i, d) = P.G[i][d];
-          value_ += real(t1);
-        }
-      }
-    }
+  }
 #if defined(TRACE_CHECK)
-    RealType Vnow = value_;
-    RealType Vsum = T_samp.sum();
-    RealType Vold = evaluate_orig(P);
-    if (std::abs(Vsum - Vnow) > TraceManager::trace_tol)
-    {
-      app_log() << "accumtest: BareKineticEnergy::evaluate()" << std::endl;
-      app_log() << "accumtest:   tot:" << Vnow << std::endl;
-      app_log() << "accumtest:   sum:" << Vsum << std::endl;
-      APP_ABORT("Trace check failed");
-    }
-    if (std::abs(Vold - Vnow) > TraceManager::trace_tol)
-    {
-      app_log() << "versiontest: BareKineticEnergy::evaluate()" << std::endl;
-      app_log() << "versiontest:   orig:" << Vold << std::endl;
-      app_log() << "versiontest:    mod:" << Vnow << std::endl;
-      APP_ABORT("Trace check failed");
-    }
-#endif
-    return value_;
-  }
-
-#endif
-
-  Return_t BareKineticEnergy::evaluate_orig(ParticleSet & P)
+  RealType Vnow = value_;
+  RealType Vsum = T_samp.sum();
+  RealType Vold = evaluate_orig(P);
+  if (std::abs(Vsum - Vnow) > TraceManager::trace_tol)
   {
-    if (SameMass)
-    {
-      value_ = Dot(P.G, P.G) + Sum(P.L);
-      value_ *= -OneOver2M;
-    }
-    else
-    {
-      value_ = 0.0;
-      for (int i = 0; i < MinusOver2M.size(); ++i)
-      {
-        Return_t x = 0.0;
-        for (int j = P.first(i); j < P.last(i); ++j)
-          x += laplacian(P.G[j], P.L[j]);
-        value_ += x * MinusOver2M[i];
-      }
-    }
-    return value_;
+    app_log() << "accumtest: BareKineticEnergy::evaluate()" << std::endl;
+    app_log() << "accumtest:   tot:" << Vnow << std::endl;
+    app_log() << "accumtest:   sum:" << Vsum << std::endl;
+    APP_ABORT("Trace check failed");
   }
+  if (std::abs(Vold - Vnow) > TraceManager::trace_tol)
+  {
+    app_log() << "versiontest: BareKineticEnergy::evaluate()" << std::endl;
+    app_log() << "versiontest:   orig:" << Vold << std::endl;
+    app_log() << "versiontest:    mod:" << Vnow << std::endl;
+    APP_ABORT("Trace check failed");
+  }
+#endif
+  return value_;
+}
 
-  /** implements the virtual function.
+#endif
+
+Return_t BareKineticEnergy::evaluate_orig(ParticleSet& P)
+{
+  if (SameMass)
+  {
+    value_ = Dot(P.G, P.G) + Sum(P.L);
+    value_ *= -OneOver2M;
+  }
+  else
+  {
+    value_ = 0.0;
+    for (int i = 0; i < MinusOver2M.size(); ++i)
+    {
+      Return_t x = 0.0;
+      for (int j = P.first(i); j < P.last(i); ++j)
+        x += laplacian(P.G[j], P.L[j]);
+      value_ += x * MinusOver2M[i];
+    }
+  }
+  return value_;
+}
+
+/** implements the virtual function.
    *
    * Nothing is done but should check the mass
    */
-  bool BareKineticEnergy::put(xmlNodePtr) { return true; }
+bool BareKineticEnergy::put(xmlNodePtr) { return true; }
 
-  bool BareKineticEnergy::get(std::ostream & os) const
-  {
-    os << "Kinetic energy";
-    return true;
-  }
+bool BareKineticEnergy::get(std::ostream& os) const
+{
+  os << "Kinetic energy";
+  return true;
+}
 
-  std::unique_ptr<OperatorBase> BareKineticEnergy::makeClone(ParticleSet & qp, TrialWaveFunction & psi)
-  {
-    return std::make_unique<BareKineticEnergy>(*this);
-  }
+std::unique_ptr<OperatorBase> BareKineticEnergy::makeClone(ParticleSet& qp, TrialWaveFunction& psi)
+{
+  return std::make_unique<BareKineticEnergy>(*this);
+}
 
 #ifdef QMC_CUDA
-  ////////////////////////////////
-  // Vectorized version for GPU //
-  ////////////////////////////////
-  // Nothing is done on GPU here, just copy into vector
-  void BareKineticEnergy::addEnergy(MCWalkerConfiguration & W, std::vector<RealType> & LocalEnergy)
+////////////////////////////////
+// Vectorized version for GPU //
+////////////////////////////////
+// Nothing is done on GPU here, just copy into vector
+void BareKineticEnergy::addEnergy(MCWalkerConfiguration& W, std::vector<RealType>& LocalEnergy)
+{
+  auto& walkers = W.WalkerList;
+  for (int iw = 0; iw < walkers.size(); iw++)
   {
-    auto& walkers = W.WalkerList;
-    for (int iw = 0; iw < walkers.size(); iw++)
-    {
-      Walker_t& w                                        = *(walkers[iw]);
-      RealType KE                                        = -OneOver2M * (Dot(w.G, w.G) + Sum(w.L));
-      w.getPropertyBase()[WP::NUMPROPERTIES + my_index_] = KE;
-      LocalEnergy[iw] += KE;
-    }
+    Walker_t& w                                        = *(walkers[iw]);
+    RealType KE                                        = -OneOver2M * (Dot(w.G, w.G) + Sum(w.L));
+    w.getPropertyBase()[WP::NUMPROPERTIES + my_index_] = KE;
+    LocalEnergy[iw] += KE;
   }
+}
 #endif
 } // namespace qmcplusplus

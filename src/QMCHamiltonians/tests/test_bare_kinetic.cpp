@@ -309,7 +309,7 @@ TEST_CASE("BareKineticEnergyListener", "[hamiltonian]")
   std::vector<ListenerVector<Real>> listeners;
   listeners.emplace_back("kinetic", getParticularListener(kinetic_energies));
 
-  bare_ke.mw_evaluate(o_list, twf_list, p_list, listeners);
+  bare_ke.mw_evaluatePerParticle(o_list, twf_list, p_list, listeners);
   CHECK(bare_ke.getValue() == Approx(-0.5));
   CHECK(bare_ke2.getValue() == Approx(-0.5));
   // Check that the sum of the particle energies is consistent with the total.

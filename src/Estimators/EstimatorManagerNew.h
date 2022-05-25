@@ -146,6 +146,8 @@ public:
   std::size_t getNumEstimators() { return operator_ests_.size(); }
   std::size_t getNumScalarEstimators() { return scalar_ests_.size(); }
 
+  bool areThereListeners();
+
 private:
   struct ScalarInputVisitor
   {

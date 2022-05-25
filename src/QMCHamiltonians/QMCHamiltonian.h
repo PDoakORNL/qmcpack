@@ -141,6 +141,8 @@ public:
   void registerListener(ListenerVector<RealType> listener);
   void registerListener(ListenerCombined<RealType> listener);
 
+  void informOperatorsOfListener();
+  
   void checkQuantityAvailable(std::string_view var_tag);
   
   ///retrun the starting index
