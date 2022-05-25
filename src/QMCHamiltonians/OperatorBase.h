@@ -259,7 +259,8 @@ public:
   virtual void mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase>& o_list,
                                       const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                                       const RefVectorWithLeader<ParticleSet>& p_list,
-                                      const std::vector<ListenerVector<RealType>>& listeners) const;
+                                      const std::vector<ListenerVector<RealType>>& listeners,
+                                      const std::vector<ListenerVector<RealType>>& listeners_ions) const;
 
   /**
    * @brief TODO: add docs
@@ -450,7 +451,7 @@ public:
                          std::vector<std::vector<NonLocalData>>& Txy);
 
   virtual void informOfPerParticleListener() { has_listener_ = true; }
-  
+
   bool isClassical() const noexcept;
   bool isQuantum() const noexcept;
   bool isClassicalClassical() const noexcept;
@@ -578,7 +579,7 @@ protected:
    * Previously addObservables but it is renamed and a non-virtial function.
    */
   void addValue(PropertySetType& plist);
-  
+
 private:
 #if !defined(REMOVE_TRACEMANAGER)
   bool streaming_scalars_;
@@ -591,7 +592,7 @@ private:
    *  sadly this is necessary due to state machines
    */
   bool has_listener_ = false;
-  
+
   ///quantum_domain_ of the (particle) operator, default = no_quantum_domain
   QuantumDomains quantum_domain_;
   ///energy domain of the operator (kinetic/potential), default = no_energy_domain

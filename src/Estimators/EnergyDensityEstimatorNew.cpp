@@ -213,7 +213,7 @@ void EnergyDensityEstimatorNew::registerListeners(QMCHamiltonian& hamiltonian)
 
   // For each walker called once per component with a element per particle.
   auto reportVd = [this](const int walker_index, const std::string& name, Vector<Real> vds) {
-    while (walker_index >= vd_samples_.size())
+    while (walker_index >= vd_samples_.size())xo
       vd_samples_.emplace_back(Vector<Real>(vds.size()));
     auto& walker_vd_samp = vd_samples_[walker_index];
     std::copy(vds.begin(), vds.end(), std::back_inserter(walker_vd_samp));

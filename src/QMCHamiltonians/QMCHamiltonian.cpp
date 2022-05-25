@@ -257,15 +257,38 @@ void QMCHamiltonian::registerCollectables(std::vector<ObservableHelper>& h5desc,
     auxH[i]->registerCollectables(h5desc, gid);
 }
 
-// void QMCHamiltonian::registerListener(const QMCHamiltonianListener& listener) {
-// }
-
-void QMCHamiltonian::registerListener(ListenerVector<RealType> listener)
+void QMCHamiltonian::registerKineticListener(ListenerVector<RealType> listener)
 {
   checkQuantityAvailable(listener.get_name());
   // This creates a state replication burder of unknown scope when operators are cloned.
   informOperatorsOfListener();
-  listeners_.push_back(listener);
+  kinetic_listeners_.push_back(listener);
+}
+
+void QMCHamiltonian::registerLocalEnergyListener(ListenerVector<RealType> listener)
+{
+  checkQuantityAvailable(listener.get_name());
+  // This creates a state replication burder of unknown scope when operators are cloned.
+  informOperatorsOfListener();
+  // A local energy listener listens to both the kinetic operator and all involved in the potential.
+  kinetic_listeners_.push_back(listener);
+  potential_listeners_.push_back(listener);
+}
+
+void QMCHamiltonian::registerLocalPotentialListener(ListenerVector<RealType> listener)
+{
+  checkQuantityAvailable(listener.get_name());
+  // This creates a state replication burder of unknown scope when operators are cloned.
+  informOperatorsOfListener();
+  potential_listeners_.push_back(listener);
+}
+
+void QMCHamiltonian::registerLocalIonPotentialListener(ListenerVector<RealType> listener)
+{
+  checkQuantityAvailable(listener.get_name());
+  // This creates a state replication burder of unknown scope when operators are cloned.
+  informOperatorsOfListener();
+  ion_potential_listeners_.push_back(listener);
 }
 
 void QMCHamiltonian::informOperatorsOfListener() {
@@ -507,15 +530,6 @@ void QMCHamiltonian::finalize_traces()
 }
 #endif
 
-void QMCHamiltonian::reportToListeners() {
-  /** seems likely this should never be called if listeners is empty
-   */
-  if(listeners_.empty())
-    return;
-  for(auto& listener : listeners_) {
-  }
-}
-
 /** Evaluate all the Hamiltonians for the N-particle  configuration
  *@param P input configuration containing N particles
  *@return the local energy
@@ -596,8 +610,17 @@ std::vector<QMCHamiltonian::FullPrecRealType> QMCHamiltonian::mw_evaluate(
     ham.LocalEnergy = 0.0;
 
   const int num_ham_operators = ham_leader.H.size();
-    
-  for (int i_ham_op = 0; i_ham_op < num_ham_operators; ++i_ham_op)
+
+  // there is a covention that the first hamiltonian operator is kinetic energy.
+  int kinetic_index = 0;
+  {
+    ScopedTimer h_timer(ham_leader.my_timers_[kinetic_index]);
+    const auto HC_list(extract_HC_list(ham_list, kinetic_index));
+    if(ham_leader.kinetic_listeners_.size() > 0)
+      ham_leader.H[kinetic_index]->mw_evaluatePerParticle(HC_list, wf_list, p_list, ham_leader.kinetic_listeners_, ham_leader.ion_kinetic_listeners_);
+  }
+  
+  for (int i_ham_op = 1; i_ham_op < num_ham_operators; ++i_ham_op)
   {
     ScopedTimer h_timer(ham_leader.my_timers_[i_ham_op]);
     const auto HC_list(extract_HC_list(ham_list, i_ham_op));
@@ -617,8 +640,9 @@ std::vector<QMCHamiltonian::FullPrecRealType> QMCHamiltonian::mw_evaluate(
     //   op.setParticlePropertyList(pset.PropertyList, ham.myIndex);
     // };
 
-    if(ham_leader.listeners_.size() > 0)
-      ham_leader.H[i_ham_op]->mw_evaluatePerParticle(HC_list, wf_list, p_list, ham_leader.listeners_);
+    
+    if(ham_leader.potential_listeners_.size() > 0)
+      ham_leader.H[i_ham_op]->mw_evaluatePerParticle(HC_list, wf_list, p_list, ham_leader.potential_listeners_, ham_leader.ion_potential_listeners_);
     else
       ham_leader.H[i_ham_op]->mw_evaluate(HC_list, wf_list, p_list);
     for (int iw = 0; iw < ham_list.size(); iw++)

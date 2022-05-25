@@ -105,9 +105,10 @@ struct CoulombPBCAA : public OperatorBase, public ForceBase
    * to registered listeners from Estimators.
    */
   void mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase>& o_list,
-                   const RefVectorWithLeader<TrialWaveFunction>& wf_list,
-                   const RefVectorWithLeader<ParticleSet>& p_list,
-                   const std::vector<ListenerVector<RealType>>& listeners) const override;
+                              const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+                              const RefVectorWithLeader<ParticleSet>& p_list,
+                              const std::vector<ListenerVector<RealType>>& listeners,
+                              const std::vector<ListenerVector<RealType>>& ion_listeners) const override;
 
 
   Return_t evaluateWithIonDerivs(ParticleSet& P,
@@ -129,7 +130,7 @@ struct CoulombPBCAA : public OperatorBase, public ForceBase
   std::unique_ptr<OperatorBase> makeClone(ParticleSet& qp, TrialWaveFunction& psi) override;
 
   void informOfPerParticleListener() override;
-  
+
 #if !defined(REMOVE_TRACEMANAGER)
   void contributeParticleQuantities() override;
   void checkoutParticleQuantities(TraceManager& tm) override;
@@ -175,7 +176,8 @@ struct CoulombPBCAA : public OperatorBase, public ForceBase
    */
   void releaseResource(ResourceCollection& collection, const RefVectorWithLeader<OperatorBase>& o_list) const override;
 
-  RealType get_madelung_constant() const { return madelung_constant_; } 
+  RealType get_madelung_constant() const { return madelung_constant_; }
+
 private:
   RealType madelung_constant_;
 
@@ -198,7 +200,7 @@ private:
 
     Vector<CoulombPBCAA::Return_t, OffloadPinnedAllocator<CoulombPBCAA::Return_t>> values_offload;
 
-    /// a walkers worth of per particle coulomb AA potential values 
+    /// a walkers worth of per particle coulomb AA potential values
     Vector<RealType> v_sample;
 
     /// constant values per particle for coulomb AA potential

@@ -2,9 +2,10 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2016 Jeongnim Kim and QMCPACK developers.
+// Copyright (c) 2022 QMCPACK developers.
 //
 // File developed by: Mark Dewing, markdewing@gmail.com, University of Illinois at Urbana-Champaign
+//                    Peter W. Doak, doakpw@ornl.gov, Oak Ridge National Laboratory
 //
 // File created by: Mark Dewing, markdewing@gmail.com, University of Illinois at Urbana-Champaign
 //////////////////////////////////////////////////////////////////////////////////////
@@ -24,6 +25,7 @@
 #include <ResourceCollection.h>
 #include "QMCWaveFunctions/TrialWaveFunction.h"
 #include "Listener.hpp"
+#include "TestListenerFunction.h"
 #include "Configuration.h"
 
 using std::string;
@@ -275,14 +277,10 @@ TEST_CASE("Coulomb PBC A-A BCC 3 particles", "[hamiltonian]")
   test_CoulombPBCAA_3p(DynamicCoordinateKind::DC_POS_OFFLOAD);
 }
 
-auto getParticularListener(Matrix<Real>& local_pots) {
-  return  [&local_pots](const int walker_index, const Vector<Real>& inputV) {
-    std::copy_n(inputV.begin(),  inputV.size(), local_pots[walker_index]);
-  };
-}
 
 TEST_CASE("CoulombAAListener", "[hamiltonian]")
 {
+  using testing::getParticularListener;
   LRCoulombSingleton::CoulombHandler = 0;
 
   CrystalLattice<OHMMS_PRECISION, OHMMS_DIM> lattice;
@@ -348,11 +346,12 @@ TEST_CASE("CoulombAAListener", "[hamiltonian]")
   ResourceCollectionTeamLock<ParticleSet> pset_lock(pset_res, p_list);
   
   std::vector<ListenerVector<Real>> listeners;
-  listeners.emplace_back("localpotential", getParticularListener(local_pots));
-  listeners.emplace_back("localpotential", getParticularListener(local_pots2));
+  listeners.emplace_back("localenergy", getParticularListener(local_pots));
+  listeners.emplace_back("localenergy", getParticularListener(local_pots2));
+  std::vector<ListenerVector<Real>> ion_listeners;
 
   ParticleSet::mw_update(p_list);
-  caa.mw_evaluatePerParticle(o_list, twf_list, p_list, listeners);
+  caa.mw_evaluatePerParticle(o_list, twf_list, p_list, listeners, ion_listeners);
   CHECK( caa.getValue() == Approx(-2.9332312765));
   CHECK( caa2.getValue() == Approx(-3.4537460926));
   // Check that the sum of the particle energies == the total
