@@ -24,8 +24,8 @@
 
 namespace qmcplusplus
 {
-EnergyDensityEstimatorNew::EnergyDensityEstimatorNew(const PSPool& PSP, const std::string& defaultKE)
-    : psetpool(PSP), Pdynamic(0), Pstatic(0), w_trace(0), Td_trace(0), Vd_trace(0), Vs_trace(0)
+EnergyDensityEstimatorNew::EnergyDensityEstimatorNew(EnergyDensityInput&& input, const ParticleSet& ions, const ParticleSet& electrons, const std::string& defaultKE)
+  : input_(input), nions_(ions.getTotalNum()), nelecs_(electrons.getTotalNum())
 {
   requires_listener_ = true;
   defKE      = defaultKE;
@@ -197,23 +197,18 @@ ParticleSet* EnergyDensityEstimatorNew::get_particleset(std::string& psname)
   return pit->second.get();
 }
 
-void EnergyDensityEstimatorNew::registerListeners(QMCHamiltonian& hamiltonian)
+void EnergyDensityEstimatorNew::registerListeners(QMCHamiltonian& ham_leader)
 {
-  auto reportWeight = [this](const int walker_index, const std::vector<REAL>& weights) {
-    std::copy(weights.begin(), weights.end(), std::back_inserter(weight_samples_));
-  };
-  ListenerVar listen_weight("weight", reportWeight);
-  hamiltonian.registerListener(listen_weight);
-
+  //kinetic energy
   auto reportKinetic = [this](const int walker_index, const std::vector<REAL>& kinetics) {
     std::copy(kinetics.begin(), kinetics.end(), std::back_inserter(kindetic_samples_));
   };
-  ListenerVar listen_kinetic("kinetic", reportKinetic);
-  hamiltonian.registerListener(listen_kinetic);
+  ListenerVector listen_kinetic("kinetic", reportKinetic);
+  hamiltonian.mw_registerKineticListener(ham_leader, listen_kinetic);
 
-  // For each walker called once per component with a element per particle.
-  auto reportVd = [this](const int walker_index, const std::string& name, Vector<Real> vds) {
-    while (walker_index >= vd_samples_.size())xo
+  // For each walker called once per component with a element per electron
+  auto reportVd = [this](const int walker_index, std::vector<Real>& vds) {
+    while (walker_index >= vd_samples_.size())
       vd_samples_.emplace_back(Vector<Real>(vds.size()));
     auto& walker_vd_samp = vd_samples_[walker_index];
     std::copy(vds.begin(), vds.end(), std::back_inserter(walker_vd_samp));
@@ -221,7 +216,7 @@ void EnergyDensityEstimatorNew::registerListeners(QMCHamiltonian& hamiltonian)
   ListenerCombined listen_dynamic_potential("LocalPotential", reportVd);
   hamiltonian.registerListener(listen_dynamic_potential);
 
-  // For each walker called once per component with a element per particle.
+  // For each walker called once per component with a element per ion
   auto reportVs = [this](const int walker_index, const std::string& name, Vector<Real> vss) {
     while (walker_index >= vs_samples_.size())
       vs_samples_.emplace_back(Vector<Real>(vss.size()));

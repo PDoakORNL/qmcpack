@@ -19,6 +19,7 @@
 #include "OhmmsData/RecordProperty.h"
 #include "Utilities/RandomGenerator.h"
 #include "QMCHamiltonians/ObservableHelper.h"
+#include "QMCHamiltonians/QMCHamiltonian.h"
 #include "QMCWaveFunctions/OrbitalSetTraits.h"
 #include "type_traits/DataLocality.h"
 #include <bitset>
@@ -130,8 +131,9 @@ public:
 
   const std::string& get_my_name() const { return my_name_; }
 
+  virtual void registerListeners(QMCHamiltonian& ham_leader) {};
+  
   bool isListenerRequired() { return requires_listener_; }
-
 protected:
   ///name of this object -- only used for debugging and h5 output
   std::string my_name_;

@@ -18,6 +18,10 @@
  *  changes in QMCHamiltonian at this time.
  */
 
+#include <functional>
+
+#include "type_traits/template_types.hpp"
+
 #include "OhmmsPETE/OhmmsMatrix.h"
 #include "OhmmsPETE/OhmmsVector.h"
 
@@ -29,47 +33,51 @@ class ListenerVar
 {
 public:
   ListenerVar(const std::string& name);
-  std::function<void(const int walker_index, const std::vector<REAL>&)> report;
+  std::function<void(const int walker_index, const std::string& name, const std::vector<REAL>&)> report;
   const std::string& get_name() const { return name_; }
+
 private:
-  const std::string name_;  
+  const std::string name_;
 };
 
+
+/** This is the type registers a listener expecting a callback with a vector of values 1 per particle, called once per walker.
+ *  The name is primarily for debugging purposes, if have decided against have the QMCHamiltonian use it to estable routeing.
+ *  Instead the register functions are specfic for what the listener wants to listen to.
+ */
 template<typename REAL>
 class ListenerVector
 {
 public:
-  ListenerVector(const std::string& name, std::function<void(const int walker_index, const Vector<REAL>&)>report_func) : report(report_func), name_(name) {}
-  std::function<void(const int walker_index, const Vector<REAL>&)> report;
+  ListenerVector(const std::string& name,
+                 std::function<void(const int walker_index, const std::string& name, const Vector<REAL>&)> report_func)
+      : report(report_func), name_(name)
+  {}
+  /** Report vector for a Hamiltonian to make a per particle report to a listener
+   */
+  std::function<void(const int walker_index, const std::string& name, const Vector<REAL>&)> report;
   const std::string& get_name() const { return name_; }
+
 private:
   const std::string name_;
 };
 
-
+/** Its unclear there is any need for this.
+ */
 template<typename REAL>
 class ListenerCombined
 {
 public:
-  ListenerCombined(const std::string& name, std::function<void(const int walker_index, const Matrix<REAL>&)>report_func);
-  std::function<void(const int walker_index, const std::string& name, const Matrix<REAL>&)> report;
+  ListenerCombined(
+      const std::string& name,
+      std::function<void(const int walker_index, const RefVector<const std::string&> names, const Matrix<REAL>&)>
+          report_func);
+  std::function<void(const int walker_index, const RefVector<const std::string&> name, const Matrix<REAL>&)> report;
   const std::string& get_name() const { return name_; }
+
 private:
   const std::string name_;
 };
-
-
-template<typename REAL>
-class Listener
-{
-public:
-  std::vector<std::string> vars;
-  std::vector<std::string> multi_vars;
-  std::function<void(const std::vector<REAL>&)> report_vars;
-  std::function<void(const std::string& name, Vector<REAL>&)> report_component;
-  std::function<void(const Matrix<REAL>&)> report_multi_vars;
-};
-
 
 } // namespace qmcplusplus
 

@@ -16,7 +16,7 @@
 #include "OhmmsPETE/OhmmsMatrix.h"
 #include "Particle/ParticleSet.h"
 #include "QMCHamiltonians/BareKineticEnergy.h"
-
+#include "QMCHamiltonians/tests/TestListenerFunction.h"
 #include "QMCWaveFunctions/TrialWaveFunction.h"
 #include "QMCWaveFunctions/Jastrow/RadialJastrowBuilder.h"
 
@@ -241,15 +241,11 @@ TEST_CASE("Bare KE Pulay PBC", "[hamiltonian]")
   REQUIRE(PulayTerm[1][2] == Approx(0.0));
 }
 
-auto getParticularListener(Matrix<Real>& energies)
-{
-  return [&energies](const int walker_index, const Vector<Real>& inputV) {
-    std::copy_n(inputV.begin(), inputV.size(), energies[walker_index]);
-  };
-}
 
 TEST_CASE("BareKineticEnergyListener", "[hamiltonian]")
 {
+  using testing::getParticularListener;
+
   const SimulationCell simulation_cell;
   ParticleSet ions(simulation_cell);
   ParticleSet elec(simulation_cell);

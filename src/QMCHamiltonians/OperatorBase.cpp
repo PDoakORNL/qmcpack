@@ -2,18 +2,19 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2016 Jeongnim Kim and QMCPACK developers.
+// Copyright (c) 2022 QMCPACK developers.
 //
 // File developed by: Jeremy McMinnis, jmcminis@gmail.com, University of Illinois at Urbana-Champaign
 //                    Jeongnim Kim, jeongnim.kim@gmail.com, University of Illinois at Urbana-Champaign
 //                    Jaron T. Krogel, krogeljt@ornl.gov, Oak Ridge National Laboratory
 //                    Mark A. Berrill, berrillma@ornl.gov, Oak Ridge National Laboratory
+//                    Peter W. Doak, doakpw@ornl.gov, Oak Ridge National Laboratory
 //
 // File created by: Jeongnim Kim, jeongnim.kim@gmail.com, University of Illinois at Urbana-Champaign
 //////////////////////////////////////////////////////////////////////////////////////
 
 
-/**@file OperatorBase.cpp
+/**@file
  *@brief Definition of OperatorBase
  */
 #include "Message/Communicate.h"
@@ -116,9 +117,15 @@ void OperatorBase::mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase
                                           const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                                           const RefVectorWithLeader<ParticleSet>& p_list,
                                           const std::vector<ListenerVector<RealType>>& listeners,
-					  const std::vector<ListenerVector<RealType>>& listeners_ions) const
+                                          const std::vector<ListenerVector<RealType>>& listeners_ions) const
 {
-  throw std::runtime_error("This operator does not support estimator listerners.");
+  if (!warned_about_listener_)
+    app_warning() << "This hamiltonian operator " << name_ << " does not support estimator listerners./n"
+                  << "It's unlikely any per particle listener estimators will give the correct result.";
+
+  this->mw_evaluate(o_list,
+		    wf_list,
+		    p_list);
 }
 
 

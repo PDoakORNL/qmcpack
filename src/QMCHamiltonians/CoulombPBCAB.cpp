@@ -348,9 +348,9 @@ void CoulombPBCAB::mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase
       vi_sample[i] += vi_consts[i];
     RealType value = Vsr + Vlr + Vc;
     for (const ListenerVector<RealType>& listener : listeners)
-      listener.report(walker_index, ve_sample);
+      listener.report(walker_index, name, ve_sample);
     for (const ListenerVector<RealType>& ion_listener : ion_listeners)
-      ion_listener.report(walker_index, vi_sample);
+      ion_listener.report(walker_index, name, vi_sample);
     return value;
   };
 

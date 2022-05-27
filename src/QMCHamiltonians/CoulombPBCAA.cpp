@@ -297,7 +297,7 @@ void CoulombPBCAA::mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase
       v_sample[i] += pp_consts[i];
     RealType value = Vsr + Vlr + Vc;
     for (const ListenerVector<RealType>& listener : listeners)
-      listener.report(walker_index, v_sample);
+      listener.report(walker_index, name, v_sample);
     return value;
   };
 

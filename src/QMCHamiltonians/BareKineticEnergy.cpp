@@ -480,10 +480,7 @@ void BareKineticEnergy::mw_evaluatePerParticle(const RefVectorWithLeader<Operato
     }
     for (auto& listener : listeners)
     {
-      if (listener.get_name() == "kinetic")
-        listener.report(walker_index, t_samp);
-      // if(listener.get_name() == "kinetic_complex")
-      // 	listener.report(walker_index, tcmp_samp);
+      listener.report(walker_index, name, t_samp);
     }
     return value;
   };

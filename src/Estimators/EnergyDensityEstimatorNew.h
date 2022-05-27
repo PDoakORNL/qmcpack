@@ -35,7 +35,8 @@ public:
   using PSPool = std::map<std::string, const std::unique_ptr<ParticleSet>>;
 
   EnergyDensityEstimator(EnergyDensityInput&& edi,
-			 const ParticleSet& pset_target,
+			 const PatricleSet& pset_ions,
+			 const ParticleSet& pset_electrons,
 			 const QMCHamiltonian& ham);
   
   EnergyDensityEstimator(const PSPool& PSP, const std::string& defaultKE);
@@ -58,6 +59,8 @@ public:
 
   void write_description(std::ostream& os);
 
+  void registerListeners(QMCHamiltonian& hamn_leader) override;
+  
   void write_EDValues(void);
   void write_nonzero_domains(const ParticleSet& P);
   void write_Collectables(std::string& label, int& cnt, ParticleSet& P);
@@ -65,15 +68,11 @@ public:
   
 private:
   //system information
+  int nions_ = 0;
+  int nelecs_ = 0;
   std::string defKE;
-  const PSPool& psetpool;
-  ParticleSet* Pdynamic;
-  ParticleSet* Pstatic;
-  ParticleSet* get_particleset(std::string& psname);
   int dtable_index;
-  int nparticles;
   bool ion_points;
-  int nions;
   int ion_buffer_offset;
   Matrix<RealType> Rion;
   //collection of points from which to build spacegrid origin and axes
