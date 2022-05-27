@@ -170,6 +170,11 @@ void QMCDriverNew::startup(xmlNodePtr cur, const QMCDriverNew::AdjustedWalkerCou
     population_.get_golden_twf().createResource(golden_resource_.twf_res);
     population_.get_golden_hamiltonian().createResource(golden_resource_.ham_res);
     app_debug() << "Multi walker shared resources creation completed" << std::endl;
+
+    // Things like turnOnPerParticleSK need to be turned on.  And this needs state needs to be changed in the golden before
+    // cloning so it will propagate to all cloned QMCHamiltonian, ParticleSets etc.
+    if(estimator_manager_->areThereListeners())
+      population_.get_golden_hamiltonian().informOperatorsOfListener();
   }
 
   crowds_.resize(awc.walkers_per_crowd.size());
@@ -177,7 +182,7 @@ void QMCDriverNew::startup(xmlNodePtr cur, const QMCDriverNew::AdjustedWalkerCou
   // at this point we can finally construct the Crowd objects.
   for (int i = 0; i < crowds_.size(); ++i)
   {
-    crowds_[i] = std::make_unique<Crowd>(*estimator_manager_, golden_resource_, dispatchers_);
+    crowds_[i] = std::make_unique<Crowd>(*estimator_manager_, golden_resource_, *population_.get_golden_electrons(), population_.get_golden_twf(), population_.get_golden_hamiltonian(), dispatchers_);
   }
 
   //now give walkers references to their walkers

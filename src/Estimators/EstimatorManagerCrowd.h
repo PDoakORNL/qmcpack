@@ -80,6 +80,11 @@ public:
   RealType get_block_num_samples() const { return block_num_samples_; }
   RealType get_block_weight() const { return block_weight_; }
 
+  /** This registers the crowd lever estimators that require listeners into the QMCHamiltonianMultiWalkerResources
+   *  We really only need a QMCHamiltonian leader but resource acquisition and release works better this way.
+   */
+  void registerListeners(const RefVectorWithLeader<QMCHamiltonian>& ham_list);
+  
 private:
   ///number of samples accumulated in a block
   RealType block_num_samples_;

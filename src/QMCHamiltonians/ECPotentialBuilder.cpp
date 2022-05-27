@@ -111,7 +111,7 @@ bool ECPotentialBuilder::put(xmlNodePtr cur)
     else
     {
       if (doForces)
-        app_log() << "  Will compute forces in CoulombPBCAB.\n" << std::endl;
+        app_log() << "  Will compute forces in CoulombPBCA.\n" << std::endl;
 #ifdef QMC_CUDA
       std::unique_ptr<CoulombPBCAB_CUDA> apot = std::make_unique<CoulombPBCAB_CUDA>(IonConfig, targetPtcl, doForces);
 #else

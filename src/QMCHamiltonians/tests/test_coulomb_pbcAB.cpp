@@ -167,13 +167,6 @@ TEST_CASE("Coulomb PBC A-B BCC H", "[hamiltonian]")
                                         // -3.14349127313640
 }
 
-auto getParticularListener(Matrix<Real>& local_pots)
-{
-  return [&local_pots](const int walker_index, const Vector<Real>& inputV) {
-    std::copy_n(inputV.begin(), inputV.size(), local_pots[walker_index]);
-  };
-}
-
 TEST_CASE("CoulombAB::Listener", "[hamiltonian]")
 {
   using testing::getParticularListener;

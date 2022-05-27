@@ -21,6 +21,9 @@
 #define QMCPLUSPLUS_HAMILTONIAN_H
 
 #include <string_view>
+
+#include <ResourceHandle.h>
+
 #include "QMCHamiltonians/NonLocalECPotential.h"
 #include "QMCHamiltonians/L2Potential.h"
 #include "Configuration.h"
@@ -135,11 +138,12 @@ public:
   void registerCollectables(std::vector<ObservableHelper>& h5desc, hid_t gid) const;
 
   /** Listener Registration
+   *  This must be called on a QMCHamiltonian that has acquired multiwalker resources
    */
-  void registerKineticListener(ListenerVector<RealType> listener);
-  void registerLocalEnergyListener(ListenerVector<RealType> listener);
-  void registerLocalPotentialListener(ListenerVector<RealType> listener);
-  void registerLocalIonPotentialListener(ListenerVector<RealType> listener);
+  static void mw_registerKineticListener(QMCHamiltonian& ham_leader, ListenerVector<RealType> listener);
+  static void mw_registerLocalEnergyListener(QMCHamiltonian& ham_leader, ListenerVector<RealType> listener);
+  static void mw_registerLocalPotentialListener(QMCHamiltonian& ham_leader, ListenerVector<RealType> listener);
+  static void mw_registerLocalIonPotentialListener(QMCHamiltonian& ham_leader, ListenerVector<RealType> listener);
   
   void informOperatorsOfListener();
   
@@ -428,7 +432,7 @@ public:
   static void releaseResource(ResourceCollection& collection, const RefVectorWithLeader<QMCHamiltonian>& ham_list);
 
   /** return a clone */
-  std::unique_ptr<QMCHamiltonian> makeClone(ParticleSet& qp, TrialWaveFunction& psi);
+  std::unique_ptr<QMCHamiltonian> makeClone(ParticleSet& qp, TrialWaveFunction& psi) const;
 
 #ifdef QMC_CUDA
   ////////////////////////////////////////////
@@ -446,11 +450,6 @@ private:
   std::vector<QMCHamiltonian::FullPrecRealType> LocalEnergyVector, AuxEnergyVector;
 #endif
 private:
-  std::vector<ListenerVector<RealType>> kinetic_listeners_;
-  std::vector<ListenerVector<RealType>> potential_listeners_;
-  std::vector<ListenerVector<RealType>> ion_kinetic_listeners_;
-  std::vector<ListenerVector<RealType>> ion_potential_listeners_;
-
   static constexpr std::array<std::string_view, 8> available_quantities_{"weight", "LocalEnergy","LocalPotential","Vq","Vc","Vqq","Vqc","Vcc"};
   
   ///starting index
@@ -504,6 +503,23 @@ private:
   Array<TraceReal, 1>* weight_sample;
   Array<TraceReal, 2>* position_sample;
 #endif
+
+  struct QMCHamiltonianMultiWalkerResource : public Resource
+  {
+    QMCHamiltonianMultiWalkerResource() : Resource("QMCHamiltonian") {}
+    // the listeners represet the connection of a particular crowds estimators to the crowds lead QMCHamiltonian.
+    // So you can not clone them.
+    QMCHamiltonianMultiWalkerResource(const QMCHamiltonianMultiWalkerResource&) : QMCHamiltonianMultiWalkerResource() {}
+    Resource* makeClone() const override { return new QMCHamiltonianMultiWalkerResource(*this); }
+    std::vector<ListenerVector<RealType>> kinetic_listeners_;
+    std::vector<ListenerVector<RealType>> potential_listeners_;
+    std::vector<ListenerVector<RealType>> ion_kinetic_listeners_;
+    std::vector<ListenerVector<RealType>> ion_potential_listeners_;
+  };
+
+  /// multiwalker shared resource
+  ResourceHandle<QMCHamiltonianMultiWalkerResource> mw_res_;
+
 };
 } // namespace qmcplusplus
 #endif

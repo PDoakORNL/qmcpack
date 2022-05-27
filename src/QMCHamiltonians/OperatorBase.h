@@ -2,7 +2,7 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2016 Jeongnim Kim and QMCPACK developers.
+// Copyright (c) 2022 QMCPACK developers.
 //
 // File developed by: D. Das, University of Illinois at Urbana-Champaign
 //                    John R. Gergely,  University of Illinois at Urbana-Champaign
@@ -11,12 +11,13 @@
 //                    Jeongnim Kim, jeongnim.kim@gmail.com, University of Illinois at Urbana-Champaign
 //                    Jaron T. Krogel, krogeljt@ornl.gov, Oak Ridge National Laboratory
 //                    Mark A. Berrill, berrillma@ornl.gov, Oak Ridge National Laboratory
+//                    Peter W. Doak, doakpw@ornl.gov, Oak Ridge National Laboratory
 //
 // File created by: Jeongnim Kim, jeongnim.kim@gmail.com, University of Illinois at Urbana-Champaign
 //////////////////////////////////////////////////////////////////////////////////////
 
 
-/**@file OperatorBase.h
+/**@file
  *@brief Declaration of OperatorBase
  */
 #ifndef QMCPLUSPLUS_HAMILTONIANBASE_H
@@ -251,10 +252,11 @@ public:
    * @brief Evaluate the contribution of this component of multiple walkers per particle and report
    * to registerd listeners from objects in Estimators
    *
-   * this should take advantage of multiwalker resources (i.e. crowd scope) to reduce cost of estimators.
+   * Base class implementation warns that this is being called on an operator that doesn't
+   * report to listeners once and decays to the mw_evaluate.
    *
-   * This can be call for 1 or more QMCHamiltonians
-   * 
+   * specialized versions of this should take advantage of multiwalker resources
+   * to reduce the resource cost of collecting these values. 
    */
   virtual void mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase>& o_list,
                                       const RefVectorWithLeader<TrialWaveFunction>& wf_list,
@@ -588,6 +590,11 @@ private:
   Array<RealType, 1>* value_sample_;
 #endif
 
+  /** Flag so we Warn that operator makes no report to listeners
+   *  but only do it once.
+   */
+  bool warned_about_listener_ = false;
+  
   /** Is there a per particle listener
    *  sadly this is necessary due to state machines
    */
