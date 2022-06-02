@@ -320,13 +320,14 @@ TEST_CASE("CoulombAAListener", "[hamiltonian]")
   elec2.R[1][1] = 0.05;
   elec2.R[1][2] = -0.1;
   elec2.update();
-  
-  CoulombPBCAA caa(elec, true, false, false);
-  CoulombPBCAA caa2(elec2, true, false, false);
+
+  DynamicCoordinateKind kind = DynamicCoordinateKind::DC_POS;
+  CoulombPBCAA caa(elec, true, false, kind == DynamicCoordinateKind::DC_POS_OFFLOAD);
+  CoulombPBCAA caa2(elec2, true, false, kind == DynamicCoordinateKind::DC_POS_OFFLOAD);
   RefVector<OperatorBase> caas{caa, caa2};
   RefVectorWithLeader<OperatorBase> o_list(caa, caas);
   // Self-energy correction, no background charge for e-e interaction
-  double consts = caa.evalConsts();
+  double consts = caa.myConst;
   CHECK(consts == Approx(-6.3314780332));
   RefVector<ParticleSet> ptcls{elec, elec2};
   RefVectorWithLeader<ParticleSet> p_list(elec, ptcls);
@@ -344,20 +345,20 @@ TEST_CASE("CoulombAAListener", "[hamiltonian]")
   ResourceCollection pset_res("test_pset_res");
   elec.createResource(pset_res);
   ResourceCollectionTeamLock<ParticleSet> pset_lock(pset_res, p_list);
-  
+
   std::vector<ListenerVector<Real>> listeners;
   listeners.emplace_back("localenergy", getParticularListener(local_pots));
   listeners.emplace_back("localenergy", getParticularListener(local_pots2));
   std::vector<ListenerVector<Real>> ion_listeners;
 
   ParticleSet::mw_update(p_list);
+
   caa.mw_evaluatePerParticle(o_list, twf_list, p_list, listeners, ion_listeners);
-  CHECK( caa.getValue() == Approx(-2.9332312765));
-  CHECK( caa2.getValue() == Approx(-3.4537460926));
+  CHECK(caa.getValue() == Approx(-2.9332312765));
+  CHECK(caa2.getValue() == Approx(-3.4537460926));
   // Check that the sum of the particle energies == the total
-  CHECK( std::accumulate(local_pots.begin(), local_pots.begin() + local_pots.cols(), 0.0) == Approx(-2.9332312765));
-  CHECK( std::accumulate(local_pots[1], local_pots[1] + local_pots.cols(), 0.0) == Approx(-3.4537460926));
-  
+  CHECK(std::accumulate(local_pots.begin(), local_pots.begin() + local_pots.cols(), 0.0) == Approx(-2.9332312765));
+  CHECK(std::accumulate(local_pots[1], local_pots[1] + local_pots.cols(), 0.0) == Approx(-3.4537460926));
 }
 
 } // namespace qmcplusplus

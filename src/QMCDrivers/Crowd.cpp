@@ -17,8 +17,9 @@ Crowd::Crowd(EstimatorManagerNew& emb,
              const ParticleSet& pset,
              const TrialWaveFunction& twf,
              const QMCHamiltonian& ham,
-             const MultiWalkerDispatchers& dispatchers)
-    : dispatchers_(dispatchers), driverwalker_resource_collection_(driverwalker_res), estimator_manager_crowd_(emb)
+             const MultiWalkerDispatchers& dispatchers,
+	     const int crowd_id)
+  : crowd_id_(crowd_id), dispatchers_(dispatchers), driverwalker_resource_collection_(driverwalker_res), estimator_manager_crowd_(emb, crowd_id)
 {
   if (emb.areThereListeners())
   {

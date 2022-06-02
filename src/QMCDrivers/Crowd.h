@@ -47,7 +47,8 @@ public:
 	const ParticleSet& pset,
         const TrialWaveFunction& twf,
 	const QMCHamiltonian& hamiltonian_temp,
-        const MultiWalkerDispatchers& dispatchers);
+        const MultiWalkerDispatchers& dispatchers,
+	const int crowd_id);
   ~Crowd();
   /** Because so many vectors allocate them upfront.
    *
@@ -107,6 +108,8 @@ public:
   const MultiWalkerDispatchers& dispatchers_;
 
 private:
+  /// For some output purposes its useful if a crowd has an identifier for it on a rank.
+  const int crowd_id_ = 0;
   /** @name Walker Vectors
    *
    *  A single index into these ordered lists constitutes a complete 

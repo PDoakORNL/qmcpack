@@ -296,6 +296,7 @@ void CoulombPBCAA::mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase
     for (int i = 0; i < v_sample.size(); ++i)
       v_sample[i] += pp_consts[i];
     RealType value = Vsr + Vlr + Vc;
+    
     for (const ListenerVector<RealType>& listener : listeners)
       listener.report(walker_index, name, v_sample);
     return value;
@@ -409,6 +410,10 @@ void CoulombPBCAA::initBreakup(ParticleSet& P)
   ChargeAttribIndx = tspecies.addAttribute("charge");
   NumCenters       = P.getTotalNum();
   NumSpecies       = tspecies.TotalNum;
+
+#if !defined(REMOVE_TRACEMANAGER)
+  V_const.resize(NumCenters);
+#endif
 
   Zspec.resize(NumSpecies);
   NofSpecies.resize(NumSpecies);
@@ -568,8 +573,7 @@ CoulombPBCAA::Return_t CoulombPBCAA::evalConsts(bool report)
   else // group background term together with Madelung vsr_k0 part
   {
 #if !defined(REMOVE_TRACEMANAGER)
-    V_const = 0.0;
-    V_const.resize(NumCenters);
+  V_const = 0.0;
 #endif
     for (int ipart = 0; ipart < NumCenters; ipart++)
     {

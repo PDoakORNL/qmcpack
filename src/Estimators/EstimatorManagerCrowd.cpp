@@ -13,7 +13,7 @@
 
 namespace qmcplusplus
 {
-EstimatorManagerCrowd::EstimatorManagerCrowd(EstimatorManagerNew& em)
+EstimatorManagerCrowd::EstimatorManagerCrowd(EstimatorManagerNew& em, const int crowd_id) : crowd_id_(crowd_id)
 {
   main_estimator_ = UPtr<ScalarEstimatorBase>(em.main_estimator_->clone());
   for (const auto& est : em.scalar_ests_)
@@ -35,17 +35,17 @@ void EstimatorManagerCrowd::accumulate(const RefVector<MCPWalker>& walkers,
   for (int i = 0; i < num_scalar_estimators; ++i)
     scalar_estimators_[i]->accumulate(walkers);
   for (int i = 0; i < operator_ests_.size(); ++i)
-    operator_ests_[i]->accumulate(walkers, psets, wfns, rng);
+    operator_ests_[i]->accumulate(walkers, psets, wfns, rng, crowd_id_);
 }
 
 void EstimatorManagerCrowd::registerListeners(const RefVectorWithLeader<QMCHamiltonian>& ham_list)
 {
   auto& ham_leader = ham_list.getLeader();
-  for(auto& estimator : operator_ests_)
-    if(estimator->isListenerRequired())
+  for (auto& estimator : operator_ests_)
+    if (estimator->isListenerRequired())
       estimator->registerListeners(ham_leader);
 }
-  
+
 void EstimatorManagerCrowd::startBlock(int steps)
 {
   for (auto& uope : operator_ests_)

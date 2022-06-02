@@ -86,7 +86,7 @@ public:
   virtual void accumulate(const RefVector<MCPWalker>& walkers,
                           const RefVector<ParticleSet>& psets,
                           const RefVector<TrialWaveFunction>& wfns,
-                          RandomGenerator& rng) = 0;
+                          RandomGenerator& rng, const int crowd_id_) = 0;
 
   /** Reduce estimator result data from crowds to rank
    *
