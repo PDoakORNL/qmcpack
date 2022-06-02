@@ -612,6 +612,10 @@ std::vector<QMCHamiltonian::FullPrecRealType> QMCHamiltonian::mw_evaluate(
     const auto HC_list(extract_HC_list(ham_list, kinetic_index));
     if(ham_leader.mw_res_->kinetic_listeners_.size() > 0)
       ham_leader.H[kinetic_index]->mw_evaluatePerParticle(HC_list, wf_list, p_list, ham_leader.mw_res_->kinetic_listeners_, ham_leader.mw_res_->ion_kinetic_listeners_);
+    else
+      ham_leader.H[kinetic_index]->mw_evaluate(HC_list, wf_list, p_list);
+    for (int iw = 0; iw < ham_list.size(); iw++)
+      updateNonKinetic(HC_list[iw], ham_list[iw], p_list[iw]);
   }
   
   for (int i_ham_op = 1; i_ham_op < num_ham_operators; ++i_ham_op)
@@ -647,10 +651,9 @@ std::vector<QMCHamiltonian::FullPrecRealType> QMCHamiltonian::mw_evaluate(
   //   pset.PropertyList[WP::LOCALENERGY]    = ham.LocalEnergy;
   //   pset.PropertyList[LOCALPOTENTIAL] = ham.LocalEnergy - ham.KineticEnergy;
   // };
-
+  const auto HC_list(extract_HC_list(ham_list, 0));
   for (int iw = 0; iw < ham_list.size(); iw++)
   {
-    const auto HC_list(extract_HC_list(ham_list, 0));
     updateKinetic(HC_list[iw], ham_list[iw], p_list[iw]);
   }
 

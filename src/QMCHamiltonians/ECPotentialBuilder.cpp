@@ -111,7 +111,7 @@ bool ECPotentialBuilder::put(xmlNodePtr cur)
     else
     {
       if (doForces)
-        app_log() << "  Will compute forces in CoulombPBCA.\n" << std::endl;
+        app_log() << "  Will compute forces in CoulombPBCAB.\n" << std::endl;
 #ifdef QMC_CUDA
       std::unique_ptr<CoulombPBCAB_CUDA> apot = std::make_unique<CoulombPBCAB_CUDA>(IonConfig, targetPtcl, doForces);
 #else
@@ -142,7 +142,12 @@ bool ECPotentialBuilder::put(xmlNodePtr cur)
       {
         nknot_max = std::max(nknot_max, nonLocalPot[i]->getNknot());
         if (NLPP_algo == "batched")
-          nonLocalPot[i]->initVirtualParticle(targetPtcl);
+        {
+          if( !targetPtcl.isSpinor())
+            nonLocalPot[i]->initVirtualParticle(targetPtcl);
+          else
+            throw std::runtime_error("Batched NLPP evaluation not validated with spinors.  Use algorithm=\"non-batched\" in pseudopotential block."); 
+        } 
         apot->addComponent(i, std::move(nonLocalPot[i]));
       }
     }

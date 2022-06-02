@@ -223,11 +223,13 @@ TEST_CASE("QMCHamiltonian-registerListeners", "[hamiltonian]")
     std::size_t num_data = num_electrons * num_walkers;
     for (std::size_t id = 0; id < num_data; ++id)
     {
+      INFO("id : " << id);
       CHECK(kinetic_ref_vector[id] == Approx(kinetic(id)));
     }
 
     for (std::size_t id = 0; id < num_data; ++id)
     {
+      INFO("id : " << id);
       CHECK(potential_ref_vector[id] == Approx(local_pots(id)));
     }
   }
