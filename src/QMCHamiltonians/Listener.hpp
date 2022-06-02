@@ -49,13 +49,14 @@ template<typename REAL>
 class ListenerVector
 {
 public:
+  using Report = std::function<void(const int walker_index, const std::string& name, const Vector<REAL>&)>;
   ListenerVector(const std::string& name,
-                 std::function<void(const int walker_index, const std::string& name, const Vector<REAL>&)> report_func)
+                 Report report_func)
       : report(report_func), name_(name)
   {}
   /** Report vector for a Hamiltonian to make a per particle report to a listener
    */
-  std::function<void(const int walker_index, const std::string& name, const Vector<REAL>&)> report;
+  Report report;
   const std::string& get_name() const { return name_; }
 
 private:
