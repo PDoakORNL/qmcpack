@@ -18,6 +18,7 @@
 #include "SpinDensityNew.h"
 #include "MomentumDistribution.h"
 #include "OneBodyDensityMatrices.h"
+#include "PerParticleHamiltonianLogger.h"
 #include "QMCHamiltonians/QMCHamiltonian.h"
 #include "Message/Communicate.h"
 #include "Message/CommOperators.h"
@@ -99,14 +100,14 @@ EstimatorManagerNew::EstimatorManagerNew(Communicate* c,
           createEstimator<MomentumDistributionInput>(est_input, pset.getTotalNum(), pset.getTwist(),
                                                      pset.getLattice()) ||
           createEstimator<OneBodyDensityMatricesInput>(est_input, pset.getLattice(), pset.getSpeciesSet(),
-                                                       twf.getSPOMap(), pset)))
+                                                       twf.getSPOMap(), pset) ||
+          createEstimator<PerParticleHamiltonianLoggerInput>(est_input, my_comm_->rank())))
       throw UniformCommunicateError(std::string(error_tag_) +
                                     "cannot construct an estimator from estimator input object.");
 
   for (auto& scalar_input : emi.get_scalar_estimator_inputs())
   {
     // since we can count on these being scalar estimator inputs  we don't needs to chekc if they are invalid.
-
     bool estimator_made = std::visit(
         [this, &H](auto scalar_input) {
           using T = std::decay_t<decltype(scalar_input)>;

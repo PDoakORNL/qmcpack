@@ -131,8 +131,15 @@ public:
 
   const std::string& get_my_name() const { return my_name_; }
 
-  virtual void registerListeners(QMCHamiltonian& ham_leader) {};
-  
+  /** Register 0-many listeners with a leading QMCHamiltonian instance i.e. a QMCHamiltonian
+   *  that has acquired the crowd scope QMCHamiltonianMultiWalkerResource.
+   *  This must be called for each crowd scope estimator that listens to register listeners into
+   *  the crowd scope QMCHamiltonianMultiWalkerResource.
+   *
+   *  Many estimators don't need per particle values so the default implementation is no op.
+   */
+  virtual void registerListeners(QMCHamiltonian& ham_leader){};
+
   bool isListenerRequired() { return requires_listener_; }
 protected:
   ///name of this object -- only used for debugging and h5 output
