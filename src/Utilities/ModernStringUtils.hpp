@@ -37,7 +37,10 @@ std::string lowerCase(const std::string_view s);
 
 /** prevent clash with string_utils.h */
 namespace modernstrutil {
+  /** return string_view tokens */
   std::vector<std::string_view> split(const std::string_view s, const std::string_view delimiters);
+  /** remove white space from each beginning and end of string_view */
+  std::string_view strip(const std::string_view s);
 }
 
 /** alternate to string2real
