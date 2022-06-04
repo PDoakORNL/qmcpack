@@ -51,15 +51,15 @@ std::vector<std::string_view> split(const string_view s, const string_view delim
 
 std::string_view strip(const string_view s)
 {
-  std::string_view delimiters = " \t\n";
+  std::string_view delimiters = " \t\n\0";
   size_t left                 = s.find_first_not_of(delimiters, 0);
-  size_t right                = s.find_first_of(delimiters, left);
-  if (left != s.npos)
-    return s.substr(left, right - left);
+  if (left != s.npos) {
+    size_t right = s.find_last_not_of(delimiters, s.npos);
+    return s.substr(left, right - left + 1);
+  }
   else
     return std::string_view{};
 }
-
 } // namespace modernstrutil
 
 
