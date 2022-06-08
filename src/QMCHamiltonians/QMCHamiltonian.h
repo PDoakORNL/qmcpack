@@ -141,10 +141,10 @@ public:
   /** Listener Registration
    *  This must be called on a QMCHamiltonian that has acquired multiwalker resources
    */
-  static void mw_registerKineticListener(QMCHamiltonian& ham_leader, ListenerVector<RealType> listener);
-  static void mw_registerLocalEnergyListener(QMCHamiltonian& ham_leader, ListenerVector<RealType> listener);
-  static void mw_registerLocalPotentialListener(QMCHamiltonian& ham_leader, ListenerVector<RealType> listener);
-  static void mw_registerLocalIonPotentialListener(QMCHamiltonian& ham_leader, ListenerVector<RealType> listener);
+  static void mw_registerKineticListener(const QMCHamiltonian& ham_leader, ListenerVector<RealType> listener);
+  static void mw_registerLocalEnergyListener(const QMCHamiltonian& ham_leader, ListenerVector<RealType> listener);
+  static void mw_registerLocalPotentialListener(const QMCHamiltonian& ham_leader, ListenerVector<RealType> listener);
+  static void mw_registerLocalIonPotentialListener(const QMCHamiltonian& ham_leader, ListenerVector<RealType> listener);
   
   void informOperatorsOfListener();
   
@@ -510,7 +510,6 @@ private:
     QMCHamiltonianMultiWalkerResource() : Resource("QMCHamiltonian") {}
     // the listeners represet the connection of a particular crowds estimators to the crowds lead QMCHamiltonian.
     // So you can not clone them.
-    QMCHamiltonianMultiWalkerResource(const QMCHamiltonianMultiWalkerResource&) : QMCHamiltonianMultiWalkerResource() {}
     Resource* makeClone() const override { return new QMCHamiltonianMultiWalkerResource(*this); }
     std::vector<ListenerVector<RealType>> kinetic_listeners_;
     std::vector<ListenerVector<RealType>> potential_listeners_;

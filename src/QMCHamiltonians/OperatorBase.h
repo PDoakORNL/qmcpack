@@ -589,11 +589,6 @@ private:
   ///array to store sample value
   Array<RealType, 1>* value_sample_;
 #endif
-
-  /** Flag so we Warn that operator makes no report to listeners
-   *  but only do it once.
-   */
-  bool warned_about_listener_ = false;
   
   /** Is there a per particle listener
    *  sadly this is necessary due to state machines

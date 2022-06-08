@@ -120,6 +120,7 @@ ParticleSet::ParticleSet(const ParticleSet& p)
 
   if (p.structure_factor_)
     structure_factor_ = std::make_unique<StructFact>(*p.structure_factor_);
+
   setup_timers(myTimers, generatePSetTimerNames(myName), timer_level_medium);
   myTwist = p.myTwist;
 

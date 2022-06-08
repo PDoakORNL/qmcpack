@@ -175,8 +175,6 @@ void CoulombPBCAA::informOfPerParticleListener()
 {
   // This is written so it can be called again and again.
   Ps.turnOnPerParticleSK();
-  // It appears that the ParticleSet will deep copy
-  // its SK and the computed per particle values.
 }
   
 
@@ -788,7 +786,8 @@ void CoulombPBCAA::evalPerParticleConsts(std::vector<RealType>& pp_consts) const
 void CoulombPBCAA::createResource(ResourceCollection& collection) const
 {
   auto new_res = std::make_unique<CoulombPBCAAMultiWalkerResource>();
-  evalPerParticleConsts(new_res->pp_consts);
+  if (has_listener_)
+    evalPerParticleConsts(new_res->pp_consts);
   auto resource_index = collection.addResource(std::move(new_res));
 }
 

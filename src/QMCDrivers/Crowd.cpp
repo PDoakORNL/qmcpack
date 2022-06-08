@@ -2,7 +2,7 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2020 QMCPACK developers.
+// Copyright (c) 2022 QMCPACK developers.
 //
 // File developed by: Peter Doak, doakpw@ornl.gov, Oak Ridge National Laboratory
 //////////////////////////////////////////////////////////////////////////////////////
@@ -19,17 +19,24 @@ Crowd::Crowd(EstimatorManagerNew& emb,
              const QMCHamiltonian& ham,
              const MultiWalkerDispatchers& dispatchers,
 	     const int crowd_id)
-  : crowd_id_(crowd_id), dispatchers_(dispatchers), driverwalker_resource_collection_(driverwalker_res), estimator_manager_crowd_(emb, crowd_id)
+  : dispatchers_(dispatchers), crowd_id_(crowd_id), driverwalker_resource_collection_(driverwalker_res), estimator_manager_crowd_(emb, crowd_id)
 {
   if (emb.areThereListeners())
   {
+    // By creating a tempory QMCHamiltonian before walkers are distributed to the crowds we insure that
+    // after construction that each crowd has a valid driverwalker_resource_collection_.ham_res.
+    // We can't use the golden hamiltonian to do this because QMCHamiltonian and mw_res_ are 1 to 1 or 1 to 0.
+    //
+    // Violating the incapsulation of the QMChamiltonian mw_res_ could make this very efficent but doesn't seem
+    // necessary since this happens num crowds times per section.
+    //
     // QMCHamiltonian makes quite a smell with its non const pset and twf constructor
     // arguments.
     ParticleSet pset_temp(pset);
     UPtr<TrialWaveFunction> twf_temp(twf.makeClone(pset_temp));
     UPtr<QMCHamiltonian> ham_temp(ham.makeClone(pset_temp, *twf_temp));
     RefVectorWithLeader<QMCHamiltonian> ham_list{*ham_temp, {*ham_temp}};
-    ResourceCollectionTeamLock<QMCHamiltonian>(driverwalker_resource_collection_.ham_res, ham_list);
+    ResourceCollectionTeamLock<QMCHamiltonian> ham_lock(driverwalker_resource_collection_.ham_res, ham_list);
     estimator_manager_crowd_.registerListeners(ham_list);
   }
 }

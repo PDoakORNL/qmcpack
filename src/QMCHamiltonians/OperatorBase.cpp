@@ -119,10 +119,6 @@ void OperatorBase::mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase
                                           const std::vector<ListenerVector<RealType>>& listeners,
                                           const std::vector<ListenerVector<RealType>>& listeners_ions) const
 {
-  if (!warned_about_listener_)
-    app_warning() << "This hamiltonian operator " << name_ << " does not support estimator listerners./n"
-                  << "It's unlikely any per particle listener estimators will give the correct result.";
-
   this->mw_evaluate(o_list,
 		    wf_list,
 		    p_list);

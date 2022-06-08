@@ -258,13 +258,13 @@ void QMCHamiltonian::registerCollectables(std::vector<ObservableHelper>& h5desc,
     auxH[i]->registerCollectables(h5desc, gid);
 }
 
-void QMCHamiltonian::mw_registerKineticListener(QMCHamiltonian& leader, ListenerVector<RealType> listener)
+void QMCHamiltonian::mw_registerKineticListener(const QMCHamiltonian& leader, ListenerVector<RealType> listener)
 {
   // This creates a state replication burder of unknown scope when operators are cloned.
   leader.mw_res_->kinetic_listeners_.push_back(listener);
 }
 
-void QMCHamiltonian::mw_registerLocalEnergyListener(QMCHamiltonian& leader, ListenerVector<RealType> listener)
+void QMCHamiltonian::mw_registerLocalEnergyListener(const QMCHamiltonian& leader, ListenerVector<RealType> listener)
 {
   // This creates a state replication burder of unknown scope when operators are cloned.
   // A local energy listener listens to both the kinetic operator and all involved in the potential.
@@ -272,13 +272,13 @@ void QMCHamiltonian::mw_registerLocalEnergyListener(QMCHamiltonian& leader, List
   leader.mw_res_->potential_listeners_.push_back(listener);
 }
 
-void QMCHamiltonian::mw_registerLocalPotentialListener(QMCHamiltonian& leader, ListenerVector<RealType> listener)
+void QMCHamiltonian::mw_registerLocalPotentialListener(const QMCHamiltonian& leader, ListenerVector<RealType> listener)
 {
   // This creates a state replication burder of unknown scope when operators are cloned.
   leader.mw_res_->potential_listeners_.push_back(listener);
 }
 
-void QMCHamiltonian::mw_registerLocalIonPotentialListener(QMCHamiltonian& leader, ListenerVector<RealType> listener)
+void QMCHamiltonian::mw_registerLocalIonPotentialListener(const QMCHamiltonian& leader, ListenerVector<RealType> listener)
 {
   // This creates a state replication burder of unknown scope when operators are cloned.
   leader.mw_res_->ion_potential_listeners_.push_back(listener);
@@ -1053,10 +1053,9 @@ void QMCHamiltonian::acquireResource(ResourceCollection& collection,
                                      const RefVectorWithLeader<QMCHamiltonian>& ham_list)
 {
   auto& ham_leader = ham_list.getLeader();
-  auto res_ptr   = dynamic_cast<QMCHamiltonianMultiWalkerResource*>(collection.lendResource().release());
-  if (!res_ptr)
+  ham_leader.mw_res_.reset(dynamic_cast<typename decltype(ham_leader.mw_res_)::pointer>(collection.lendResource().release()));
+  if (!ham_leader.mw_res_)
     throw std::runtime_error("QMCHamilonian::acquireResource dynamic_cast failed");
-  ham_leader.mw_res_.reset(res_ptr);
   for (int i_ham_op = 0; i_ham_op < ham_leader.H.size(); ++i_ham_op)
   {
     const auto HC_list(extract_HC_list(ham_list, i_ham_op));
