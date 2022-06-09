@@ -252,8 +252,8 @@ public:
    * @brief Evaluate the contribution of this component of multiple walkers per particle and report
    * to registerd listeners from objects in Estimators
    *
-   * Base class implementation warns that this is being called on an operator that doesn't
-   * report to listeners once and decays to the mw_evaluate.
+   * Base class implementation decays to the mw_evaluate so if not overridden the estimator doesn't
+   * hear from this operator.
    *
    * specialized versions of this should take advantage of multiwalker resources
    * to reduce the resource cost of collecting these values. 
@@ -305,6 +305,22 @@ public:
   virtual void mw_evaluateWithToperator(const RefVectorWithLeader<OperatorBase>& o_list,
                                         const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                                         const RefVectorWithLeader<ParticleSet>& p_list) const;
+
+    /**
+   * @brief Evaluate the contribution of this component of multiple walkers per particle and report
+   * to registerd listeners from objects in Estimators
+   *
+   * default implementation decays to the mw_evaluatePerParticle.
+   *
+   * specialized versions of this should take advantage of multiwalker resources
+   * to reduce the resource cost of collecting these values. 
+   */
+  virtual void mw_evaluatePerParticleWithToperator(const RefVectorWithLeader<OperatorBase>& o_list,
+                                      const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+                                      const RefVectorWithLeader<ParticleSet>& p_list,
+                                      const std::vector<ListenerVector<RealType>>& listeners,
+                                      const std::vector<ListenerVector<RealType>>& listeners_ions) const;
+
 
   /**
    * @brief Evaluate value and derivatives wrt the optimizables. Default uses evaluate.
@@ -474,7 +490,7 @@ public:
    */
   bool isNonLocal() const noexcept;
 
-
+  bool hasListener() const noexcept;  
 #if !defined(REMOVE_TRACEMANAGER)
 
   /**

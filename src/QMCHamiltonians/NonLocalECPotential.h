@@ -2,13 +2,14 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2016 Jeongnim Kim and QMCPACK developers.
+// Copyright (c) 2022 QMCPACK developers.
 //
 // File developed by: Ken Esler, kpesler@gmail.com, University of Illinois at Urbana-Champaign
 //                    Jeremy McMinnis, jmcminis@gmail.com, University of Illinois at Urbana-Champaign
 //                    Jeongnim Kim, jeongnim.kim@gmail.com, University of Illinois at Urbana-Champaign
 //                    Jaron T. Krogel, krogeljt@ornl.gov, Oak Ridge National Laboratory
 //                    Mark A. Berrill, berrillma@ornl.gov, Oak Ridge National Laboratory
+//                    Peter W. Doak, doakpw@ornl.gov, Oak Ridge National Laboratory
 //
 // File created by: Jeongnim Kim, jeongnim.kim@gmail.com, University of Illinois at Urbana-Champaign
 //////////////////////////////////////////////////////////////////////////////////////
@@ -16,23 +17,35 @@
 
 #ifndef QMCPLUSPLUS_NONLOCAL_ECPOTENTIAL_H
 #define QMCPLUSPLUS_NONLOCAL_ECPOTENTIAL_H
+#include "Configuration.h"
 #include "QMCHamiltonians/NonLocalTOperator.h"
 #include "QMCHamiltonians/ForceBase.h"
 #include "QMCHamiltonians/NonLocalECPComponent.h"
 #include "Particle/NeighborLists.h"
-
 namespace qmcplusplus
 {
 template<typename T>
 struct NLPPJob;
-
-struct NonLocalECPotentialMultiWalkerResource;
 
 /** @ingroup hamiltonian
  * \brief Evaluate the semi local potentials
  */
 class NonLocalECPotential : public OperatorBase, public ForceBase
 {
+  using Real = QMCTraits::RealType;
+
+  struct NonLocalECPotentialMultiWalkerResource : public Resource
+  {
+    NonLocalECPotentialMultiWalkerResource();
+    Resource* makeClone() const override;
+
+    ResourceCollection collection;
+
+    /// a walkers worth of per particle nonlocal ecp potential values
+    Vector<RealType> ve_sample;
+    Vector<RealType> vi_sample;
+  };
+
 public:
   NonLocalECPotential(ParticleSet& ions, ParticleSet& els, TrialWaveFunction& psi, bool computeForces, bool enable_DLA);
   ~NonLocalECPotential() override;
@@ -56,6 +69,12 @@ public:
   void mw_evaluateWithToperator(const RefVectorWithLeader<OperatorBase>& o_list,
                                 const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                                 const RefVectorWithLeader<ParticleSet>& p_list) const override;
+
+  void mw_evaluatePerParticleWithToperator(const RefVectorWithLeader<OperatorBase>& o_list,
+                                           const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+                                           const RefVectorWithLeader<ParticleSet>& p_list,
+                                           const std::vector<ListenerVector<RealType>>& listeners,
+                                           const std::vector<ListenerVector<RealType>>& listeners_ions) const override;
 
   Return_t evaluateWithIonDerivs(ParticleSet& P,
                                  ParticleSet& ions,
@@ -183,6 +202,7 @@ private:
   std::vector<NonLocalData> tmove_xy_;
 #if !defined(REMOVE_TRACEMANAGER)
   ///single particle trace samples
+
   Array<TraceReal, 1>* Ve_sample;
   Array<TraceReal, 1>* Vi_sample;
 #endif
@@ -207,6 +227,14 @@ private:
                               const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                               const RefVectorWithLeader<ParticleSet>& p_list,
                               bool Tmove);
+
+  static void mw_evaluatePerParticleImpl(const RefVectorWithLeader<OperatorBase>& o_list,
+                                         const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+                                         const RefVectorWithLeader<ParticleSet>& p_list,
+                                         const std::vector<ListenerVector<RealType>>& listeners,
+                                         const std::vector<ListenerVector<RealType>>& listeners_ions,
+                                         bool tmove);
+
 
   void evalIonDerivsImpl(ParticleSet& P,
                          ParticleSet& ions,

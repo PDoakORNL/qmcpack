@@ -119,9 +119,7 @@ void OperatorBase::mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase
                                           const std::vector<ListenerVector<RealType>>& listeners,
                                           const std::vector<ListenerVector<RealType>>& listeners_ions) const
 {
-  this->mw_evaluate(o_list,
-		    wf_list,
-		    p_list);
+  this->mw_evaluate(o_list, wf_list, p_list);
 }
 
 
@@ -160,6 +158,17 @@ void OperatorBase::mw_evaluateWithToperator(const RefVectorWithLeader<OperatorBa
 {
   mw_evaluate(o_list, wf_list, p_list);
 }
+
+void OperatorBase::mw_evaluatePerParticleWithToperator(
+    const RefVectorWithLeader<OperatorBase>& o_list,
+    const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+    const RefVectorWithLeader<ParticleSet>& p_list,
+    const std::vector<ListenerVector<RealType>>& listeners,
+    const std::vector<ListenerVector<RealType>>& listeners_ions) const
+{
+  mw_evaluatePerParticle(o_list, wf_list, p_list, listeners, listeners_ions);
+}
+
 
 OperatorBase::Return_t OperatorBase::evaluateValueAndDerivatives(ParticleSet& P,
                                                                  const opt_variables_type& optvars,
@@ -245,6 +254,7 @@ bool OperatorBase::getMode(const int i) const noexcept { return update_mode_[i];
 
 bool OperatorBase::isNonLocal() const noexcept { return update_mode_[NONLOCAL]; }
 
+bool OperatorBase::hasListener() const noexcept { return has_listener_; }
 
 #if !defined(REMOVE_TRACEMANAGER)
 

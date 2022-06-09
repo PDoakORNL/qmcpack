@@ -856,12 +856,27 @@ std::vector<QMCHamiltonian::FullPrecRealType> QMCHamiltonian::mw_evaluateWithTop
 
   auto& ham_leader            = ham_list.getLeader();
   const int num_ham_operators = ham_leader.H.size();
-  for (int i_ham_op = 0; i_ham_op < num_ham_operators; ++i_ham_op)
+
+  int kinetic_index = 0;
+  {
+    ScopedTimer h_timer(ham_leader.my_timers_[kinetic_index]);
+    const auto HC_list(extract_HC_list(ham_list, kinetic_index));
+    if(ham_leader.mw_res_->kinetic_listeners_.size() > 0)
+      ham_leader.H[kinetic_index]->mw_evaluatePerParticleWithToperator(HC_list, wf_list, p_list, ham_leader.mw_res_->kinetic_listeners_, ham_leader.mw_res_->ion_kinetic_listeners_);
+    else
+      ham_leader.H[kinetic_index]->mw_evaluateWithToperator(HC_list, wf_list, p_list);
+    for (int iw = 0; iw < ham_list.size(); iw++)
+      updateNonKinetic(HC_list[iw], ham_list[iw], p_list[iw]);
+  }
+  
+  for (int i_ham_op = 1; i_ham_op < num_ham_operators; ++i_ham_op)
   {
     ScopedTimer local_timer(ham_leader.my_timers_[i_ham_op]);
     const auto HC_list(extract_HC_list(ham_list, i_ham_op));
-
-    ham_leader.H[i_ham_op]->mw_evaluateWithToperator(HC_list, wf_list, p_list);
+    if(ham_leader.mw_res_->potential_listeners_.size() > 0)
+      ham_leader.H[i_ham_op]->mw_evaluatePerParticleWithToperator(HC_list, wf_list, p_list, ham_leader.mw_res_->potential_listeners_, ham_leader.mw_res_->ion_potential_listeners_);
+    else
+      ham_leader.H[i_ham_op]->mw_evaluateWithToperator(HC_list, wf_list, p_list);
     for (int iw = 0; iw < ham_list.size(); ++iw)
       updateNonKinetic(HC_list[iw], ham_list[iw], p_list[iw]);
   }

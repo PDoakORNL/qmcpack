@@ -234,7 +234,7 @@ void CoulombPBCAA::mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase
     return;
 
   auto num_centers           = p_leader.getTotalNum();
-  auto& name                 = o_leader.name_;
+  auto name(o_leader.getName());
   Vector<RealType>& v_sample = o_leader.mw_res_->v_sample;
   const auto& pp_consts       = o_leader.mw_res_->pp_consts;
   auto num_species           = p_leader.getSpeciesSet().getTotalNum();
@@ -786,7 +786,7 @@ void CoulombPBCAA::evalPerParticleConsts(std::vector<RealType>& pp_consts) const
 void CoulombPBCAA::createResource(ResourceCollection& collection) const
 {
   auto new_res = std::make_unique<CoulombPBCAAMultiWalkerResource>();
-  if (has_listener_)
+  if (hasListener())
     evalPerParticleConsts(new_res->pp_consts);
   auto resource_index = collection.addResource(std::move(new_res));
 }
