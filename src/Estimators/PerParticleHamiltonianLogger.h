@@ -62,6 +62,7 @@ private:
   const std::string name_{"PerParticleHamiltonianLogger"};
   std::fstream rank_fstream_;
   std::mutex write_lock;
+  int block_;
 };
   
 }

@@ -20,8 +20,8 @@ PerParticleHamiltonianLogger::PerParticleHamiltonianLogger(PerParticleHamiltonia
     : OperatorEstBase(DataLocality::crowd), rank_estimator_(nullptr), input_(input), rank_(rank)
 {
   requires_listener_ = true;
-  my_name_ = "PerParticleHamiltonianLogger";
-  
+  my_name_           = "PerParticleHamiltonianLogger";
+
   std::string filename("rank_" + std::to_string(rank_) + "_" + input_.get_name() + ".dat");
   rank_fstream_.open(filename, std::ios::out);
 }
@@ -42,7 +42,7 @@ void PerParticleHamiltonianLogger::write(CrowdLogValues& cl_values, const int cr
     for (auto& [component, values] : cl_values)
     {
       std::cout << component << " for "
-	 << "crowd: " << crowd_id << '\n';
+                << "crowd: " << crowd_id << '\n';
       for (int iw = 0; iw < values.size(); ++iw)
         std::cout << " walker: " << iw << "  " << NativePrint(values[iw]) << '\n';
     }
@@ -52,22 +52,21 @@ void PerParticleHamiltonianLogger::write(CrowdLogValues& cl_values, const int cr
 void PerParticleHamiltonianLogger::accumulate(const RefVector<MCPWalker>& walkers,
                                               const RefVector<ParticleSet>& psets,
                                               const RefVector<TrialWaveFunction>& wfns,
-                                              RandomGenerator& rng, const int crowd_id)
+                                              RandomGenerator& rng,
+                                              const int crowd_id)
 {
   rank_estimator_->write(values_, crowd_id);
-  
+
   // \todo some per crowd reduction.
   //       clear log values
 }
 
 PerParticleHamiltonianLogger::PerParticleHamiltonianLogger(const PerParticleHamiltonianLogger& pphl, DataLocality dl)
-    : OperatorEstBase(dl),
-      rank_estimator_(const_cast<PerParticleHamiltonianLogger*>(&pphl)),
-      input_(pphl.input_)
+    : OperatorEstBase(dl), rank_estimator_(const_cast<PerParticleHamiltonianLogger*>(&pphl)), input_(pphl.input_)
 {
   requires_listener_ = true;
-  my_name_=pphl.name_;
-  data_locality_ = dl;
+  my_name_           = pphl.name_;
+  data_locality_     = dl;
 }
 
 
@@ -112,6 +111,10 @@ void PerParticleHamiltonianLogger::registerListeners(QMCHamiltonian& ham_leader)
 
 void collect(const RefVector<OperatorEstBase>& type_erased_operator_estimators) {}
 
-void PerParticleHamiltonianLogger::startBlock(int steps) {}
+void PerParticleHamiltonianLogger::startBlock(int steps)
+{
+  ++block_;
+  rank_fstream_ << "starting block:  " << block_ << " steps: " << steps << "\n";
+}
 
 } // namespace qmcplusplus
