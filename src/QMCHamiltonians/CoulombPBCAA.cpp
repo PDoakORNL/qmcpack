@@ -175,6 +175,7 @@ void CoulombPBCAA::informOfPerParticleListener()
 {
   // This is written so it can be called again and again.
   Ps.turnOnPerParticleSK();
+  OperatorBase::informOfPerParticleListener();
 }
   
 

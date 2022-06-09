@@ -87,6 +87,7 @@ void CoulombPBCAB::informOfPerParticleListener()
   // This is written so it can be called again and again.
   pset_ions_.turnOnPerParticleSK();
   Peln.turnOnPerParticleSK();
+  OperatorBase::informOfPerParticleListener();
 }
 
 void CoulombPBCAB::deleteParticleQuantities()
