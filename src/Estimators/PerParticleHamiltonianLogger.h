@@ -48,7 +48,7 @@ public:
    *  the purpose of this function is to factor out the production of the lambda for unit testing
    *  \param[out] values
    */
-  ListenerVector<Real>::Report getLogger();
+  ListenerVector<Real>::ReportingFunction getLogger();
 
   void collect(const RefVector<OperatorEstBase>& type_erased_operator_estimators) override;
 

@@ -30,42 +30,48 @@ class Talker
 private:
   std::vector<ListenerVector<Real>> listener_vectors_;
   const std::string name_{"Talker"};
+
 public:
-  void registerVector(ListenerVector<Real>& listener_vector) { listener_vectors_.push_back(listener_vector); }
-  void reportVector() {
+  void registerVector(ListenerVector<Real>&& listener_vector) { listener_vectors_.push_back(listener_vector); }
+  void reportVector()
+  {
     Vector<Real> vec_part(4);
     std::iota(vec_part.begin(), vec_part.end(), 0);
     for (auto& listener : listener_vectors_)
-      listener.report(0,name_,vec_part);
+      listener.report(0, name_, vec_part);
   }
-    
 };
 
 class TestReceiver
 {
 public:
-  /** Listener frunction that has captured an object data member.
-   *  This leaves access to the listening object quick controlled but allows a great deal of flexibility in dealing with
-   *  the vector report.  In this case we just copy it, but it could be a reduce or something more involved.
-   */  
-  auto getParticularListener(Vector<Real>& part_val) {
-    return [&part_val] (const int walker_index, const std::string& name, const Vector<Real>& values) ->void { part_val = values; };
+  /** Return listener frunction that has captured an object data member.
+   *  returning a lambda allows access to the listening object controlled but allows a great deal of flexibility
+   *  in dealing with the vector report. In this case the receiver just copies the vector it is called with to local storage
+   *  which the lambda has captured.
+   */
+  auto getParticularListener(Vector<Real>& local_vector)
+  {
+    return [&local_vector](const int walker_index, const std::string& name, const Vector<Real>& values) -> void {
+      local_vector = values;
+    };
   }
-  
-  Vector<Real> particular_values_;
+  ListenerVector<Real> makeListener() { return {"kinetic", getParticularListener(receiver_vector_)}; }
+
+  // For purposes of testing this is public.
+  Vector<Real> receiver_vector_;
 };
 
 TEST_CASE("ListenerVector", "[hamiltonian]")
 {
   Talker talker;
   TestReceiver test_receiver;
-  ListenerVector<Real> listen_vector("kinetic", test_receiver.getParticularListener(test_receiver.particular_values_));
-  
-  talker.registerVector(listen_vector);
+
+  talker.registerVector(test_receiver.makeListener());
 
   talker.reportVector();
-  CHECK(test_receiver.particular_values_[0] == 0);
-  CHECK(test_receiver.particular_values_[3] == 3);
+  CHECK(test_receiver.receiver_vector_[0] == 0);
+  CHECK(test_receiver.receiver_vector_[3] == 3);
 }
 
 } // namespace testing

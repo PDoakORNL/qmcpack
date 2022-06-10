@@ -88,7 +88,7 @@ std::unique_ptr<OperatorEstBase> PerParticleHamiltonianLogger::spawnCrowdClone()
   return spawn;
 }
 
-ListenerVector<QMCTraits::RealType>::Report PerParticleHamiltonianLogger::getLogger()
+ListenerVector<QMCTraits::RealType>::ReportingFunction PerParticleHamiltonianLogger::getLogger()
 {
   auto& local_values = values_;
   return [&local_values](const int walker_index, const std::string& name, const Vector<Real>& inputV) {

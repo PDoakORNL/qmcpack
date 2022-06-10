@@ -28,57 +28,37 @@
 namespace qmcplusplus
 {
 
-template<typename REAL>
-class ListenerVar
-{
-public:
-  ListenerVar(const std::string& name);
-  std::function<void(const int walker_index, const std::string& name, const std::vector<REAL>&)> report;
-  const std::string& get_name() const { return name_; }
-
-private:
-  const std::string name_;
-};
-
-
-/** This is the type registers a listener expecting a callback with a vector of values 1 per particle, called once per walker.
- *  The name is primarily for debugging purposes, if have decided against have the QMCHamiltonian use it to estable routeing.
- *  Instead the register functions are specfic for what the listener wants to listen to.
+/** An object of this type is a listener expecting a callback to the report function  with a vector of values,
+ *  the convention being 1 per particle, called once per walker per component.
+ *  The name is primarily for debugging purposes, if have decided against having the QMCHamiltonian use it to estable
+ *  routing. Instead the register functions in the QMCHamiltonian are specfic to the sort of value that the listener wants
+ *  to listen to.
  */
-template<typename REAL>
+template<typename T>
 class ListenerVector
 {
 public:
-  using Report = std::function<void(const int walker_index, const std::string& name, const Vector<REAL>&)>;
-  ListenerVector(const std::string& name,
-                 Report report_func)
-      : report(report_func), name_(name)
-  {}
-  /** Report vector for a Hamiltonian to make a per particle report to a listener
+  /** "Callback" function type for an operator to report a vector of values to a listener
+   *  \param[in] walker_index    a numeric walker id, could be important to listener
+   *  \param[in] name            of operator reporting, could be important to listener
+   *  \param[in] values          vector of values, per particle by convention. Also by convention
+   *                             the receiver should not assume the reference values have any persistence
+   *                             beyond the scope of the callback.
    */
-  Report report;
+  using ReportingFunction =
+      std::function<void(const int walker_index, const std::string& name, const Vector<T>& values)>;
+  /** constructor that should appear in the code
+   *  \param[in]  name           intended to be strictly information
+   *  \param[in]  report_func    intended to be a lambda callback function that will be used to report.
+   */
+  ListenerVector(const std::string& name, ReportingFunction report_func) : report(report_func), name_(name) {}
+  ReportingFunction report;
   const std::string& get_name() const { return name_; }
 
 private:
   const std::string name_;
 };
 
-/** Its unclear there is any need for this.
- */
-template<typename REAL>
-class ListenerCombined
-{
-public:
-  ListenerCombined(
-      const std::string& name,
-      std::function<void(const int walker_index, const RefVector<const std::string&> names, const Matrix<REAL>&)>
-          report_func);
-  std::function<void(const int walker_index, const RefVector<const std::string&> name, const Matrix<REAL>&)> report;
-  const std::string& get_name() const { return name_; }
-
-private:
-  const std::string name_;
-};
 
 } // namespace qmcplusplus
 
