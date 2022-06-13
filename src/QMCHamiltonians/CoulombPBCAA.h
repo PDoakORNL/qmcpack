@@ -204,7 +204,7 @@ private:
     Vector<RealType> v_sample;
 
     /// constant values per particle for coulomb AA potential
-    std::vector<RealType> pp_consts;
+    Vector<RealType> pp_consts;
   };
 
   /// multiwalker shared resource
@@ -217,7 +217,7 @@ private:
   /** Compute the const part of the per particle coulomb self interaction potential.
    *  \param[out]  pp_consts   constant values for the particles self interaction
    */
-  void evalPerParticleConsts(std::vector<RealType>& pp_consts) const;
+  void evalPerParticleConsts(Vector<RealType>& pp_consts) const;
 };
 
 } // namespace qmcplusplus

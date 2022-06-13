@@ -12,10 +12,10 @@
 #ifndef QMCPLUSPLUS_LISTENER_HPP
 #define QMCPLUSPLUS_LISTENER_HPP
 /** \file
- *  Listener and its supporting types serves to deliver "trace" values from
- *  QMCHamiltonian to estimators.
- *  It is designed to be lightweight and minimal but while still minimizing the
- *  changes in QMCHamiltonian at this time.
+ *  Listener types that allow Estimators to register with QMCHamiltonian to have "trace" values from
+ *  operators reported.
+ *  This is aims to be lightweight and minimal but still use much of the trace manager based
+ *  implementation of observables that rely on per particle Hamiltonian values.
  */
 
 #include <functional>

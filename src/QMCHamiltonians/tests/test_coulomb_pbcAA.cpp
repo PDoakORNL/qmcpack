@@ -338,6 +338,7 @@ TEST_CASE("CoulombAAListener", "[hamiltonian]")
   Matrix<Real> local_pots(2);
   Matrix<Real> local_pots2(2);
 
+  caa.informOfPerParticleListener();
   ResourceCollection caa_res("test_caa_res");
   caa.createResource(caa_res);
   ResourceCollectionTeamLock<OperatorBase> caa_lock(caa_res, o_list);
