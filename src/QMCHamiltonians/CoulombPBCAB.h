@@ -230,9 +230,9 @@ private:
     /// a walkers worth of per electron AB potential values
     Vector<RealType> pp_samples_trg;
     /// constant values for the source particles aka ions aka A
-    std::vector<RealType> pp_consts_src;
+    Vector<RealType> pp_consts_src;
     /// constant values for the target particles aka electrons aka B
-    std::vector<RealType> pp_consts_trg;
+    Vector<RealType> pp_consts_trg;
   };
 
   ResourceHandle<CoulombPBCABMultiWalkerResource> mw_res_;
@@ -241,7 +241,7 @@ private:
    *  \param[out]  pp_consts_src   constant values for the source particles aka ions aka A   
    *  \param[out]  pp_consts_trg   constant values for the target particles aka electrons aka B
    */
-  void evalPerParticleConsts(std::vector<RealType>& pp_consts_src, std::vector<RealType>& pp_consts_trg) const;
+  void evalPerParticleConsts(Vector<RealType>& pp_consts_src, Vector<RealType>& pp_consts_trg) const;
 
   /** Creates the long-range handlers, then splines and stores it by particle and species for quick evaluation.
    *  this is just constructor code factored out
