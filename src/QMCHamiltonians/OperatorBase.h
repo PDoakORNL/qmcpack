@@ -306,22 +306,6 @@ public:
                                         const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                                         const RefVectorWithLeader<ParticleSet>& p_list) const;
 
-    /**
-   * @brief Evaluate the contribution of this component of multiple walkers per particle and report
-   * to registerd listeners from objects in Estimators
-   *
-   * default implementation decays to the mw_evaluatePerParticle.
-   *
-   * specialized versions of this should take advantage of multiwalker resources
-   * to reduce the resource cost of collecting these values. 
-   */
-  virtual void mw_evaluatePerParticleWithToperator(const RefVectorWithLeader<OperatorBase>& o_list,
-                                      const RefVectorWithLeader<TrialWaveFunction>& wf_list,
-                                      const RefVectorWithLeader<ParticleSet>& p_list,
-                                      const std::vector<ListenerVector<RealType>>& listeners,
-                                      const std::vector<ListenerVector<RealType>>& listeners_ions) const;
-
-
   /**
    * @brief Evaluate the contribution of this component of multiple walkers per particle and report
    * to registerd listeners from objects in Estimators
@@ -336,7 +320,6 @@ public:
                                                    const RefVectorWithLeader<ParticleSet>& p_list,
                                                    const std::vector<ListenerVector<RealType>>& listeners,
                                                    const std::vector<ListenerVector<RealType>>& listeners_ions) const;
-
 
   /**
    * @brief Evaluate value and derivatives wrt the optimizables. Default uses evaluate.
@@ -622,11 +605,6 @@ private:
   Array<RealType, 1>* value_sample_;
 #endif
   
-  /** Is there a per particle listener
-   *  sadly this is necessary due to state machines
-   */
-  bool has_listener_ = false;
-
   /** Is there a per particle listener
    *  sadly this is necessary due to state machines
    */

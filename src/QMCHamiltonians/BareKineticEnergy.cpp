@@ -493,7 +493,6 @@ void BareKineticEnergy::mw_evaluatePerParticle(const RefVectorWithLeader<Operato
   }
 }
 
-<<<<<<< HEAD
 void BareKineticEnergy::mw_evaluatePerParticleWithToperator(
     const RefVectorWithLeader<OperatorBase>& o_list,
     const RefVectorWithLeader<TrialWaveFunction>& wf_list,
