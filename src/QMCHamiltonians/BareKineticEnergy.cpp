@@ -25,6 +25,7 @@
 #include "Particle/MCWalkerConfiguration.h"
 #endif
 #include "type_traits/ConvertToReal.h"
+#include "Listener.hpp"
 
 namespace qmcplusplus
 {
@@ -490,6 +491,17 @@ void BareKineticEnergy::mw_evaluatePerParticle(const RefVectorWithLeader<Operato
     auto& bare_kinetic_energy  = o_list.getCastedElement<BareKineticEnergy>(iw);
     bare_kinetic_energy.value_ = evaluate_walker_per_particle(iw, bare_kinetic_energy, p_list[iw], listeners);
   }
+}
+
+<<<<<<< HEAD
+void BareKineticEnergy::mw_evaluatePerParticleWithToperator(
+    const RefVectorWithLeader<OperatorBase>& o_list,
+    const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+    const RefVectorWithLeader<ParticleSet>& p_list,
+    const std::vector<ListenerVector<RealType>>& listeners,
+    const std::vector<ListenerVector<RealType>>& ion_listeners) const
+{
+  mw_evaluatePerParticle(o_list, wf_list, p_list, listeners, ion_listeners);
 }
 
 #if !defined(REMOVE_TRACEMANAGER)

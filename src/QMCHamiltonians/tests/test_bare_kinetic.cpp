@@ -34,6 +34,8 @@ using Real = QMCT::RealType;
 
 TEST_CASE("Bare Kinetic Energy", "[hamiltonian]")
 {
+  outputManager.pause();
+
   const SimulationCell simulation_cell;
   ParticleSet ions(simulation_cell);
   ParticleSet elec(simulation_cell);
@@ -91,6 +93,7 @@ TEST_CASE("Bare Kinetic Energy", "[hamiltonian]")
   elec.G[1][2] = 0.0;
   v            = bare_ke.evaluate(elec);
   REQUIRE(v == -0.5);
+  outputManager.resume();
 }
 
 TEST_CASE("Bare KE Pulay PBC", "[hamiltonian]")
@@ -101,6 +104,7 @@ TEST_CASE("Bare KE Pulay PBC", "[hamiltonian]")
 
   Communicate* c = OHMMS::Controller;
 
+  outputManager.pause();
   //Cell definition:
 
   CrystalLattice<OHMMS_PRECISION, OHMMS_DIM> lattice;
@@ -239,6 +243,8 @@ TEST_CASE("Bare KE Pulay PBC", "[hamiltonian]")
   REQUIRE(PulayTerm[1][0] == Approx(-0.12145));
   REQUIRE(PulayTerm[1][1] == Approx(0.0));
   REQUIRE(PulayTerm[1][2] == Approx(0.0));
+
+  outputManager.resume();
 }
 
 
@@ -246,6 +252,7 @@ TEST_CASE("BareKineticEnergyListener", "[hamiltonian]")
 {
   using testing::getParticularListener;
 
+  outputManager.pause();
   const SimulationCell simulation_cell;
   ParticleSet ions(simulation_cell);
   ParticleSet elec(simulation_cell);
@@ -312,8 +319,31 @@ TEST_CASE("BareKineticEnergyListener", "[hamiltonian]")
   CHECK(bare_ke2.getValue() == Approx(-0.5));
   // Check that the sum of the particle energies is consistent with the total.
   CHECK(std::accumulate(kinetic_energies.begin(), kinetic_energies.begin() + kinetic_energies.cols(), 0.0) ==
-        Approx(-0.5));
+        Approx(bare_ke.getValue()));
+  // check a single particle
   CHECK(std::accumulate(kinetic_energies[1], kinetic_energies[1] + kinetic_energies.cols(), 0.0) == Approx(-0.5));
+
+  elec.L[0]  = 2.0;
+  elec.L[1]  = 1.0;
+  elec2.L[0] = 2.0;
+  elec2.L[1] = 1.0;
+
+  bare_ke.mw_evaluatePerParticle(o_list, twf_list, p_list, listeners, ion_listeners);
+  CHECK(std::accumulate(kinetic_energies.begin(), kinetic_energies.begin() + kinetic_energies.cols(), 0.0) ==
+        Approx(bare_ke.getValue()));
+  CHECK(std::accumulate(kinetic_energies[1], kinetic_energies[1] + kinetic_energies.cols(), 0.0) == Approx(-1.5));
+
+  // test that mw_evaluatePerParticleWithToperator decays to mw_evaluatePerParticle
+  // If mw_evaluatePerParticle follows the standard behavior in OperatorBase the Listner will not receive a report
+  // and tis values will remain as in the previous check.
+  elec.L[0]  = 1.0;
+  elec.L[1]  = 0.0;
+  elec2.L[0] = 1.0;
+  elec2.L[1] = 0.0;
+
+  bare_ke.mw_evaluatePerParticleWithToperator(o_list, twf_list, p_list, listeners, ion_listeners);
+  CHECK(std::accumulate(kinetic_energies[1], kinetic_energies[1] + kinetic_energies.cols(), 0.0) == Approx(-0.5));
+  outputManager.resume();
 }
 
 } // namespace qmcplusplus

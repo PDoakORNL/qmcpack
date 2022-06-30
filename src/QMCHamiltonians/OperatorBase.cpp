@@ -156,7 +156,21 @@ void OperatorBase::mw_evaluateWithToperator(const RefVectorWithLeader<OperatorBa
                                             const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                                             const RefVectorWithLeader<ParticleSet>& p_list) const
 {
-  mw_evaluate(o_list, wf_list, p_list);
+  for (int iw = 0; iw < o_list.size(); iw++)
+    o_list[iw].evaluateWithToperator(p_list[iw]);
+}
+
+void OperatorBase::mw_evaluatePerParticleWithToperator(
+    const RefVectorWithLeader<OperatorBase>& o_list,
+    const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+    const RefVectorWithLeader<ParticleSet>& p_list,
+    const std::vector<ListenerVector<RealType>>& listeners,
+    const std::vector<ListenerVector<RealType>>& listeners_ions) const
+{
+  // This may or may not be what is expected.
+  // It the responsibility of the derived type to override this if the
+  // desired behavior is instead to call mw_evaluatePerParticle
+  this->mw_evaluateWithToperator(o_list, wf_list, p_list);
 }
 
 void OperatorBase::mw_evaluatePerParticleWithToperator(
