@@ -35,9 +35,8 @@
 #include "Particle/ParticleSet.h"
 #include "LongRange/EwaldHandler3D.h"
 
-#ifdef QMC_COMPLEX //This is for the spinor test.
-#include "QMCWaveFunctions/ElectronGas/ElectronGasComplexOrbitalBuilder.h"
-#endif
+//This is for the spinor test.
+#include "QMCWaveFunctions/ElectronGas/FreeOrbital.h"
 
 namespace qmcplusplus
 {
@@ -82,7 +81,6 @@ TEST_CASE("ReadFileBuffer_simple_mpi", "[hamiltonian]")
 TEST_CASE("ReadFileBuffer_ecp", "[hamiltonian]")
 {
   Communicate* c = OHMMS::Controller;
-  outputManager.pause();
 
   ECPComponentBuilder ecp("test_read_ecp", c, 4, 1);
 
@@ -90,7 +88,6 @@ TEST_CASE("ReadFileBuffer_ecp", "[hamiltonian]")
   REQUIRE(okay);
 
   REQUIRE(ecp.Zeff == 4);
-  outputManager.resume();
 
   // TODO: add more checks that pseudopotential file was read correctly
 }
@@ -98,7 +95,6 @@ TEST_CASE("ReadFileBuffer_ecp", "[hamiltonian]")
 TEST_CASE("ReadFileBuffer_sorep", "[hamiltonian]")
 {
   Communicate* c = OHMMS::Controller;
-  outputManager.pause();
 
   ECPComponentBuilder ecp("test_read_sorep", c);
 
@@ -127,7 +123,6 @@ TEST_CASE("ReadFileBuffer_sorep", "[hamiltonian]")
     REQUIRE(so_d_val == Approx(so_d_ref));
     REQUIRE(so_f_val == Approx(so_f_ref));
   }
-  outputManager.resume();
 
   // TODO: add more checks that pseudopotential file was read correctly
 }
@@ -164,7 +159,6 @@ TEST_CASE("Evaluate_ecp", "[hamiltonian]")
   using PosType   = QMCTraits::PosType;
 
   Communicate* c = OHMMS::Controller;
-  outputManager.pause();
 
   //Cell definition:
 
@@ -433,8 +427,6 @@ TEST_CASE("Evaluate_ecp", "[hamiltonian]")
   //HFTerm[1][0]+PulayTerm[1][0] =  0.002734064
   //HFTerm[1][1]+PulayTerm[1][1] =  0.0
   //HFTerm[1][2]+PulayTerm[1][2] =  0.0
-
-  outputManager.resume();
 }
 
 #ifdef QMC_COMPLEX
@@ -448,7 +440,6 @@ TEST_CASE("Evaluate_soecp", "[hamiltonian]")
   using PosType   = QMCTraits::PosType;
 
   Communicate* c = OHMMS::Controller;
-  outputManager.pause();
 
   //Cell definition:
 
@@ -509,20 +500,11 @@ TEST_CASE("Evaluate_soecp", "[hamiltonian]")
   kup.resize(nelec);
   kup[0] = PosType(1, 1, 1);
 
-  k2up.resize(nelec);
-  //For some goofy reason, EGOSet needs to be initialized with:
-  //1.) A k-vector list (fine).
-  //2.) A list of -|k|^2.  To save on expensive - sign multiplication apparently.
-  k2up[0] = -dot(kup[0], kup[0]);
-
   kdn.resize(nelec);
   kdn[0] = PosType(2, 2, 2);
 
-  k2dn.resize(nelec);
-  k2dn[0] = -dot(kdn[0], kdn[0]);
-
-  auto spo_up = std::make_unique<EGOSet>(kup, k2up);
-  auto spo_dn = std::make_unique<EGOSet>(kdn, k2dn);
+  auto spo_up = std::make_unique<FreeOrbital>(kup);
+  auto spo_dn = std::make_unique<FreeOrbital>(kdn);
 
   auto spinor_set = std::make_unique<SpinorSet>();
   spinor_set->set_spos(std::move(spo_up), std::move(spo_dn));
@@ -569,8 +551,6 @@ TEST_CASE("Evaluate_soecp", "[hamiltonian]")
     }
   }
   REQUIRE(Value1 == Approx(-0.3214176962));
-
-  outputManager.resume();
 }
 #endif
 
