@@ -191,7 +191,7 @@ void QMCDriverNew::startup(xmlNodePtr cur, const QMCDriverNew::AdjustedWalkerCou
   for (int i = 0; i < crowds_.size(); ++i)
   {
     crowds_[i] =
-        std::make_unique<Crowd>(*estimator_manager_, golden_resource_, *population_.get_golden_electrons(),
+        std::make_unique<Crowd>(*estimator_manager_, golden_resource_, population_.get_golden_electrons(),
                                 population_.get_golden_twf(), population_.get_golden_hamiltonian(), dispatchers_, i);
   }
 
