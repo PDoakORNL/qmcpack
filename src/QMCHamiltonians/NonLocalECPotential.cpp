@@ -16,12 +16,15 @@
 
 
 #include "NonLocalECPotential.h"
+
+#include <optional>
+
 #include <DistanceTable.h>
 #include <IteratorUtility.h>
 #include <ResourceCollection.h>
 #include "NonLocalECPComponent.h"
 #include "NLPPJob.h"
-#include "ResourceCollection.h"
+#include <ResourceCollection.h>
 
 namespace qmcplusplus
 {
@@ -107,7 +110,7 @@ void NonLocalECPotential::mw_evaluate(const RefVectorWithLeader<OperatorBase>& o
                                       const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                                       const RefVectorWithLeader<ParticleSet>& p_list) const
 {
-  mw_evaluateImpl(o_list, wf_list, p_list, false);
+  mw_evaluateImpl(o_list, wf_list, p_list, false, std::nullopt);
 }
 
 NonLocalECPotential::Return_t NonLocalECPotential::evaluateWithToperator(ParticleSet& P)
@@ -124,50 +127,53 @@ void NonLocalECPotential::mw_evaluateWithToperator(const RefVectorWithLeader<Ope
                                                    const RefVectorWithLeader<ParticleSet>& p_list) const
 {
   if (UseTMove == TMOVE_V0 || UseTMove == TMOVE_V3)
-    mw_evaluateImpl(o_list, wf_list, p_list, true);
+    mw_evaluateImpl(o_list, wf_list, p_list, true, std::nullopt);
   else
-    mw_evaluateImpl(o_list, wf_list, p_list, false);
+    mw_evaluateImpl(o_list, wf_list, p_list, false, std::nullopt);
 }
 
 void NonLocalECPotential::mw_evaluatePerParticleWithToperator(
     const RefVectorWithLeader<OperatorBase>& o_list,
     const RefVectorWithLeader<TrialWaveFunction>& wf_list,
     const RefVectorWithLeader<ParticleSet>& p_list,
-    const std::vector<ListenerVector<RealType>>& listeners,
-    const std::vector<ListenerVector<RealType>>& listeners_ions) const
+    const std::vector<ListenerVector<Real>>& listeners,
+    const std::vector<ListenerVector<Real>>& listeners_ions) const
 {
+  std::optional<ListenerOption> l_opt(std::in_place, listeners, listeners_ions);
   if (UseTMove == TMOVE_V0 || UseTMove == TMOVE_V3)
-    mw_evaluatePerParticleImpl(o_list, wf_list, p_list, listeners, listeners_ions, true);
+    mw_evaluateImpl(o_list, wf_list, p_list, true, l_opt);
+  // mw_evaluatePerParticleImpl(o_list, wf_list, p_list, listeners, listeners_ions, true);
   else
-    mw_evaluatePerParticleImpl(o_list, wf_list, p_list, listeners, listeners_ions, false);
+    // mw_evaluatePerParticleImpl(o_list, wf_list, p_list, listeners, listeners_ions, false);
+    mw_evaluateImpl(o_list, wf_list, p_list, false, l_opt);
 }
 
 void NonLocalECPotential::mw_evaluatePerParticleImpl(const RefVectorWithLeader<OperatorBase>& o_list,
                                                      const RefVectorWithLeader<TrialWaveFunction>& twf_list,
                                                      const RefVectorWithLeader<ParticleSet>& p_list,
-                                                     const std::vector<ListenerVector<RealType>>& listeners,
-                                                     const std::vector<ListenerVector<RealType>>& listeners_ions,
+                                                     const std::vector<ListenerVector<Real>>& listeners,
+                                                     const std::vector<ListenerVector<Real>>& listeners_ions,
                                                      bool tmove)
 {
-  auto& o_leader = o_list.getCastedLeader<NonLocalECPotential>();
-  auto& p_leader = p_list.getLeader();
+  auto& o_leader  = o_list.getCastedLeader<NonLocalECPotential>();
+  auto& p_leader  = p_list.getLeader();
+  const size_t nw = o_list.size();
   auto name(o_leader.getName());
-  Vector<RealType>& ve_sample = o_leader.mw_res_->ve_sample;
-  Vector<RealType>& vi_sample = o_leader.mw_res_->vi_sample;
-  ve_sample.resize(p_leader.getTotalNum());
-  vi_sample.resize(o_leader.IonConfig.getTotalNum());
-
-  auto evaluate_walker = [name, &ve_sample, &vi_sample](const int walker_index, NonLocalECPotential& nlecp,
-                                                         ParticleSet& pset, TrialWaveFunction& twf,
-                                                         const std::vector<ListenerVector<RealType>>& listeners,
-                                                         const std::vector<ListenerVector<RealType>>& listeners_ions,
-                                                         bool tmove) {
+  auto& ve_samples = o_leader.mw_res_->ve_samples;
+  auto& vi_samples = o_leader.mw_res_->vi_samples;
+  ve_samples.resize(nw, p_leader.getTotalNum());
+  vi_samples.resize(nw, o_leader.IonConfig.getTotalNum());
+  ve_samples           = 0.0;
+  vi_samples           = 0.0;
+  int num_ions         = o_leader.IonConfig.getTotalNum();
+  auto evaluate_walker = [name, &ve_samples, &vi_samples,
+                          num_ions](const int walker_index, NonLocalECPotential& nlecp, ParticleSet& pset,
+                                    TrialWaveFunction& twf, const std::vector<ListenerVector<Real>>& listeners,
+                                    const std::vector<ListenerVector<Real>>& listeners_ions, bool tmove) {
     if (tmove)
       nlecp.tmove_xy_.clear();
 
-    nlecp.value_    = 0.0;
-    ve_sample       = 0.0;
-    vi_sample       = 0.0;
+    nlecp.value_ = 0.0;
     auto& p_pset = nlecp.PPset;
     for (int ipp = 0; ipp < p_pset.size(); ipp++)
       if (p_pset[ipp])
@@ -194,17 +200,17 @@ void NonLocalECPotential::mw_evaluatePerParticleImpl(const RefVectorWithLeader<O
           for (int iat = 0; iat < nlecp.NumIons; iat++)
             if (nlecp.PP[iat] != nullptr && dist[iat] < nlecp.PP[iat]->getRmax())
             {
-              RealType pairpot =
+              auto pairpot =
                   nlecp.PP[iat]->evaluateOneWithForces(pset, iat, twf, jel, dist[iat], -displ[iat], nlecp.forces[iat]);
               if (tmove)
                 nlecp.PP[iat]->contributeTxy(jel, nlecp.tmove_xy_);
               nlecp.value_ += pairpot;
               NeighborIons.push_back(iat);
               nlecp.IonNeighborElecs.getNeighborList(iat).push_back(jel);
-	      // This might add support for per particle reporting when forces are on.
-	      // There was nothing here in legacy.
-	      ve_sample[jel] += 0.5 * pairpot;
-	      vi_sample[iat] += 0.5 * pairpot;
+              // This might add support for per particle reporting when forces are on.
+              // There was nothing here in legacy.
+              ve_samples(walker_index, jel) += 0.5 * pairpot;
+              vi_samples(walker_index, iat) += 0.5 * pairpot;
             }
         }
       }
@@ -222,21 +228,26 @@ void NonLocalECPotential::mw_evaluatePerParticleImpl(const RefVectorWithLeader<O
           for (int iat = 0; iat < nlecp.NumIons; iat++)
             if (nlecp.PP[iat] != nullptr && dist[iat] < nlecp.PP[iat]->getRmax())
             {
-              RealType pairpot = nlecp.PP[iat]->evaluateOne(pset, iat, twf, jel, dist[iat], -displ[iat], nlecp.use_DLA);
+              auto pairpot = nlecp.PP[iat]->evaluateOne(pset, iat, twf, jel, dist[iat], -displ[iat], nlecp.use_DLA);
               if (tmove)
                 nlecp.PP[iat]->contributeTxy(jel, nlecp.tmove_xy_);
               nlecp.value_ += pairpot;
               NeighborIons.push_back(iat);
               nlecp.IonNeighborElecs.getNeighborList(iat).push_back(jel);
-	      ve_sample[jel] += 0.5 * pairpot;
-	      vi_sample[iat] += 0.5 * pairpot;
+              ve_samples(walker_index, jel) += 0.5 * pairpot;
+              vi_samples(walker_index, iat) += 0.5 * pairpot;
             }
         }
       }
     }
-    for (const ListenerVector<RealType>& listener : listeners)
+
+    Vector<std::remove_reference<decltype(ve_samples)>::type::value_type> ve_sample(ve_samples.begin(walker_index),
+                                                                                    pset.getTotalNum());
+    Vector<std::remove_reference<decltype(vi_samples)>::type::value_type> vi_sample(vi_samples.begin(walker_index),
+                                                                                    num_ions);
+    for (const ListenerVector<Real>& listener : listeners)
       listener.report(walker_index, name, ve_sample);
-    for (const ListenerVector<RealType>& listener : listeners_ions)
+    for (const ListenerVector<Real>& listener : listeners_ions)
       listener.report(walker_index, name, vi_sample);
   };
 
@@ -288,7 +299,7 @@ void NonLocalECPotential::evaluateImpl(ParticleSet& P, bool Tmove, bool keepGrid
         for (int iat = 0; iat < NumIons; iat++)
           if (PP[iat] != nullptr && dist[iat] < PP[iat]->getRmax())
           {
-            RealType pairpot = PP[iat]->evaluateOneWithForces(P, iat, Psi, jel, dist[iat], -displ[iat], forces[iat]);
+            Real pairpot = PP[iat]->evaluateOneWithForces(P, iat, Psi, jel, dist[iat], -displ[iat], forces[iat]);
             if (Tmove)
               PP[iat]->contributeTxy(jel, tmove_xy_);
             value_ += pairpot;
@@ -311,7 +322,7 @@ void NonLocalECPotential::evaluateImpl(ParticleSet& P, bool Tmove, bool keepGrid
         for (int iat = 0; iat < NumIons; iat++)
           if (PP[iat] != nullptr && dist[iat] < PP[iat]->getRmax())
           {
-            RealType pairpot = PP[iat]->evaluateOne(P, iat, Psi, jel, dist[iat], -displ[iat], use_DLA);
+            Real pairpot = PP[iat]->evaluateOne(P, iat, Psi, jel, dist[iat], -displ[iat], use_DLA);
             if (Tmove)
               PP[iat]->contributeTxy(jel, tmove_xy_);
             value_ += pairpot;
@@ -331,10 +342,10 @@ void NonLocalECPotential::evaluateImpl(ParticleSet& P, bool Tmove, bool keepGrid
 #if !defined(TRACE_CHECK)
   if (streaming_particles_)
   {
-    Return_t Vnow  = value_;
-    RealType Visum = Vi_sample->sum();
-    RealType Vesum = Ve_sample->sum();
-    RealType Vsum  = Vesum + Visum;
+    Return_t Vnow = value_;
+    Real Visum    = Vi_sample->sum();
+    Real Vesum    = Ve_sample->sum();
+    Real Vsum     = Vesum + Visum;
     if (std::abs(Vsum - Vnow) > TraceManager::trace_tol)
     {
       app_log() << "accumtest: NonLocalECPotential::evaluate()" << std::endl;
@@ -356,7 +367,8 @@ void NonLocalECPotential::evaluateImpl(ParticleSet& P, bool Tmove, bool keepGrid
 void NonLocalECPotential::mw_evaluateImpl(const RefVectorWithLeader<OperatorBase>& o_list,
                                           const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                                           const RefVectorWithLeader<ParticleSet>& p_list,
-                                          bool Tmove)
+                                          bool Tmove,
+                                          const std::optional<ListenerOption> listeners)
 {
   auto& O_leader           = o_list.getCastedLeader<NonLocalECPotential>();
   ParticleSet& pset_leader = p_list.getLeader();
@@ -435,8 +447,8 @@ void NonLocalECPotential::mw_evaluateImpl(const RefVectorWithLeader<OperatorBase
   for (size_t iw = 0; iw < nw; iw++)
     assert(&o_list.getCastedElement<NonLocalECPotential>(iw).Psi == &wf_list[iw]);
 
-  RefVector<const NLPPJob<RealType>> batch_list;
-  std::vector<RealType> pairpots(nw);
+  RefVector<const NLPPJob<Real>> batch_list;
+  std::vector<Real> pairpots(nw);
 
   ecp_potential_list.reserve(nw);
   ecp_component_list.reserve(nw);
@@ -480,11 +492,29 @@ void NonLocalECPotential::mw_evaluateImpl(const RefVectorWithLeader<OperatorBase
       NonLocalECPComponent::mw_evaluateOne(ecp_component_list, pset_list, psi_list, batch_list, pairpots,
                                            O_leader.mw_res_->collection, O_leader.use_DLA);
 
+      // Right now this is just over walker but could and probably should be over a set
+      // larger than the walker count.  The easiest way to not complicate the per particle
+      // reporting code would be to add the crowd walker index to the nlpp job meta data.
       for (size_t j = 0; j < ecp_potential_list.size(); j++)
       {
+        ecp_potential_list[j].get().value_ += pairpots[j];
+        if (Tmove)
+          ecp_component_list[j].contributeTxy(batch_list[j].get().electron_id, ecp_potential_list[j].get().tmove_xy_);
+
+        if (listeners)
+        {
+          auto& ve_samples = O_leader.mw_res_->ve_samples;
+          auto& vi_samples = O_leader.mw_res_->vi_samples;
+          // CAUTION! This may not be so simple in the future
+          int iw = j;
+          ve_samples(iw, batch_list[j].get().electron_id) += pairpots[j];
+          vi_samples(iw, batch_list[j].get().ion_id) += pairpots[j];
+        }
+
+#ifndef DEBUG_NLPP_BATCHED
         if (false)
-        { // code usefully for debugging
-          RealType check_value =
+        { // code usefully for debugging, but bad for reading.
+          Real check_value =
               ecp_component_list[j].evaluateOne(pset_list[j], batch_list[j].get().ion_id, psi_list[j],
                                                 batch_list[j].get().electron_id, batch_list[j].get().ion_elec_dist,
                                                 batch_list[j].get().ion_elec_displ, O_leader.use_DLA);
@@ -492,9 +522,29 @@ void NonLocalECPotential::mw_evaluateImpl(const RefVectorWithLeader<OperatorBase
             std::cout << "check " << check_value << " wrong " << pairpots[j] << " diff "
                       << std::abs(check_value - pairpots[j]) << std::endl;
         }
-        ecp_potential_list[j].get().value_ += pairpots[j];
-        if (Tmove)
-          ecp_component_list[j].contributeTxy(batch_list[j].get().electron_id, ecp_potential_list[j].get().tmove_xy_);
+#endif
+      }
+    }
+  }
+
+  if (listeners)
+  {
+    // Motivation for this repeated definition is to make factoring this listener code out easy
+    // and making it ignorable when reading this function.
+    auto& ve_samples  = O_leader.mw_res_->ve_samples;
+    auto& vi_samples  = O_leader.mw_res_->vi_samples;
+    int num_electrons = pset_leader.getTotalNum();
+    for (int iw = 0; iw < nw; ++iw)
+    {
+      Vector<Real> ve_sample(ve_samples.begin(iw), num_electrons);
+      Vector<Real> vi_sample(vi_samples.begin(iw), O_leader.NumIons);
+      for (const ListenerVector<Real>& listener : listeners->electrons)
+      {
+        listener.report(iw, O_leader.getName(), ve_sample);
+      }
+      for (const ListenerVector<Real>& listener : listeners->ions)
+      {
+        listener.report(iw, O_leader.getName(), vi_sample);
       }
     }
   }
@@ -764,11 +814,11 @@ void NonLocalECPotential::markAffectedElecs(const DistanceTableAB& myTable, int 
   {
     if (PP[iat] == nullptr)
       continue;
-    RealType old_distance = 0.0;
-    RealType new_distance = 0.0;
-    old_distance          = myTable.getDistRow(iel)[iat];
-    new_distance          = myTable.getTempDists()[iat];
-    bool moved            = false;
+    Real old_distance = 0.0;
+    Real new_distance = 0.0;
+    old_distance      = myTable.getDistRow(iel)[iat];
+    new_distance      = myTable.getTempDists()[iat];
+    bool moved        = false;
     // move out
     if (old_distance < PP[iat]->getRmax() && new_distance >= PP[iat]->getRmax())
     {
@@ -919,10 +969,6 @@ void NonLocalECPotential::setParticlePropertyList(QMCTraits::PropertySetType& pl
     }
   }
 }
-
-NonLocalECPotential::NonLocalECPotentialMultiWalkerResource::NonLocalECPotentialMultiWalkerResource()
-    : Resource("NonLocalECPotential"), collection("NLPPcollection")
-{}
 
 Resource* NonLocalECPotential::NonLocalECPotentialMultiWalkerResource::makeClone() const
 {

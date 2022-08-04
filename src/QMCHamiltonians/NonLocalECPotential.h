@@ -36,14 +36,25 @@ class NonLocalECPotential : public OperatorBase, public ForceBase
 
   struct NonLocalECPotentialMultiWalkerResource : public Resource
   {
-    NonLocalECPotentialMultiWalkerResource();
+    NonLocalECPotentialMultiWalkerResource() : Resource("NonLocalECPotential") {}
+
     Resource* makeClone() const override;
 
-    ResourceCollection collection;
+    ResourceCollection collection{"NLPPcollection"};
 
-    /// a walkers worth of per particle nonlocal ecp potential values
-    Vector<RealType> ve_sample;
-    Vector<RealType> vi_sample;
+    int num_walker = 0;
+    /// a crowds worth of per particle nonlocal ecp potential values
+    Matrix<Real> ve_samples;
+    Matrix<Real> vi_samples;
+  };
+
+  struct ListenerOption
+  {
+    ListenerOption(const std::vector<ListenerVector<RealType>>& le, const std::vector<ListenerVector<RealType>>& li)
+        : electrons(le), ions(li)
+    {}
+    const std::vector<ListenerVector<RealType>>& electrons;
+    const std::vector<ListenerVector<RealType>>& ions;
   };
 
 public:
@@ -218,15 +229,19 @@ private:
    */
   void evaluateImpl(ParticleSet& P, bool Tmove, bool keepGrid = false);
 
-  /** the actual implementation for batched walkers, used by mw_evaluate and mw_evaluateWithToperator
-   * @param o_list the list of NonLocalECPotential in a walker batch
-   * @param p_list the list of ParticleSet in a walker batch
-   * @param Tmove whether Txy for Tmove is updated
+  /** the actual implementation for batched walkers, used by mw_evaluate, mw_evaluateWithToperator
+   *  mw_evaluatePerPaticleWithToperator
+   * @param o_list     the list of NonLocalECPotential in a walker batch
+   * @param wf_list    the list of TrialWaveFunction in a walker batch
+   * @param p_list     the list of ParticleSet in a walker batch
+   * @param Tmove      whether Txy for Tmove is updated
+   * @param listeners  optional listeners which allow per particle and reduced to share impl
    */
   static void mw_evaluateImpl(const RefVectorWithLeader<OperatorBase>& o_list,
                               const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                               const RefVectorWithLeader<ParticleSet>& p_list,
-                              bool Tmove);
+                              bool Tmove,
+                              std::optional<ListenerOption> listeners);
 
   static void mw_evaluatePerParticleImpl(const RefVectorWithLeader<OperatorBase>& o_list,
                                          const RefVectorWithLeader<TrialWaveFunction>& wf_list,
