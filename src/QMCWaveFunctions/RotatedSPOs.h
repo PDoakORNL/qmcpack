@@ -18,13 +18,18 @@
 
 namespace qmcplusplus
 {
-class RotatedSPOs : public SPOSet
+class RotatedSPOs : public SPOSet, public OptimizableObject
 {
 public:
   //constructor
-  RotatedSPOs(std::unique_ptr<SPOSet>&& spos);
+  RotatedSPOs(const std::string& my_name, std::unique_ptr<SPOSet>&& spos);
   //destructor
   ~RotatedSPOs() override;
+
+  std::string getClassName() const override { return "RotatedSPOs"; }
+  bool isOptimizable() const override { return true; }
+  bool isOMPoffload() const override { return Phi->isOMPoffload(); }
+  bool hasIonDerivs() const override { return Phi->hasIonDerivs(); }
 
   // Vector of rotation matrix indices
   using RotationIndices = std::vector<std::pair<int, int>>;
@@ -94,15 +99,15 @@ public:
 
   void evaluateDerivatives(ParticleSet& P,
                            const opt_variables_type& optvars,
-                           std::vector<ValueType>& dlogpsi,
-                           std::vector<ValueType>& dhpsioverpsi,
+                           Vector<ValueType>& dlogpsi,
+                           Vector<ValueType>& dhpsioverpsi,
                            const int& FirstIndex,
                            const int& LastIndex) override;
 
   void evaluateDerivatives(ParticleSet& P,
                            const opt_variables_type& optvars,
-                           std::vector<ValueType>& dlogpsi,
-                           std::vector<ValueType>& dhpsioverpsi,
+                           Vector<ValueType>& dlogpsi,
+                           Vector<ValueType>& dhpsioverpsi,
                            const ValueType& psiCurrent,
                            const std::vector<ValueType>& Coeff,
                            const std::vector<size_t>& C2node_up,
@@ -128,7 +133,7 @@ public:
 
   void evaluateDerivativesWF(ParticleSet& P,
                              const opt_variables_type& optvars,
-                             std::vector<ValueType>& dlogpsi,
+                             Vector<ValueType>& dlogpsi,
                              const QTFull::ValueType& psiCurrent,
                              const std::vector<ValueType>& Coeff,
                              const std::vector<size_t>& C2node_up,
@@ -143,8 +148,8 @@ public:
                              const std::vector<std::vector<int>>& lookup_tbl) override;
 
   //helper function to evaluatederivative; evaluate orbital rotation parameter derivative using table method
-  void table_method_eval(std::vector<ValueType>& dlogpsi,
-                         std::vector<ValueType>& dhpsioverpsi,
+  void table_method_eval(Vector<ValueType>& dlogpsi,
+                         Vector<ValueType>& dhpsioverpsi,
                          const ParticleSet::ParticleLaplacian& myL_J,
                          const ParticleSet::ParticleGradient& myG_J,
                          const size_t nel,
@@ -172,7 +177,7 @@ public:
                          const size_t NP2,
                          const std::vector<std::vector<int>>& lookup_tbl);
 
-  void table_method_evalWF(std::vector<ValueType>& dlogpsi,
+  void table_method_evalWF(Vector<ValueType>& dlogpsi,
                            const size_t nel,
                            const size_t nmo,
                            const ValueType& psiCurrent,
@@ -188,41 +193,31 @@ public:
                            const std::vector<int>& detData_up,
                            const std::vector<std::vector<int>>& lookup_tbl);
 
-  void checkInVariables(opt_variables_type& active) override
+  void extractOptimizableObjectRefs(UniqueOptObjRefs& opt_obj_refs) override { opt_obj_refs.push_back(*this); }
+
+  void checkInVariablesExclusive(opt_variables_type& active) override
   {
     //reset parameters to zero after coefficient matrix has been updated
     for (int k = 0; k < myVars.size(); ++k)
       myVars[k] = 0.0;
 
-    if (Optimizable)
-    {
-      if (myVars.size())
-        active.insertFrom(myVars);
-      Phi->storeParamsBeforeRotation();
-    }
+    if (myVars.size())
+      active.insertFrom(myVars);
+    Phi->storeParamsBeforeRotation();
   }
 
-  void checkOutVariables(const opt_variables_type& active) override
-  {
-    if (Optimizable)
-    {
-      myVars.getIndex(active);
-    }
-  }
+  void checkOutVariables(const opt_variables_type& active) override { myVars.getIndex(active); }
 
   ///reset
-  void resetParameters(const opt_variables_type& active) override
+  void resetParametersExclusive(const opt_variables_type& active) override
   {
-    if (Optimizable)
+    std::vector<RealType> param(m_act_rot_inds.size());
+    for (int i = 0; i < m_act_rot_inds.size(); i++)
     {
-      std::vector<RealType> param(m_act_rot_inds.size());
-      for (int i = 0; i < m_act_rot_inds.size(); i++)
-      {
-        int loc  = myVars.where(i);
-        param[i] = myVars[i] = active[loc];
-      }
-      apply_rotation(param, true);
+      int loc  = myVars.where(i);
+      param[i] = myVars[i] = active[loc];
     }
+    apply_rotation(param, true);
   }
 
   //*********************************************************************************

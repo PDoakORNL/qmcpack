@@ -66,7 +66,6 @@ inline T string2Real(const std::string_view svalue) {
   
 /** @} */
 
-
 } // namespace qmcplusplus
 
 #endif

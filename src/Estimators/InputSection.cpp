@@ -11,6 +11,7 @@
 
 #include "InputSection.h"
 #include "Message/UniformCommunicateError.h"
+#include "ModernStringUtils.hpp"
 #include "Utilities/string_utils.h"
 
 namespace qmcplusplus
@@ -72,6 +73,7 @@ void InputSection::readXML(xmlNodePtr cur)
       error << "InputSection::readXML node name " << ename << " is handled by " << section_name << "\n";
       throw UniformCommunicateError(error.str());
     }
+    else if (isDelegate(ename)) {}
     element = element->next;
   }
 

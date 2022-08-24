@@ -17,6 +17,8 @@
 #include "OneBodyDensityMatricesInput.h"
 #include "SpinDensityInput.h"
 #include "PerParticleHamiltonianLoggerInput.h"
+#include "ModernStringUtils.hpp"
+
 namespace qmcplusplus
 {
 EstimatorManagerInput::EstimatorManagerInput(xmlNodePtr cur) { readXML(cur); }

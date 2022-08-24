@@ -14,11 +14,14 @@
 #include "spline2/MultiBsplineEval.hpp"
 #include "spline2/MultiBsplineEval_OMPoffload.hpp"
 #include "QMCWaveFunctions/BsplineFactory/contraction_helper.hpp"
-#include "Platforms/OMPTarget/ompReduction.hpp"
+#include "Platforms/OMPTarget/ompReductionComplex.hpp"
 #include "OMPTarget/OMPTargetMath.hpp"
 
 namespace qmcplusplus
 {
+template<typename ST>
+SplineC2COMPTarget<ST>::SplineC2COMPTarget(const SplineC2COMPTarget& in) = default;
+
 namespace C2C
 {
 template<typename ST, typename TT>
