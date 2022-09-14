@@ -406,6 +406,14 @@ std::unique_ptr<DiracDeterminantBase> SlaterDetBuilder::putDeterminant(
                                                                                           matrix_inverter_kind);
       }
       else
+#elif defined(ENABLE_CUDA)
+      if (useGPU == "yes")
+        adet = std::make_unique<DiracDeterminantBatched<
+            MatrixCleanDelayedUpdateCUDA<QMCTraits::ValueType, QMCTraits::QTFull::ValueType>>>(std::move(psi_clone),
+                                                                                               firstIndex, lastIndex,
+                                                                                               delay_rank,
+                                                                                               matrix_inverter_kind);
+      else
 #endif
       {
 #if defined(ENABLE_OFFLOAD)

@@ -768,6 +768,7 @@ public:
       std::cout << "debug Ainv host  " << engine.get_psiMinv()[0][0] << " " << engine.get_psiMinv()[0][1] << " "
                 << engine.psiMinv[1][0] << " " << engine.psiMinv[1][1] << std::endl;
       auto* temp_ptr = engine.psiMinv.data();
+      
       PRAGMA_OFFLOAD("omp target update from(temp_ptr[:psiMinv_.size()])")
       std::cout << "debug Ainv devi  " << engine.psiMinv[0][0] << " " << engine.psiMinv[0][1] << " "
                 << engine.psiMinv[1][0] << " " << engine.psiMinv[1][1] << std::endl;

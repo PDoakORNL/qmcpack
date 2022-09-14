@@ -21,6 +21,8 @@
 #include "QMCWaveFunctions/Fermion/MatrixUpdateOMPTarget.h"
 #if defined(ENABLE_CUDA) && defined(ENABLE_OFFLOAD)
 #include "QMCWaveFunctions/Fermion/MatrixDelayedUpdateCUDA.h"
+#elif defined(ENABLE_CUDA)
+#include "QMCWaveFunctions/Fermion/MatrixCleanDelayedUpdateCUDA.hpp"
 #endif
 #include "DualAllocatorAliases.hpp"
 #include "WaveFunctionTypes.hpp"
