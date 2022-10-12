@@ -115,23 +115,20 @@ public:
   virtual void buildOptVariables(const size_t nel) {}
   // For the MSD case rotations must be created in MultiSlaterDetTableMethod class
   virtual void buildOptVariables(const std::vector<std::pair<int, int>>& rotations) {}
-  // store parameters before getting destroyed by rotation.
+  /// return true if this SPOSet can be wrappered by RotatedSPO
+  virtual bool isRotationSupported() const { return false; }
+  /// store parameters before getting destroyed by rotation.
   virtual void storeParamsBeforeRotation() {}
-  // apply rotation to all the orbitals
-  virtual void applyRotation(const ValueMatrix& rot_mat, bool use_stored_copy = false)
-  {
-    std::ostringstream o;
-    o << "SPOSet::applyRotation is not implemented by " << getClassName() << std::endl;
-    APP_ABORT(o.str());
-  }
+  /// apply rotation to all the orbitals
+  virtual void applyRotation(const ValueMatrix& rot_mat, bool use_stored_copy = false);
 
   virtual void evaluateDerivatives(ParticleSet& P,
                                    const opt_variables_type& optvars,
                                    Vector<ValueType>& dlogpsi,
                                    Vector<ValueType>& dhpsioverpsi,
                                    const int& FirstIndex,
-                                   const int& LastIndex)
-  {}
+                                   const int& LastIndex);
+
   /** Evaluate the derivative of the optimized orbitals with respect to the parameters
    *  this is used only for MSD, to be refined for better serving both single and multi SD
    */
@@ -160,8 +157,7 @@ public:
                                    const size_t N2,
                                    const size_t NP1,
                                    const size_t NP2,
-                                   const std::vector<std::vector<int>>& lookup_tbl)
-  {}
+                                   const std::vector<std::vector<int>>& lookup_tbl);
 
   /** Evaluate the derivative of the optimized orbitals with respect to the parameters
    *  this is used only for MSD, to be refined for better serving both single and multi SD
@@ -180,8 +176,7 @@ public:
                                      const ValueMatrix& Minv_up,
                                      const ValueMatrix& Minv_dn,
                                      const std::vector<int>& detData_up,
-                                     const std::vector<std::vector<int>>& lookup_tbl)
-  {}
+                                     const std::vector<std::vector<int>>& lookup_tbl);
 
   /** set the OrbitalSetSize
    * @param norbs number of single-particle orbitals
@@ -303,6 +298,26 @@ public:
                                               OffloadMWVGLArray& phi_vgl_v,
                                               std::vector<ValueType>& ratios,
                                               std::vector<GradType>& grads) const;
+
+  /** evaluate the values, gradients and laplacians of this single-particle orbital sets and determinant ratio
+   *  and grads of multiple walkers. Device data of phi_vgl_v must be up-to-date upon return.
+   *  Includes spin gradients
+   * @param spo_list the list of SPOSet pointers in a walker batch
+   * @param P_list the list of ParticleSet pointers in a walker batch
+   * @param iat active particle
+   * @param phi_vgl_v orbital values, gradients and laplacians of all the walkers
+   * @param ratios, ratios of all walkers
+   * @param grads, spatial gradients of all walkers
+   * @param spingrads, spin gradients of all walkers
+   */
+  virtual void mw_evaluateVGLandDetRatioGradsWithSpin(const RefVectorWithLeader<SPOSet>& spo_list,
+                                                      const RefVectorWithLeader<ParticleSet>& P_list,
+                                                      int iat,
+                                                      const std::vector<const ValueType*>& invRow_ptr_list,
+                                                      OffloadMWVGLArray& phi_vgl_v,
+                                                      std::vector<ValueType>& ratios,
+                                                      std::vector<GradType>& grads,
+                                                      std::vector<ValueType>& spingrads) const;
 
   /** evaluate the values, gradients and hessians of this single-particle orbital set
    * @param P current ParticleSet

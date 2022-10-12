@@ -27,6 +27,11 @@ namespace qmcplusplus
 template<typename T>
 struct NLPPJob;
 
+namespace testing
+{
+class TestNonLocalECPotential;
+}
+
 /** @ingroup hamiltonian
  * \brief Evaluate the semi local potentials
  */
@@ -34,28 +39,7 @@ class NonLocalECPotential : public OperatorBase, public ForceBase
 {
   using Real = QMCTraits::RealType;
 
-  struct NonLocalECPotentialMultiWalkerResource : public Resource
-  {
-    NonLocalECPotentialMultiWalkerResource() : Resource("NonLocalECPotential") {}
-
-    Resource* makeClone() const override;
-
-    ResourceCollection collection{"NLPPcollection"};
-
-    int num_walker = 0;
-    /// a crowds worth of per particle nonlocal ecp potential values
-    Matrix<Real> ve_samples;
-    Matrix<Real> vi_samples;
-  };
-
-  struct ListenerOption
-  {
-    ListenerOption(const std::vector<ListenerVector<RealType>>& le, const std::vector<ListenerVector<RealType>>& li)
-        : electrons(le), ions(li)
-    {}
-    const std::vector<ListenerVector<RealType>>& electrons;
-    const std::vector<ListenerVector<RealType>>& ions;
-  };
+  struct NonLocalECPotentialMultiWalkerResource;
 
 public:
   NonLocalECPotential(ParticleSet& ions, ParticleSet& els, TrialWaveFunction& psi, bool computeForces, bool enable_DLA);
@@ -83,11 +67,17 @@ public:
                                 const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                                 const RefVectorWithLeader<ParticleSet>& p_list) const override;
 
+  void mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase>& o_list,
+                              const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+                              const RefVectorWithLeader<ParticleSet>& p_list,
+                              const std::vector<ListenerVector<Real>>& listeners,
+                              const std::vector<ListenerVector<Real>>& listeners_ions) const override;
+
   void mw_evaluatePerParticleWithToperator(const RefVectorWithLeader<OperatorBase>& o_list,
                                            const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                                            const RefVectorWithLeader<ParticleSet>& p_list,
-                                           const std::vector<ListenerVector<RealType>>& listeners,
-                                           const std::vector<ListenerVector<RealType>>& listeners_ions) const override;
+                                           const std::vector<ListenerVector<Real>>& listeners,
+                                           const std::vector<ListenerVector<Real>>& listeners_ions) const override;
 
   Return_t evaluateWithIonDerivs(ParticleSet& P,
                                  ParticleSet& ions,
@@ -177,6 +167,21 @@ public:
   inline void setComputeForces(bool val) override { ComputeForces = val; }
 
 protected:
+  /** the actual implementation for batched walkers, used by mw_evaluate, mw_evaluateWithToperator
+   *  mw_evaluatePerPaticleWithToperator
+   * @param o_list     the list of NonLocalECPotential in a walker batch
+   * @param wf_list    the list of TrialWaveFunction in a walker batch
+   * @param p_list     the list of ParticleSet in a walker batch
+   * @param Tmove      whether Txy for Tmove is updated
+   * @param listeners  optional listeners which allow per particle and reduced to share impl
+   */
+  static void mw_evaluateImpl(const RefVectorWithLeader<OperatorBase>& o_list,
+                              const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+                              const RefVectorWithLeader<ParticleSet>& p_list,
+                              bool Tmove,
+                              std::optional<ListenerOption<Real>> listeners,
+                              bool keepGrid = false);
+
   ///random number generator
   RandomGenerator* myRNG;
   ///the set of local-potentials (one for each ion)
@@ -220,7 +225,7 @@ private:
   Array<TraceReal, 1>* Vi_sample;
 #endif
   ///NLPP job list of ion-electron pairs by spin group
-  std::vector<std::vector<NLPPJob<RealType>>> nlpp_jobs;
+  std::vector<std::vector<NLPPJob<Real>>> nlpp_jobs;
   /// mult walker shared resource
   std::unique_ptr<NonLocalECPotentialMultiWalkerResource> mw_res_;
 
@@ -230,28 +235,6 @@ private:
    * @param keepGrid.  If true, does not randomize the quadrature grid before evaluation.  
    */
   void evaluateImpl(ParticleSet& P, bool Tmove, bool keepGrid = false);
-
-  /** the actual implementation for batched walkers, used by mw_evaluate, mw_evaluateWithToperator
-   *  mw_evaluatePerPaticleWithToperator
-   * @param o_list     the list of NonLocalECPotential in a walker batch
-   * @param wf_list    the list of TrialWaveFunction in a walker batch
-   * @param p_list     the list of ParticleSet in a walker batch
-   * @param Tmove      whether Txy for Tmove is updated
-   * @param listeners  optional listeners which allow per particle and reduced to share impl
-   */
-  static void mw_evaluateImpl(const RefVectorWithLeader<OperatorBase>& o_list,
-                              const RefVectorWithLeader<TrialWaveFunction>& wf_list,
-                              const RefVectorWithLeader<ParticleSet>& p_list,
-                              bool Tmove,
-                              std::optional<ListenerOption> listeners);
-
-  static void mw_evaluatePerParticleImpl(const RefVectorWithLeader<OperatorBase>& o_list,
-                                         const RefVectorWithLeader<TrialWaveFunction>& wf_list,
-                                         const RefVectorWithLeader<ParticleSet>& p_list,
-                                         const std::vector<ListenerVector<RealType>>& listeners,
-                                         const std::vector<ListenerVector<RealType>>& listeners_ions,
-                                         bool tmove);
-
 
   void evalIonDerivsImpl(ParticleSet& P,
                          ParticleSet& ions,
@@ -272,6 +255,8 @@ private:
    * Note this function should be called before acceptMove for a Tmove
    */
   void markAffectedElecs(const DistanceTableAB& myTable, int iel);
+
+  friend class testing::TestNonLocalECPotential;
 };
 } // namespace qmcplusplus
 #endif
