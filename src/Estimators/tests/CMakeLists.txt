@@ -34,6 +34,9 @@ set(SRCS
     test_InputSection.cpp
     test_EstimatorManagerInput.cpp
     test_ScalarEstimatorInputs.cpp
+    test_PerParticleHamiltonianLogger.cpp
+    test_ReferencePointsInput.cpp
+    test_ReferencePoints.cpp
     )
 
 # Tests incompatible with DiracDeterminantCUDA
@@ -67,7 +70,7 @@ if(HAVE_MPI)
   set(UTEST_NAME deterministic-unit_test_${SRC_DIR}_mpi)
 
   #this is dependent on the directory creation and sym linking of earlier driver tests
-  set(SRCS FakeOperatorEstimator.cpp EstimatorManagerNewTest.cpp test_manager_mpi.cpp)
+
   add_executable(${UTEST_EXE} ${SRCS})
   if(USE_OBJECT_TARGET)
     target_link_libraries(

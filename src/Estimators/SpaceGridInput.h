@@ -12,17 +12,21 @@
 #ifndef QMCPLUSPLUS_SPACEGRID_INPUT_H
 #define QMCPLUSPLUS_SPACEGRID_INPUT_H
 
+#include <Configuration.h>
+
 namespace qmcplusplus
 {
 namespace testing
 {
 template<typename T>
 class EnergyDensityTests;
+}
 
 class SpaceGridInput
 {
 public:
   using Consumer = SpaceGrid;
+  using Real     = double;
 
   enum class SpaceGridCoord
   {
@@ -38,41 +42,58 @@ public:
                               {"spacegridcoord-spherical", SpaceGridCoord::SPHERICAL},
                               {"spacegridcoord-voronoi", SpaceGridCoord::VORONOI}};
 
-  class SpaceGridAxisInputSection : public InputSection
+  class SpaceGridAxisInput
   {
-    SpaceGridAxisInputSection()
+    class SpaceGridAxisInputSection : public InputSection
     {
-      section_name = "axis";
-      attributes   = {"label", "grid", "p1", "p2", "scale"};
-      strings      = {"label", "grid", "p1", "p2"};
-      reals        = {"scale"};
+    public:
+      SpaceGridAxisInputSection()
+      {
+        section_name = "axis";
+        attributes   = {"label", "grid", "p1", "p2", "scale"};
+        strings      = {"label", "grid", "p1", "p2"};
+        reals        = {"scale"};
+      }
+    };
+
+  public:
+    SpaceGridAxisInput(xmlNodePtr cur) { input_section_.readXML(cur); }
+    static std::any makeAxis(xmlNodePtr cur, std::string& value_label)
+    {
+      SpaceGridAxisInput space_grid_axis{cur};
+      value_label = "spacegridorigin";
+      return space_grid_axis;
     }
+  private:
+    SpaceGridAxisInputSection input_section_;
   };
 
-  std::any makeAxis(xmlNodePtr cur)
+  class SpaceGridOriginInput
   {
-    SpaceGridAxisInputSection space_grid_axis;
-    space_grid_axis.readXML(cur);
-    return space_grid_axis;
-  }
-
-  class SpaceGridOriginInputSection : public InputSection
-  {
-    SpaceGridOriginInputSection()
+    class SpaceGridOriginInputSection : public InputSection
     {
-      section_name = "origin";
-      attributes   = {"p1", "p2", "fraction"};
-      strings      = {"p1", "p2"};
-      reals        = {"fraction"};
-    }
-  };
+    public:
+      SpaceGridOriginInputSection()
+      {
+        section_name = "origin";
+        attributes   = {"p1", "p2", "fraction"};
+        strings      = {"p1", "p2"};
+        reals        = {"fraction"};
+      }
+    };
 
-  std::any makeOrigin(xmlNodePtr cur)
-  {
-    SpaceGridOriginInputSection space_grid_origin;
-    space_origin_origin.readXML(cur);
-    return space_grid_origin;
-  }
+  public:
+    SpaceGridOriginInput(xmlNodePtr cur) { input_section_.readXML(cur); }
+
+    static std::any makeOrigin(xmlNodePtr cur, std::string& value_label)
+    {
+      SpaceGridOriginInput space_grid_origin{cur};
+      value_label = "spacegridorigin";
+      return space_grid_origin;
+    }
+  private:
+    SpaceGridOriginInputSection input_section_;
+  };
 
   class SpaceGridInputSection : public InputSection
   {
@@ -83,22 +104,25 @@ public:
       attributes   = {"coord"};
       enums        = {"coord"};
       delegates    = {"origin", "axis"};
-      registerDelegate("origin", makeOrigin);
-      registerDelegate("axis", makeAxis);
+      registerDelegate("origin", SpaceGridOriginInput::makeOrigin);
+      registerDelegate("axis", SpaceGridAxisInput::makeAxis);
     }
     std::any assignAnyEnum(const std::string& name) const override;
   };
 
 private:
+  SpaceGridInputSection input_section_;
   SpaceGridCoord space_grid_coord;
   std::string origin_p1;
   std::string origin_p2;
   Real origin_fraction;
-  std::array<std::string, OHMMSDIM> axis_p1;
-  std::array<Real, OHMMSDIM> axis_scale;
-  std::array<std::string, OHMMSDIM> axis_label;
-  std::array<std::string, OHMMSDIM> axis_grid;
-}
-}; // namespace testing
+  std::array<std::string, OHMMS_DIM> axis_p1;
+  std::array<Real, OHMMS_DIM> axis_scale;
+  std::array<std::string, OHMMS_DIM> axis_label;
+  std::array<std::string, OHMMS_DIM> axis_grid;
+};
+
+std::any makeSpaceGridInput(xmlNodePtr, std::string& value_label);
+
 } // namespace qmcplusplus
 #endif
