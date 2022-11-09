@@ -25,6 +25,7 @@ set(SRCS
     EstimatorManagerNewTest.cpp
     EstimatorManagerInputTest.cpp
     test_manager.cpp
+    test_EnergyDensityInput.cpp
     test_EstimatorManagerNew.cpp
     test_trace_manager.cpp
     EstimatorTesting.cpp
