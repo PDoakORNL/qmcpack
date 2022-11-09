@@ -12,8 +12,9 @@
 #ifndef QMCPLUSPLUS_ENERGY_DENSITY_INPUT_H
 #define QMCPLUSPLUS_ENERGY_DENSITY_INPUT_H
 
+#include "InputSection.h"
 #include "ReferencePointsInput.h"
-#include "SpaceGrid.h"
+#include "SpaceGridInput.h"
 
 namespace qmcplusplus
 {
@@ -24,10 +25,11 @@ class EnergyDensityTests;
 }
 
 class EnergyDensityEstimator;
+class NESpaceGrid;
 
 /** EnergyDensity has two other XML input reading objects that it delegates to.
-    I don't think these need to be handled with a variant vector because there
-    is no expectation it be expanded and they in general occur together and not as options.
+ *  I don't think these need to be handled with a variant vector because there
+ *  is no expectation it be expanded and they in general occur together and not as options.
  */
 // using EnergyDensityDelegate =
 //     std::variant<std::monostate, ReferencePointsInput, SpaceGridInput >;
@@ -42,22 +44,21 @@ public:
 
   class EnergyDensityInputSection : public InputSection
   {
-    public:
+  public:
     EnergyDensityInputSection()
     {
       section_name = "EnergyDensity";
-      attributes = {"name", "dynamic", "static", "ion_points", "type"};
-      parameters = {"reference_points","spacegrid"};
-      strings = {"name", "type", "dynamic", "static"};
-      booleans = {"ion_points"};
-      delegates = {"reference_points","spacegrid"};
-      required = {"type", "spacegrid"};
+      attributes   = {"name", "dynamic", "static", "ion_points", "type"};
+      parameters   = {"reference_points", "spacegrid"};
+      strings      = {"name", "type", "dynamic", "static"};
+      bools        = {"ion_points"};
+      delegates    = {"reference_points", "spacegrid"};
+      required     = {"type", "spacegrid"};
       registerDelegate("reference_points", makeReferencePointsInput);
+      //    registerDelegate("spacegrid", makeSpaceGridInput);
     }
     /** Here the delegate input object is registered */
-    EnergyDensityInputSection();
     EnergyDensityInputSection(const EnergyDensityInputSection&) = default;
-    bool setFromStreamCustom(const std::string& name, istringstream sstream) override;
   };
 
   using Real = QMCTraits::RealType;
@@ -68,16 +69,17 @@ public:
   const std::string& get_name() const { return name_; }
   const std::string& get_dynamic() const { return dynamic_; }
   const std::string& get_static() const { return static_; }
-  const ReferencePointsInput& get_ref_points_input() const { return ref_points_input_; }
-  const std::vector<SpaceGridsInput>& get_space_grid_inputs() const { return space_grid_inputs_; }
+  ReferencePointsInput get_ref_points_input() const { return input_section_.get<ReferencePointsInput>("referencepoints"); }
+  //const std::vector<SpaceGridInput>& get_space_grid_inputs() const { return space_grid_inputs_; }
+
 private:
   std::string name_;
   std::string dynamic_;
   std::string static_;
-  ReferencePointsInput ref_points_input_;
-  std::vector<SpaceGridsInput> space_grid_inputs_;
-}
+  //std::vector<SpaceGridInput> space_grid_inputs_;
+  EnergyDensityInputSection input_section_;
+};
 
-}
+} // namespace qmcplusplus
 
 #endif

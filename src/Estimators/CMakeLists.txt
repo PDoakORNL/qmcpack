@@ -33,10 +33,8 @@ set(QMCEST_SRC
     OneBodyDensityMatrices.cpp
     PerParticleHamiltonianLoggerInput.cpp
     PerParticleHamiltonianLogger.cpp
-    ReferencePointsInput.cpp
     NEReferencePoints.cpp
-    NESpaceGrid.cpp
-    SpaceGridInput.cpp)
+    ReferencePointsInput.cpp)
 
 ####################################
 # create libqmcestimators

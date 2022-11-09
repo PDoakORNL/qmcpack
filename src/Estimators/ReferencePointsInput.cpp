@@ -13,9 +13,10 @@
 
 #include "ReferencePointsInput.h"
 
-#include <string_view>
+#include <sstream>
 
 #include "EstimatorInput.h"
+#include "ModernStringUtils.hpp"
 
 namespace qmcplusplus
 {
@@ -25,51 +26,60 @@ ReferencePointsInput::ReferencePointsInput(xmlNodePtr cur)
   input_section_.readXML(cur);
   auto setIfInInput = LAMBDA_setIfInInput;
   setIfInInput(coord_form_, "coord");
-  if (!readXML(cur))
-    throw UniformCommunicateError("Failure in parsing reference points node content");
+  readRefPointsXML(cur);
 }
 
-ReferencePointsInput::ReferencePointsInput(const Points& points, const CoordForm coord_form)
-    : points_(points), coord_form_(coord_form)
-{}
+// ReferencePointsInput::ReferencePointsInput(const Points& points, const CoordForm coord_form)
+//     : points_(points), coord_form_(coord_form)
+// {}
 
-bool ReferencePointsInput::readXML(xmlNodePtr cur)
+void ReferencePointsInput::readRefPointsXML(xmlNodePtr cur)
 {
   using modernstrutil::split;
+  using modernstrutil::strip;
 
-  bool succeeded = true;
-  //read in the point contents
-      std::vector<std::string_view> lines = split(XMLNodeString{cur}, "\n");
-      for (int i = 0; i < lines.size(); i++)
+  // read refpoints values they are some sequence of value nodes
+  std::string node_str{XMLNodeString{cur}};
+  std::vector<std::string_view> lines = split(strip(node_str), "\n");
+  for (int i = 0; i < lines.size(); i++)
+  {
+    auto stripped_line                   = strip(lines[i]);
+    std::vector<std::string_view> tokens = split(stripped_line, " ");
+    if (tokens.size() != OHMMS_DIM + 1)
+    {
+      std::ostringstream error;
+      error << error_tag << "reference point has 4 entries, given " << tokens.size() << ": " << lines[i];
+      throw UniformCommunicateError(error.str());
+    }
+    else
+    {
+      Point rp;
+      for (int d = 0; d < OHMMS_DIM; d++)
       {
-        succeeded                            = true;
-        std::vector<std::string_view> tokens = split(lines[i], " ");
-        if (tokens.size() != OHMMS_DIM + 1)
-        {
-          app_log() << "  reference point must have 4 entries, given " << tokens.size() << ": " << lines[i]
-                    << std::endl;
-          succeeded = false;
-          break;
-        }
-        else
-        {
-          Point rp;
-          for (int d = 0; d < OHMMS_DIM; d++)
-          {
-            rp[d] = string2Real<Real>(tokens[d + 1]);
-          }
-	  std::string key{tokens[0]};
-          points_[key] = rp;
-        }
+	try {
+	  rp[d] = std::stod(std::string(tokens[d + 1].begin(), tokens[d + 1].size()));
+	} catch (const std::invalid_argument& ia) {
+	  throw UniformCommunicateError(ia.what());
+	}
       }
-if (succeeded)
-  return true;
-else
-  return false;
+
+      // This must be done in constructor of ReferencePoints
+      // rp                = dot(crd, rp);
+      points_[std::string(tokens[0].begin(), tokens[0].size())] = rp;
+    }
+  }
 }
 
 std::any ReferencePointsInput::ReferencePointsInputSection::assignAnyEnum(const std::string& name) const
 {
   return lookupAnyEnum(name, get<std::string>(name), lookup_input_enum_value);
 }
+
+std::any makeReferencePointsInput(xmlNodePtr cur, std::string& value_label)
+{
+  ReferencePointsInput rpi{cur};
+  value_label = "referencepoints";
+  return rpi;
+}
+
 } // namespace qmcplusplus
