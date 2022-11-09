@@ -2,13 +2,13 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2022 Jeongnim Kim and QMCPACK developers.
+// Copyright (c) 2022 QMCPACK developers.
 //
 // File developed by: Jaron T. Krogel, krogeljt@ornl.gov, Oak Ridge National Laboratory
 //                    Mark A. Berrill, berrillma@ornl.gov, Oak Ridge National Laboratory
 //                    Peter W. Doak. doakpw@ornl.gov, Oak Ridge National Laboratory
 //
-// File created by: Jaron T. Krogel, krogeljt@ornl.gov, Oak Ridge National Laboratory
+// File refactored from: QMCHamiltonian/ReferencePoints.cpp
 //////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -18,131 +18,124 @@
 
 namespace qmcplusplus
 {
-bool NEReferencePoints::put(xmlNodePtr cur, ParticleSet& P, std::vector<ParticleSet*>& Pref)
+NEReferencePoints::NEReferencePoints(ReferencePointsInput&& rp_input,
+                                     ParticleSet& pset,
+                                     RefVector<ParticleSet>& ref_psets)
+    : input_(std::move(rp_input))
 {
-  app_log() << "  Entering ReferencePoints::put" << std::endl;
-  bool succeeded = true;
-  put(P, Pref);
-  OhmmsAttributeSet ra;
-  std::string coord = "";
-  ra.add(coord, "coord");
-  ra.put(cur);
-  for (int i = 0; i < DIM; i++)
-    for (int d = 0; d < DIM; d++)
-      axes(d, i) = P.getLattice().a(i)[d];
-  Tensor_t crd;
-  if (coord == "cell")
+  processParticleSets(pset, ref_psets);
+  for (int i = 0; i < OHMMS_DIM; i++)
+    for (int d = 0; d < OHMMS_DIM; d++)
+      axes(d, i) = pset.getLattice().a(i)[d];
+  Axes crd;
+  // no need to handle error here rp_input will have a valid value for coord_form
+  switch (input_.get_coord_form())
   {
-    coordinate = cellC;
-    crd        = axes;
-  }
-  else if (coord == "cartesian")
-  {
-    coordinate = cartesianC;
-    for (int i = 0; i < DIM; i++)
-      for (int d = 0; d < DIM; d++)
+  case Coord::CELL:
+    crd = axes;
+    break;
+  case Coord::CARTESIAN:
+    for (int i = 0; i < OHMMS_DIM; i++)
+      for (int d = 0; d < OHMMS_DIM; d++)
         if (d == i)
           crd(i, i) = 1.0;
         else
           crd(d, i) = 0.0;
+    break;
   }
-  else
-  {
-    app_log() << std::endl;
-    app_log() << "    Valid coordinates must be provided for element reference_points." << std::endl;
-    app_log() << "      You provided: " << coord << std::endl;
-    app_log() << "      Options are cell or cartesian." << std::endl;
-    app_log() << std::endl;
-    succeeded = false;
-  }
-  //read in the point contents
-  app_log() << "    reading reference_points contents" << std::endl;
-  std::vector<std::string> lines = split(strip(XMLNodeString{cur}), "\n");
-  for (int i = 0; i < lines.size(); i++)
-  {
-    std::vector<std::string> tokens = split(strip(lines[i]), " ");
-    if (tokens.size() != DIM + 1)
-    {
-      app_log() << "  reference point has 4 entries, given " << tokens.size() << ": " << lines[i] << std::endl;
-      succeeded = false;
-    }
-    else
-    {
-      Point rp;
-      for (int d = 0; d < DIM; d++)
-      {
-        rp[d] = string2real(tokens[d + 1]);
-      }
-      rp                = dot(crd, rp);
-      points[tokens[0]] = rp;
-    }
-  }
-  return succeeded;
+
+  for (const auto& [key, value] : input_.get_points())
+    points_[key] = dot(crd, value);
 }
 
-bool NEReferencePoints::put(ParticleSet& P, std::vector<ParticleSet*>& Psets)
+void NEReferencePoints::processParticleSets(ParticleSet& P, RefVector<ParticleSet>& Psets)
 {
   //get axes and origin information from the ParticleSet
-  points["zero"] = 0 * P.getLattice().a(0);
-  points["a1"]   = P.getLattice().a(0);
-  points["a2"]   = P.getLattice().a(1);
-  points["a3"]   = P.getLattice().a(2);
-  //points["center"]= .5*(P.getLattice().a(0)+P.getLattice().a(1)+P.Lattice.a(2))
-  //set points on face centers
-  points["f1p"] = points["zero"] + .5 * points["a1"];
-  points["f1m"] = points["zero"] - .5 * points["a1"];
-  points["f2p"] = points["zero"] + .5 * points["a2"];
-  points["f2m"] = points["zero"] - .5 * points["a2"];
-  points["f3p"] = points["zero"] + .5 * points["a3"];
-  points["f3m"] = points["zero"] - .5 * points["a3"];
-  //set points on cell corners
-  points["cmmm"] = points["zero"] + .5 * (-1 * points["a1"] - points["a2"] - points["a3"]);
-  points["cpmm"] = points["zero"] + .5 * (points["a1"] - points["a2"] - points["a3"]);
-  points["cmpm"] = points["zero"] + .5 * (-1 * points["a1"] + points["a2"] - points["a3"]);
-  points["cmmp"] = points["zero"] + .5 * (-1 * points["a1"] - points["a2"] + points["a3"]);
-  points["cmpp"] = points["zero"] + .5 * (-1 * points["a1"] + points["a2"] + points["a3"]);
-  points["cpmp"] = points["zero"] + .5 * (points["a1"] - points["a2"] + points["a3"]);
-  points["cppm"] = points["zero"] + .5 * (points["a1"] + points["a2"] - points["a3"]);
-  points["cppp"] = points["zero"] + .5 * (points["a1"] + points["a2"] + points["a3"]);
+  points_["zero"] = 0 * P.getLattice().a(0);
+  points_["a1"]   = P.getLattice().a(0);
+  points_["a2"]   = P.getLattice().a(1);
+  points_["a3"]   = P.getLattice().a(2);
+  //points_["center"]= .5*(P.getLattice().a(0)+P.getLattice().a(1)+P.Lattice.a(2))
+  //set points_ on face centers
+  points_["f1p"] = points_["zero"] + .5 * points_["a1"];
+  points_["f1m"] = points_["zero"] - .5 * points_["a1"];
+  points_["f2p"] = points_["zero"] + .5 * points_["a2"];
+  points_["f2m"] = points_["zero"] - .5 * points_["a2"];
+  points_["f3p"] = points_["zero"] + .5 * points_["a3"];
+  points_["f3m"] = points_["zero"] - .5 * points_["a3"];
+  //set points_ on cell corners
+  points_["cmmm"] = points_["zero"] + .5 * (-1 * points_["a1"] - points_["a2"] - points_["a3"]);
+  points_["cpmm"] = points_["zero"] + .5 * (points_["a1"] - points_["a2"] - points_["a3"]);
+  points_["cmpm"] = points_["zero"] + .5 * (-1 * points_["a1"] + points_["a2"] - points_["a3"]);
+  points_["cmmp"] = points_["zero"] + .5 * (-1 * points_["a1"] - points_["a2"] + points_["a3"]);
+  points_["cmpp"] = points_["zero"] + .5 * (-1 * points_["a1"] + points_["a2"] + points_["a3"]);
+  points_["cpmp"] = points_["zero"] + .5 * (points_["a1"] - points_["a2"] + points_["a3"]);
+  points_["cppm"] = points_["zero"] + .5 * (points_["a1"] + points_["a2"] - points_["a3"]);
+  points_["cppp"] = points_["zero"] + .5 * (points_["a1"] + points_["a2"] + points_["a3"]);
   //get points from requested particle sets
   int cshift = 1;
-  for (int i = 0; i < Psets.size(); i++)
+  for (ParticleSet& pset : Psets)
   {
-    ParticleSet& PS = *Psets[i];
-    for (int p = 0; p < PS.getTotalNum(); p++)
+    for (int p = 0; p < pset.getTotalNum(); p++)
     {
       std::stringstream ss;
       ss << p + cshift;
-      points[PS.getName() + ss.str()] = PS.R[p];
+      points_[pset.getName() + ss.str()] = pset.R[p];
     }
   }
-  return true;
 }
 
-
-void NEReferencePoints::write_description(std::ostream& os, std::string& indent)
+void NEReferencePoints::write_description(std::ostream& os, const std::string& indent) const
 {
-  os << indent + "reference_points" << std::endl;
-  std::map<std::string, Point>::const_iterator it, end = points.end();
-  for (it = points.begin(); it != end; ++it)
+  os << indent + "reference_points_" << std::endl;
+  std::map<std::string, Point>::const_iterator it, end = points_.end();
+  for (it = points_.begin(); it != end; ++it)
   {
     os << indent + "  " << it->first << ": " << it->second << std::endl;
   }
-  os << indent + "end reference_points" << std::endl;
+  os << indent + "end reference_points_" << std::endl;
   return;
 }
 
 void NEReferencePoints::save(std::vector<ObservableHelper>& h5desc, hdf_archive& file) const
 {
-  h5desc.emplace_back("reference_points");
+  h5desc.emplace_back("reference_points_");
   auto& oh = h5desc.back();
   oh.open(file);
   std::map<std::string, Point>::const_iterator it;
-  for (it = points.begin(); it != points.end(); ++it)
+  for (it = points_.begin(); it != points_.end(); ++it)
   {
     oh.addProperty(const_cast<Point&>(it->second), it->first, file);
   }
   return;
+}
+
+std::ostream& operator<<(std::ostream& out, const NEReferencePoints& rhs)
+{
+  rhs.write_description(out, "");
+  return out;
+}
+
+namespace testing
+{
+void TestableNEReferencePoints::write_testable_description(std::ostream& os) const
+{
+  os << "{" << '\n';
+  std::map<std::string, Point>::const_iterator it, end = points_.end();
+  for (it = points_.begin(); it != end; ++it)
+  {
+    os << " {\"" << it->first << "\", {" << std::setw(16) << std::setprecision(16) << it->second[0] << "," << it->second[1] << "," << it->second[2]
+       << "}}," << '\n';
+  }
+  os << "};" << '\n';
+  return;
+}
+} // namespace testing
+
+std::ostream& operator<<(std::ostream& out, const testing::TestableNEReferencePoints& rhs)
+{
+  rhs.write_testable_description(out);
+  return out;
 }
 
 

@@ -31,3 +31,9 @@ std::any SpaceGridInput::SpaceGridInputSection::assignAnyEnum(const std::string&
   return lookupAnyEnum(name, get<std::string>(name), lookup_input_enum_value);
 }
 
+std::any make makeSpaceGridInput(xmlNodePtr, std::string& value_label)
+{
+  SpaceGridInput sgi{cur};
+  value_label = "spacegrid";
+  return sgi;
+}

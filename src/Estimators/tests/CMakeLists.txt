@@ -38,10 +38,19 @@ set(SRCS
     test_MomentumDistribution.cpp
     test_OneBodyDensityMatricesInput.cpp
     test_OneBodyDensityMatrices.cpp
-    test_PerParticleHamiltonianLogger.cpp
     test_EstimatorManagerCrowd.cpp
     test_MagnetizationDensityInput.cpp
     test_MagnetizationDensity.cpp)
+    test_PerParticleHamiltonianLogger.cpp
+    test_ReferencePointsInput.cpp
+    test_ReferencePoints.cpp
+    )
+
+# Tests incompatible with DiracDeterminantCUDA
+# DiracDeterminantsCUDA cannot be copied
+if(NOT QMC_CUDA)
+  set(SRCS ${SRCS} test_MomentumDistribution.cpp test_OneBodyDensityMatricesInput.cpp test_OneBodyDensityMatrices.cpp test_PerParticleHamiltonianLogger.cpp test_EstimatorManagerCrowd.cpp)
+endif()
 
 add_executable(${UTEST_EXE} ${SRCS})
 target_link_libraries(${UTEST_EXE} catch_main qmcutil qmcestimators utilities_for_test sposets_for_testing)
@@ -67,7 +76,7 @@ if(HAVE_MPI)
   set(UTEST_NAME deterministic-unit_test_${SRC_DIR}_mpi)
 
   #this is dependent on the directory creation and sym linking of earlier driver tests
-  set(SRCS FakeOperatorEstimator.cpp EstimatorManagerNewTest.cpp test_manager_mpi.cpp)
+
   add_executable(${UTEST_EXE} ${SRCS})
   if(USE_OBJECT_TARGET)
     target_link_libraries(

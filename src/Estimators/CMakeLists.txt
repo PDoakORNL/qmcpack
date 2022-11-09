@@ -35,10 +35,8 @@ set(QMCEST_SRC
     MagnetizationDensityInput.cpp
     PerParticleHamiltonianLoggerInput.cpp
     PerParticleHamiltonianLogger.cpp
-    ReferencePointsInput.cpp
     NEReferencePoints.cpp
-    NESpaceGrid.cpp
-    SpaceGridInput.cpp)
+    ReferencePointsInput.cpp)
 
 ####################################
 # create libqmcestimators
