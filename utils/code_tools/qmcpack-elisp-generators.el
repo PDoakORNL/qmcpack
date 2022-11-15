@@ -48,6 +48,36 @@ a correction string"
 
 (setq qmcp-variable-declaration-re "\\( *\\)\\([<>,A-Za-z:_&\\*]+ *[<>,A-Za-z:_&\\*]+\\)\\( +\\)\\([A-Za-z_0-9]+\\)_.*;")
 
+(defun qmcp-add-ref-getters()
+  "For each C++ variable declaration in REGION write const ref getter.
+The getter functions are written starting on the line after the REGION."
+  (interactive)
+  (let ((leading-indent (qmcp-leading-indent)))
+    (save-excursion
+      (save-restriction
+        (narrow-to-region (region-beginning) (region-end))
+        (goto-char (point-min))
+        (let ((getters "")
+              (indent "")
+              (my-type "")
+              (my-var "")
+              (getter-line "")
+              (first-line (line-beginning-position))
+              )
+          (setq getters "")
+          (while (re-search-forward qmcp-variable-declaration-re nil t)
+            (message "match")
+            (setq indent (match-string 1))
+            (when (= first-line (line-beginning-position))
+              (setq indent (concat indent leading-indent)))
+            (setq my-type (match-string 2))
+            (setq my-var (match-string 4))
+            (setq getter-line (format "%sconst %s& get_%s() const { return %s_; }\n" indent my-type my-var my-var))
+            (setq getters (concat getters getter-line)))
+          (goto-char (point-max))
+          (insert "\n")
+          (insert getters))))))
+
 (defun qmcp-add-getters()
   "For each C++ variable declaration in REGION write getter.
 The getter functions are written on starting on the line after the REGION."
@@ -77,6 +107,7 @@ The getter functions are written on starting on the line after the REGION."
           (goto-char (point-max))
           (insert "\n")
           (insert getters))))))
+
 
 (defun qmcp-add-setters()
   "For each C++ variable declaration in REGION write setter.
