@@ -37,6 +37,7 @@ set(SRCS
     test_PerParticleHamiltonianLogger.cpp
     test_ReferencePointsInput.cpp
     test_ReferencePoints.cpp
+    test_SpaceGridInput.cpp
     )
 
 # OneBodyDensityMatrices are not tested with legacy CUDA

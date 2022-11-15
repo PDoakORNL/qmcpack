@@ -2,13 +2,13 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2022 Jeongnim Kim and QMCPACK developers.
+// Copyright (c) 2022 QMCPACK developers.
 //
 // File developed by: Jaron T. Krogel, krogeljt@ornl.gov, Oak Ridge National Laboratory
 //                    Mark A. Berrill, berrillma@ornl.gov, Oak Ridge National Laboratory
 //                    Peter W. Doak, doakpw@ornl.gov, Oak Ridge National Laboratory
 //
-// File created by: Jaron T. Krogel, krogeljt@ornl.gov, Oak Ridge National Laboratory
+// Some code refactored from: QMCHamiltonian/SpaceGrid.h
 //////////////////////////////////////////////////////////////////////////////////////
 
 #ifndef QMCPLUSPLUS_NESPACEGRID_H
@@ -29,32 +29,33 @@ namespace qmcplusplus
 class NESpaceGrid
 {
 public:
-  using Point      = TinyVector<RealType, DIM>;
-  using BufferType = PooledData<RealType>;
+  using Real   = QMCTraits::RealType;
+  using Points = typename NEReferencePoints::Points;
+  using BufferType = PooledData<Real>;
   using Matrix_t   = Matrix<RealType>;
+  using POLT    = PtclOnLatticeTraits;
+  using ParticlePos = POLT::ParticlePos;
 
-  NESpaceGrid(int& nvalues);
-  bool put(xmlNodePtr cur,
-           std::map<std::string, Point>& points,
-           ParticlePos& R,
-           std::vector<RealType>& Z,
-           int ndp,
-           bool is_periodic,
-           bool abort_on_fail = true)
+  enum class ReferenceEnergy
   {
-    Rptcl       = &R;
-    Zptcl       = &Z;
-    ndparticles = ndp;
-    return put(cur, points, is_periodic, abort_on_fail);
-  }
-  bool put(xmlNodePtr cur, std::map<std::string, Point>& points, bool is_periodic, bool abort_on_fail = true);
-  bool initialize_rectilinear(xmlNodePtr cur, std::string& coord, std::map<std::string, Point>& points);
+    vacuum,
+    neutral,
+    noref
+  };
+
+  
+  NESpaceGrid(int& nvalues);
+  NESpaceGrid(SpaceGridInput& sgi,
+           NEReferencePoints::Points& points,
+           int ndp,
+	      bool is_periodic);
+
   bool initialize_voronoi(std::map<std::string, Point>& points);
   void write_description(std::ostream& os, std::string& indent);
   int allocate_buffer_space(BufferType& buf);
   void registerCollectables(std::vector<ObservableHelper>& h5desc, hid_t gid, int grid_index) const;
   void evaluate(const ParticlePos& R,
-                const Matrix<RealType>& values,
+                const Matrix<Real>& values,
                 BufferType& buf,
                 std::vector<bool>& particles_outside,
                 const DistanceTableAB& dtab);
@@ -62,69 +63,61 @@ public:
   bool check_grid(void);
   inline int nDomains(void) { return ndomains; }
 
-  void sum(const BufferType& buf, RealType* vals);
+  void sum(const BufferType& buf, Real* vals);
 
-  int buffer_start;
-  int buffer_end;
+private:
+  bool initialize_rectilinear(SpaceGridInput& input, Points& points);
+
+  SpaceGridInput& input_;
+  int ndparticles_;
+  bool periodic_;
+  NEReferencePoints& points_;
+  
+  // _NO_
+  int buffer_start_;
+  int buffer_end_;
 
   //private:
 
-  //same for all spacegrids
-  enum
-  {
-    cartesian = 0,
-    cylindrical,
-    spherical,
-    voronoi,
-    ncoordinates
-  } coordinate;
-  int buffer_offset;
-  int ndomains;
-  int nvalues_per_domain;
-  Matrix<RealType> domain_volumes;
-  Matrix<RealType> domain_centers;
+  int buffer_offset_;
+  int ndomains_;
+  int nvalues_per_domain_;
+  Matrix<Real> domain_volumes_;
+  Matrix<Real> domain_centers_;
 
   //in use if sorting by particle count
-  bool chempot;
-  int npmin, npmax;
-  int npvalues;
-  Matrix<RealType> cellsamples;
-  enum
-  {
-    vacuum,
-    neutral,
-    noref
-  } reference;
-  std::vector<int> reference_count;
+  bool chempot_;
+  int npmin_, npmax_;
+  int npvalues_;
+  Matrix<Real> cellsamples_;
+
+  std::vector<int> reference_count_;
 
   //really only used for cartesian-like grids
-  Point origin;
-  Tensor<RealType, DIM> axes;
-  Tensor<RealType, DIM> axinv;
-  RealType volume;
-  Matrix<RealType> domain_uwidths;
-  std::string axlabel[DIM];
-  std::vector<int> gmap[DIM];
-  RealType odu[DIM];
-  RealType umin[DIM];
-  RealType umax[DIM];
-  int dimensions[DIM];
-  int dm[DIM];
-  bool periodic;
-
-  //voronoi grids
-  ParticlePos* Rptcl;
-  std::vector<RealType>* Zptcl;
-  struct irpair
+  Point origin_;
+  Tensor<Real, OHMMS_DIM> axes_;
+  Tensor<Real, OHMMS_DIM> axinv_;
+  Real volume_;
+  Matrix<Real> domain_uwidths_;
+  std::string axlabel_[OHMMS_DIM];
+  std::vector<int> gmap_[OHMMS_DIM];
+  Real odu_[OHMMS_DIM];
+  Real umin_[OHMMS_DIM];
+  Real umax_[OHMMS_DIM];
+  int dimensions_[OHMMS_DIM];
+  int dm_[OHMMS_DIM];
+  ReferenceEnergy reference_energy_;
+  
+  struct IRPair
   {
-    RealType r;
+    Real r;
     int i;
   };
-  std::vector<irpair> nearcell;
-  int ndparticles;
+  std::vector<IRPair> nearcell_;
 
   //used only in evaluate
-  Point u, ub;
+  // Then why are they here and not on the stack in evaluate!
+  Point u_, ub_;
 };
 
 
