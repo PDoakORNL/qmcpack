@@ -49,16 +49,33 @@ void InputSection::readXML(xmlNodePtr cur)
     {
       assert(delegate_factories_.find(ename) != delegate_factories_.end());
       std::string value_key;
-      std::any value     = delegate_factories_[ename](element, value_key);
-      if (has(value_key))
-	throw UniformCommunicateError("Input is invalid  " + section_name + " contains " + ename + " node with duplicate name " + value_key + "!");
-      values_[value_key] = std::move(value);
+      std::any value = delegate_factories_[ename](element, value_key);
+      if (has(value_key) && !isMultiple(value_key))
+        throw UniformCommunicateError("Input is invalid  " + section_name + " contains " + ename +
+                                      " node with duplicate name " + value_key + "!");
+      if (isMultiple(value_key))
+      {
+        if (has(value_key))
+        {
+          auto* value_vector = std::any_cast<std::vector<std::any>>(&(values_[value_key]));
+          value_vector->push_back(value);
+        }
+        else
+        {
+          values_[value_key] = std::vector<std::any>{value};
+        }
+      }
+      else
+      {
+        values_[value_key] = value;
+      }
     }
-    else if (isCustom(ename)) {
+    else if (isCustom(ename))
+    {
       std::istringstream stream(XMLNodeString{element});
       setFromStreamCustom(ename, name, stream);
     }
-    else if (ename == "parameter" || isParameter(ename) )
+    else if (ename == "parameter" || isParameter(ename))
     {
       if (!isParameter(name))
       {
@@ -67,7 +84,7 @@ void InputSection::readXML(xmlNodePtr cur)
         throw UniformCommunicateError(error.str());
       }
       std::istringstream stream(XMLNodeString{element});
-	setFromStream(name, stream);
+      setFromStream(name, stream);
     }
     else if (ename != "text")
     {
@@ -129,6 +146,13 @@ void InputSection::setFromStream(const std::string& name, std::istringstream& sv
       string_values.push_back(value);
     values_[name] = string_values;
   }
+  else if (isMultiReal(name))
+  {
+    std::vector<Real> real_values;
+    for (Real value; svalue >> value;)
+      real_values.push_back(value);
+    values_[name] = real_values;
+  }
   else if (isBool(name))
   {
     std::string sval;
@@ -169,6 +193,8 @@ void InputSection::setFromValue(const std::string& name, const T& value)
     values_[name] = std::any_cast<std::string>(value);
   else if (isMultiString(name))
     values_[name] = (std::any_cast<std::vector<std::string>>(value));
+  else if (isMultiString(name))
+    values_[name] = (std::any_cast<std::vector<Real>>(value));
   else if (isBool(name))
     values_[name] = std::any_cast<bool>(value);
   else if (isInteger(name))
@@ -229,7 +255,7 @@ std::any InputSection::lookupAnyEnum(const std::string& enum_name,
   }
   catch (std::out_of_range& oor_exc)
   {
-    std::throw_with_nested(std::logic_error("bad_enum_tag_value: " + enum_value_str));
+    std::throw_with_nested(UniformCommunicateError("bad_enum_tag_value: " + enum_value_str));
   }
 }
 

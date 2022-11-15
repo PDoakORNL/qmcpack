@@ -37,6 +37,7 @@ set(SRCS
     test_PerParticleHamiltonianLogger.cpp
     test_ReferencePointsInput.cpp
     test_ReferencePoints.cpp
+    test_SpaceGridInput.cpp
     )
 
 # Tests incompatible with DiracDeterminantCUDA
