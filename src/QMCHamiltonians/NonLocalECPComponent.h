@@ -144,6 +144,8 @@ public:
   template<typename T>
   void randomize_grid(std::vector<T>& sphere, RandomGenerator& myRNG);
 
+  void random_rotation(std::vector<PosType>& grid_points, RandomGenerator& myRNG);
+
   /** contribute local non-local move data
    * @param iel reference electron id.
    * @param Txy nonlocal move data.
