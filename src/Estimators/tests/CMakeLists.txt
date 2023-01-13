@@ -71,14 +71,16 @@ if(HAVE_MPI)
   set(UTEST_NAME deterministic-unit_test_${SRC_DIR}_mpi)
 
   #this is dependent on the directory creation and sym linking of earlier driver tests
-
+  set(SRCS FakeOperatorEstimator.cpp EstimatorManagerNewTest.cpp test_manager_mpi.cpp)
+  
   add_executable(${UTEST_EXE} ${SRCS})
   if(USE_OBJECT_TARGET)
     target_link_libraries(
       ${UTEST_EXE}
-      qmcestimators_unit
-      qmcham_unit
-      qmcdriver_unit
+      qmcutil
+      qmcestimators
+      qmcham
+      qmcdriver
       qmcwfs
       qmcparticle
       qmcwfs_omptarget
@@ -87,7 +89,7 @@ if(HAVE_MPI)
       platform_omptarget_LA
       utilities_for_test)
   endif()
-  target_link_libraries(${UTEST_EXE} catch_main qmcestimators_unit)
+  target_link_libraries(${UTEST_EXE} catch_main qmcestimators qmcwfs qmcparticle qmcham qmcwfs_omptarget qmcutil utilities_for_test)
   # Right now the unified driver mpi tests are hard coded for 3 MPI ranks
   add_unit_test(${UTEST_NAME} 3 1 $<TARGET_FILE:${UTEST_EXE}>)
 endif()

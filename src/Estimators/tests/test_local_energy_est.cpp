@@ -91,13 +91,27 @@ TEST_CASE("LocalEnergy with hdf5", "[estimators]")
   (*W.begin())->Properties(WP::LOCALENERGY)    = 1.1;
   (*W.begin())->Properties(WP::LOCALPOTENTIAL) = 1.2;
 
+  le_est.accumulate(W, W.begin(), W.end(), 1.0);
+
+  Vector<double> average_cache;
+  average_cache.resize(3);
+  
+  le_est.addAccumulated(average_cache.begin());
+  
   std::vector<ObservableHelper> h5desc;
 
   std::filesystem::path filename("tmp_obs.h5");
   hdf_archive h_file;
   h_file.create(filename);
   le_est.registerObservables(h5desc, h_file);
+
+  h5desc[0].write(average_cache.data(), h_file);
+  h5desc[1].write(average_cache.data(), h_file);
+  h5desc[2].write(average_cache.data(), h_file);
+  
   h_file.close();
+
+  
   REQUIRE(std::filesystem::exists(filename));
   // Check contents?
   REQUIRE(std::filesystem::remove(filename));

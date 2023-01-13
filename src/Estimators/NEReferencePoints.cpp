@@ -15,6 +15,7 @@
 #include "NEReferencePoints.h"
 #include "Utilities/string_utils.h"
 #include "OhmmsData/AttributeSet.h"
+#include "QMCHamiltonians/ObservableHelper.h"
 
 namespace qmcplusplus
 {
@@ -87,23 +88,21 @@ void NEReferencePoints::processParticleSets(ParticleSet& P, RefVector<ParticleSe
 
 void NEReferencePoints::write_description(std::ostream& os, const std::string& indent) const
 {
-  os << indent + "reference_points_" << std::endl;
+  os << indent + "reference_points" << std::endl;
   std::map<std::string, Point>::const_iterator it, end = points_.end();
   for (it = points_.begin(); it != end; ++it)
   {
     os << indent + "  " << it->first << ": " << it->second << std::endl;
   }
-  os << indent + "end reference_points_" << std::endl;
+  os << indent + "end reference_points" << std::endl;
   return;
 }
 
 void NEReferencePoints::save(std::vector<ObservableHelper>& h5desc, hdf_archive& file) const
 {
-  h5desc.emplace_back("reference_points_");
+  h5desc.emplace_back(hdf_path{"reference_points"});
   auto& oh = h5desc.back();
-  oh.open(file);
-  std::map<std::string, Point>::const_iterator it;
-  for (it = points_.begin(); it != points_.end(); ++it)
+  for (auto it = points_.cbegin(); it != points_.cend(); ++it)
   {
     oh.addProperty(const_cast<Point&>(it->second), it->first, file);
   }
