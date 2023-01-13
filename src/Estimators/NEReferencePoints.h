@@ -39,7 +39,7 @@ public:
   const Points& get_points() const { return points_; }
 
 protected:
-  std::map<std::string, Point> points_;
+  Points points_;
 
 private:
   Axes axes;

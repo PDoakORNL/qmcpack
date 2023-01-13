@@ -2,7 +2,7 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2022 QMCPACK developers.
+// Copyright (c) 2023 QMCPACK developers.
 //
 // File developed by: Peter Doak, doakpw@ornl.gov, Oak Ridge National Lab
 //////////////////////////////////////////////////////////////////////////////////////
@@ -17,15 +17,23 @@
 #include "Particle/tests/MinimalParticlePool.h"
 
 /** \file
- *  This is postfacto unit testing written for reference points during porting of EnergyDensity
- *  to the batched version of the estimators.  Since the original authors provided no unit testing
- *  this is just a best guess.
+ *  This is a postfacto unit testing written for reference points during porting of EnergyDensity
+ *  to the batched version of the estimators.
  */
 
 namespace qmcplusplus
 {
 constexpr bool generate_test_data = false;
 
+template<typename T1, typename T2, unsigned D>
+bool approxEquality(const TinyVector<T1, D>& val_a, const TinyVector<T2, D>& val_b)
+{
+  for (int i = 0; i < D; ++i)
+    if (val_a[i] != Approx(val_b[i]))
+      return false;
+  return true;
+}
+  
 TEST_CASE("ReferencePoints::Construction", "[estimators]")
 {
   auto& inputs = testing::valid_reference_points_input_sections;
@@ -57,34 +65,36 @@ TEST_CASE("ReferencePoints::Construction", "[estimators]")
     testing::TestableNEReferencePoints tref_points(ref_points);
     std::cout << "expected_reference_points" << tref_points;
   }
-  NEReferencePoints::Points expected_reference_points{
- {"a1", {3.37316107749939,3.37316107749939,0}},
- {"a2", {               0,3.37316107749939,3.37316107749939}},
- {"a3", {3.37316107749939,0,3.37316107749939}},
- {"cmmm", {-3.37316107749939,-3.37316107749939,-3.37316107749939}},
- {"cmmp", {               0,-3.37316107749939,0}},
- {"cmpm", {-3.37316107749939,0,0}},
- {"cmpp", {               0,0,3.37316107749939}},
- {"cpmm", {               0,0,-3.37316107749939}},
- {"cpmp", {3.37316107749939,0,0}},
- {"cppm", {               0,3.37316107749939,0}},
- {"cppp", {3.37316107749939,3.37316107749939,3.37316107749939}},
- {"f1m", {-1.686580538749695,-1.686580538749695,0}},
- {"f1p", {1.686580538749695,1.686580538749695,0}},
- {"f2m", {               0,-1.686580538749695,-1.686580538749695}},
- {"f2p", {               0,1.686580538749695,1.686580538749695}},
- {"f3m", {-1.686580538749695,0,-1.686580538749695}},
- {"f3p", {1.686580538749695,0,1.686580538749695}},
- {"ion1", {               0,0,0}},
- {"ion2", {1.686580538749695,1.686580538749695,1.686580538749695}},
- {"r1", {3.37316107749939,3.37316107749939,0}},
- {"r2", {               0,3.37316107749939,3.37316107749939}},
- {"r3", {3.37316107749939,0,3.37316107749939}},
- {"zero", {               0,0,0}},
-};
+  typename NEReferencePoints::Points expected_reference_points{
+      {"a1", {3.37316107749939, 3.37316107749939, 0}},
+      {"a2", {0, 3.37316107749939, 3.37316107749939}},
+      {"a3", {3.37316107749939, 0, 3.37316107749939}},
+      {"cmmm", {-3.37316107749939, -3.37316107749939, -3.37316107749939}},
+      {"cmmp", {0, -3.37316107749939, 0}},
+      {"cmpm", {-3.37316107749939, 0, 0}},
+      {"cmpp", {0, 0, 3.37316107749939}},
+      {"cpmm", {0, 0, -3.37316107749939}},
+      {"cpmp", {3.37316107749939, 0, 0}},
+      {"cppm", {0, 3.37316107749939, 0}},
+      {"cppp", {3.37316107749939, 3.37316107749939, 3.37316107749939}},
+      {"f1m", {-1.686580538749695, -1.686580538749695, 0}},
+      {"f1p", {1.686580538749695, 1.686580538749695, 0}},
+      {"f2m", {0, -1.686580538749695, -1.686580538749695}},
+      {"f2p", {0, 1.686580538749695, 1.686580538749695}},
+      {"f3m", {-1.686580538749695, 0, -1.686580538749695}},
+      {"f3p", {1.686580538749695, 0, 1.686580538749695}},
+      {"ion1", {0, 0, 0}},
+      {"ion2", {1.686580538749695, 1.686580538749695, 1.686580538749695}},
+      {"r1", {3.37316107749939, 3.37316107749939, 0}},
+      {"r2", {0, 3.37316107749939, 3.37316107749939}},
+      {"r3", {3.37316107749939, 0, 3.37316107749939}},
+      {"zero", {0, 0, 0}},
+  };
 
-  for(auto& [key,value] : ref_points.get_points()) {
-    CHECK(value == expected_reference_points[key]);
+  for (auto& [key, value] : ref_points.get_points())
+  {
+    bool coords_match = approxEquality(expected_reference_points[key], value);
+    CHECK(coords_match);
   }
 }
 
