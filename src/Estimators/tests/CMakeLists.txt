@@ -38,6 +38,7 @@ set(SRCS
     test_ReferencePointsInput.cpp
     test_ReferencePoints.cpp
     test_SpaceGridInput.cpp
+    test_ParseGridInput.cpp
     )
 
 # Tests incompatible with DiracDeterminantCUDA

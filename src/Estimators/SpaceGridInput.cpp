@@ -2,7 +2,7 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2022 QMCPACK developers.
+// Copyright (c) 2023 QMCPACK developers.
 //
 // File developed by: Jaron T. Krogel, krogeljt@ornl.gov, Oak Ridge National Laboratory
 //                    Mark A. Berrill, berrillma@ornl.gov, Oak Ridge National Laboratory
@@ -22,6 +22,41 @@
 namespace qmcplusplus
 {
 
+SpaceGridInput::SpaceGridAxisInput::SpaceGridAxisInput(xmlNodePtr cur)
+{
+  input_section_.readXML(cur);
+  auto setIfInInput = LAMBDA_setIfInInput;
+  setIfInInput(label_, "label");
+  setIfInInput(grid_, "grid");
+  setIfInInput(p1_, "p1");
+  setIfInInput(p2_, "p2");
+  setIfInInput(scale_, "scale");
+}
+
+void SpaceGridInput::SpaceGridAxisInput::SpaceGridAxisInputSection::setFromStreamCustom(const std::string& ename,
+                                                                                        const std::string& name,
+                                                                                        std::istringstream& svalue)
+{
+  if (ename == "grid")
+  {
+    try
+    {
+      values_[name] = parseGridInput<Real>(svalue);
+    }
+    catch (const UniformCommunicateError& uce)
+    {
+      std::ostringstream msg;
+      msg << "SpaceGridAxisInputSection failed in custom stream handler with: " << uce.what()
+          << " a report of the current parse progress should be found above\n";
+      report();
+      throw UniformCommunicateError(msg.str());
+    }
+  }
+  else
+    throw std::runtime_error("bad name passed or custom setFromStream not implemented in derived class.");
+}
+
+
 SpaceGridInput::SpaceGridInput(xmlNodePtr cur)
 {
   input_section_.readXML(cur);
@@ -34,43 +69,26 @@ SpaceGridInput::SpaceGridInput(xmlNodePtr cur)
   for (int d = 0; d < OHMMS_DIM; d++)
   {
     auto* axis_input = std::any_cast<SpaceGridAxisInput>(&axes[d]);
-    auto& input = axis_input->get_input();
-    axis_label_[d] = input.get<std::string>("label");
-    axis_p1_[d] = input.get<std::string>("p1");
-    axis_grid_[d] = input.get<std::vector<double>>("grid");
-    axis_scale_[d] = input.get<double>("scale");
+    axis_labels_[d]  = axis_input->get_label();
+    axis_p1s_[d]     = axis_input->get_p1();
+    axis_p2s_[d]     = axis_input->get_p2();
+    axis_grids_[d]   = axis_input->get_grid();
+    axis_scales_[d]  = axis_input->get_scale();
   }
 }
 
 
-void SpaceGridInput::checkAxes(std::vector<std::any>& axes) {
-  auto checkLabels = [&](const std::array<const std::string, 3>& ax_labels, auto& axes) {
-    for (auto& axis : axes)
-    {
-      auto* axis_input = std::any_cast<SpaceGridAxisInput>(&axis);
-      std::string axis_label = axis_input->get_input().template get<std::string>("label");
-      auto result      = std::find(std::begin(ax_labels), std::end(ax_labels), axis_label);
-      if (result == std::end(ax_labels))
-        throw UniformCommunicateError(axis_label + " is not a valid label for coord form " +
-                                      input_section_.get<std::string>("coord"));
-    }
-  };
-
-  // many many checks belong here
-  switch (coord_form_)
+void SpaceGridInput::checkAxes(std::vector<std::any>& axes)
+{
+  auto& ax_labels = axes_label_sets.at(coord_form_);
+  for (auto& axis : axes)
   {
-  case (CoordForm::CARTESIAN):
-    checkLabels(ax_cartesian, axes);
-    break;
-  case (CoordForm::CYLINDRICAL):
-    checkLabels(ax_cylindrical, axes);
-    break;
-  case (CoordForm::SPHERICAL):
-    checkLabels(ax_spherical, axes);
-    break;
-  case (CoordForm::VORONOI):
-    throw UniformCommunicateError("VORONOI SpaceGrid coordinates are not yet supported!");
-    break;
+    auto* axis_input       = std::any_cast<SpaceGridAxisInput>(&axis);
+    std::string axis_label = axis_input->get_input().template get<std::string>("label");
+    auto result            = std::find(std::begin(ax_labels), std::end(ax_labels), axis_label);
+    if (result == std::end(ax_labels))
+      throw UniformCommunicateError(axis_label + " is not a valid label for coord form " +
+                                    input_section_.get<std::string>("coord"));
   }
 }
 
