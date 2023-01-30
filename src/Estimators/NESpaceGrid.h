@@ -11,6 +11,10 @@
 // Some code refactored from: QMCHamiltonian/SpaceGrid.h
 //////////////////////////////////////////////////////////////////////////////////////
 
+/** \file
+ *  This is the port of QMCHamiltonian/SpaceGrid to the new Estimator design.
+ *  Name clashes were undesirable as the legacy implementation needed to remain.
+ */
 #ifndef QMCPLUSPLUS_NESPACEGRID_H
 #define QMCPLUSPLUS_NESPACEGRID_H
 

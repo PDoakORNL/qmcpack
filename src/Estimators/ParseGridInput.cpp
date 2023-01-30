@@ -25,11 +25,8 @@ AxisGrid<REAL> parseGridInput(std::istringstream& grid_input_stream)
   using namespace modernstrutil;
   const REAL utol = 1e-5;
 
-
   std::string grid_line;
   std::getline(grid_input_stream, grid_line);
-  //grid_input_stream >> grid_line;
-  std::cout << grid_line << '\n';
   // This refactored from QMCHamiltonian/SpaceGrid::initializeRectilinear
   std::vector<std::string_view> tokens = split(grid_line, " ");
 
