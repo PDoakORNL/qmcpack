@@ -18,7 +18,7 @@
 #include "catch.hpp"
 
 #include "ParseGridInput.hpp"
-
+#include "Message/UniformCommunicateError.h"
 #include <StlPrettyPrint.hpp>
 #include <NativeInitializerPrint.hpp>
 
@@ -41,7 +41,7 @@ std::ostream& operator<<(std::ostream& out, const AxisGrid<T>& rhs)
   return out;
 }
 
-TEMPLATE_TEST_CASE("ParseGridInput", "[estimators]", float, double)
+TEMPLATE_TEST_CASE("ParseGridInput::Good", "[estimators]", float, double)
 {
   using Real = TestType;
   using namespace std::string_literals;
@@ -86,7 +86,6 @@ TEMPLATE_TEST_CASE("ParseGridInput", "[estimators]", float, double)
                             },   //ndu_per_interval
                             10}; //dimensions
 
-  //std::cout << axis_grid_1;
   CHECK(axis_grid_1 == expected_1);
 
   std::istringstream grid_input_2("0.1 (10) 0.2 (20) 0.4 (10) 0.8"s);
@@ -122,6 +121,28 @@ TEMPLATE_TEST_CASE("ParseGridInput", "[estimators]", float, double)
                             40}; //dimensions
 
   CHECK(axis_grid_2 == expected_2);
+}
+
+TEMPLATE_TEST_CASE("ParseGridInput::Bad", "[estimators]", float, double)
+{
+  using Real = TestType;
+  using namespace std::string_literals;
+
+  std::istringstream grid_input_1("1.1 (0.1) 1.5"s);
+  CHECK_THROWS_AS(parseGridInput<Real>(grid_input_1), UniformCommunicateError);
+
+  std::istringstream grid_input_2("0.8 (0.1) 0.5"s);
+  CHECK_THROWS_AS(parseGridInput<Real>(grid_input_2), UniformCommunicateError);
+
+  std::istringstream grid_input_3("0.8 (0.1) 1.5"s);
+  CHECK_THROWS_AS(parseGridInput<Real>(grid_input_3), UniformCommunicateError);
+
+  std::istringstream grid_input_4("0.1 (0.3) 0.2"s);
+  CHECK_THROWS_AS(parseGridInput<Real>(grid_input_4), UniformCommunicateError);
+
+  std::istringstream grid_input_5("0.1 (10) 0.2 (20) 0.35 (10) 0.73"s);
+  CHECK_THROWS_AS(parseGridInput<Real>(grid_input_5), UniformCommunicateError);
+
 }
 
 } // namespace qmcplusplus
