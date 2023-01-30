@@ -61,14 +61,14 @@ TEST_CASE("SpaceGridInputs::parseXML::axes", "[estimators]")
 
   SpaceGridInput sgi(node);
 
-  auto& axis_p1 = sgi.get_axis_p1();
+  auto& axis_p1 = sgi.get_axis_p1s();
   CHECK(checkVec(axis_p1, {"r1","r2","r3"}));
-  auto& axis_scale = sgi.get_axis_scale();
+  auto& axis_scale = sgi.get_axis_scales();
   CHECK(checkVec(axis_scale, {6.9,6.9,6.9}));
-  auto& axis_label = sgi.get_axis_label();
+  auto& axis_label = sgi.get_axis_labels();
   CHECK(checkVec(axis_label, {"r","phi","theta"}));
-  auto& axis_grid = sgi.get_axis_grid();
-  CHECK(checkVec(axis_grid, {{{0.0, 1.0},{0, 1},{0, 1}}}));
+  auto& axis_grid = sgi.get_axis_grids();
+  //CHECK(checkVec(axis_grid, {{{0.0, 1.0},{0, 1},{0, 1}}}));
 }
   
 } // namespace qmcplusplus

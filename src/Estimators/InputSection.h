@@ -233,6 +233,11 @@ protected:
   static std::any lookupAnyEnum(const std::string& enum_name,
                                 const std::string& enum_value,
                                 const std::unordered_map<std::string, std::any>& enum_map);
+protected:
+  // Simple dump of contents. Useful for developing and as
+  // debugging function useful when input sections local error reports
+  // may be insufficient.
+  void report() const;
 
 protected:
   // Simple dump of contents. Useful for developing and as

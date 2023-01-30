@@ -37,7 +37,8 @@ set(QMCEST_SRC
     PerParticleHamiltonianLogger.cpp
     NEReferencePoints.cpp
     ReferencePointsInput.cpp
-    SpaceGridInput.cpp)
+    SpaceGridInput.cpp
+    ParseGridInput.cpp)
 #    NESpaceGrid.cpp)
 
 ####################################
