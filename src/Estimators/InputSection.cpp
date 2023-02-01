@@ -49,7 +49,6 @@ void InputSection::readAttributes(xmlNodePtr cur,
       setFromStreamCustom(element_name, qualified_name, stream);
     else
       setFromStream(qualified_name, stream);
-
     att = att->next;
   }
 }

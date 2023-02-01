@@ -37,7 +37,8 @@ void SpaceGridInput::SpaceGridAxisInput::SpaceGridAxisInputSection::setFromStrea
                                                                                         const std::string& name,
                                                                                         std::istringstream& svalue)
 {
-  if (ename == "grid")
+  // grid can only be an attribute for space grid axes.
+  if (name == "grid")
   {
     try
     {

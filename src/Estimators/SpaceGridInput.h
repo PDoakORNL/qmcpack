@@ -93,7 +93,7 @@ public:
     Real get_scale() const { return scale_; }
     std::string get_p1() const { return p1_; }
     std::string get_p2() const { return p2_; }
-    std::vector<Real> get_grid() const { return grid_; }
+    AxisGrid<Real> get_grid() const { return grid_; }
 
   private:
     SpaceGridAxisInputSection input_section_;
@@ -101,7 +101,7 @@ public:
     Real scale_        = 1.0;
     std::string p1_    = "";
     std::string p2_    = "zero";
-    std::vector<Real> grid_;
+    AxisGrid<Real> grid_;
   };
 
   class SpaceGridOriginInput
@@ -160,7 +160,7 @@ public:
 
   const std::array<Real, OHMMS_DIM>& get_axis_scales() const { return axis_scales_; }
   const std::array<std::string, OHMMS_DIM>& get_axis_labels() const { return axis_labels_; }
-  const std::array<std::vector<double>, OHMMS_DIM>& get_axis_grids() const { return axis_grids_; }
+  const std::array<AxisGrid<Real>, OHMMS_DIM>& get_axis_grids() const { return axis_grids_; }
   const std::string& get_origin_p1() const { return origin_p1_; }
   const std::string& get_origin_p2() const { return origin_p2_; }
   Real get_origin_fraction() const { return origin_fraction_; }
@@ -179,7 +179,7 @@ private:
   std::array<std::string, OHMMS_DIM> axis_p1s_;
   std::array<std::string, OHMMS_DIM> axis_p2s_;
   std::array<Real, OHMMS_DIM> axis_scales_;
-  std::array<std::vector<double>, OHMMS_DIM> axis_grids_;
+  std::array<AxisGrid<Real>, OHMMS_DIM> axis_grids_;
 };
 
 std::any makeSpaceGridInput(xmlNodePtr, std::string& value_label);
