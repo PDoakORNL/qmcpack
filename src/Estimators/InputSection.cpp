@@ -32,7 +32,10 @@ void InputSection::readXML(xmlNodePtr cur)
       throw UniformCommunicateError(error.str());
     }
     std::istringstream stream(castXMLCharToChar(att->children->content));
-    setFromStream(name, stream);
+    if (isCustom(name))
+      setFromStreamCustom({}, name, stream);
+    else
+      setFromStream(name, stream);
     att = att->next;
   }
 

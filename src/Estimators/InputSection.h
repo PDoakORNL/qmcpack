@@ -13,6 +13,8 @@
 
 #include <typeinfo>
 #include <any>
+#include <stdexcept>
+#include <exception>
 #include <functional>
 #include <unordered_set>
 #include <unordered_map>
@@ -83,8 +85,13 @@ public:
       std::any any_enum = assignAnyEnum(name);
       return std::any_cast<T>(any_enum);
     }
-    else
-      return std::any_cast<T>(values_.at(name));
+    else {
+      try {
+	return std::any_cast<T>(values_.at(name));
+      } catch (...) {
+	std::throw_with_nested( std::runtime_error("Could not access value with name " + name) );
+      }
+    }
   }
 
   /** set var if input section has read the tag
