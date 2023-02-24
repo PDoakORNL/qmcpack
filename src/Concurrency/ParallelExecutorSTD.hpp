@@ -49,7 +49,7 @@ template<>
 template<typename F, typename... Args>
 void ParallelExecutor<Executor::STD_THREADS>::operator()(int num_tasks, F&& f, Args&&... args)
 {
-  std::vector<std::thread> threads(num_tasks_);
+  std::vector<std::thread> threads(num_tasks);
 
   for (int task_id = 0; task_id < num_tasks; ++task_id)
   {
