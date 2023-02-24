@@ -325,7 +325,6 @@ TEST_CASE("InputSection::init", "[estimators]")
   }
 }
 
-
 TEST_CASE("InputSection::get", "[estimators]")
 {
   TestInputSection ti;
@@ -341,16 +340,16 @@ TEST_CASE("InputSection::get", "[estimators]")
            {"center", InputSection::Position(0.0, 0.0, 0.1)}});
 
   // invalid type access results in thrown exception
-  CHECK_THROWS_AS(ti.get<int>("name"), std::bad_cast);
-  CHECK_THROWS_AS(ti.get<RealType>("samples"), std::bad_cast);
-  CHECK_THROWS_AS(ti.get<bool>("kmax"), std::bad_cast);
-  CHECK_THROWS_AS(ti.get<std::string>("full"), std::bad_cast);
-  CHECK_THROWS_AS(ti.get<RealType>("label"), std::bad_cast);
-  CHECK_THROWS_AS(ti.get<bool>("count"), std::bad_cast);
-  CHECK_THROWS_AS(ti.get<std::string>("width"), std::bad_cast);
-  CHECK_THROWS_AS(ti.get<int>("rational"), std::bad_cast);
-  CHECK_THROWS_AS(ti.get<std::string>("sposets"), std::bad_cast);
-  CHECK_THROWS_AS(ti.get<RealType>("center"), std::bad_cast);
+  CHECK_THROWS_AS(ti.get<int>("name"), UniformCommunicateError);
+  CHECK_THROWS_AS(ti.get<RealType>("samples"), UniformCommunicateError);
+  CHECK_THROWS_AS(ti.get<bool>("kmax"), UniformCommunicateError);
+  CHECK_THROWS_AS(ti.get<std::string>("full"), UniformCommunicateError);
+  CHECK_THROWS_AS(ti.get<RealType>("label"), UniformCommunicateError);
+  CHECK_THROWS_AS(ti.get<bool>("count"), UniformCommunicateError);
+  CHECK_THROWS_AS(ti.get<std::string>("width"), UniformCommunicateError);
+  CHECK_THROWS_AS(ti.get<int>("rational"), UniformCommunicateError);
+  CHECK_THROWS_AS(ti.get<std::string>("sposets"), UniformCommunicateError);
+  CHECK_THROWS_AS(ti.get<RealType>("center"), UniformCommunicateError);
 }
 
 class CustomTestInput : public InputSection

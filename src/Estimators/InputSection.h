@@ -89,7 +89,7 @@ public:
       try {
 	return std::any_cast<T>(values_.at(name));
       } catch (...) {
-	std::throw_with_nested( std::runtime_error("Could not access value with name " + name) );
+	std::throw_with_nested( UniformCommunicateError("Could not access value with name " + name) );
       }
     }
   }
