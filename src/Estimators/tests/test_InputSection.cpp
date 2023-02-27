@@ -397,7 +397,10 @@ public:
     {
       std::string cus_at;
       std::getline(svalue, cus_at);
-      values_[name] = cus_at;
+      if (ename != section_name)
+	values_[ename + " " + name] = cus_at;
+      else
+	values_[name] = cus_at;
     }
     else
       throw std::runtime_error("bad name passed or custom setFromStream not implemented in derived class.");
@@ -451,7 +454,8 @@ TEST_CASE("InputSection::custom", "[estimators]")
   CHECK(ws.numbers == exp_numbers);
 
   std::string custom_attribute = cti.get<std::string>("custom_attribute");
-
+  std::cout << "non fail attribute" << '\n';
+  
   auto repeater = cti.get<decltype(cti)::Repeater>("repeater");
   decltype(cti)::Repeater exp_repeater{{"first", "something"}, {"second", "else"}};
   CHECK(repeater == exp_repeater);
