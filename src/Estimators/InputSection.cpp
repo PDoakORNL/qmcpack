@@ -40,9 +40,29 @@ void InputSection::readAttributes(xmlNodePtr cur,
 
     if (!isAttribute(qualified_name))
     {
-      std::stringstream error;
-      error << "InputSection::readXML name " << name << " is not an attribute of " << section_name << "\n";
-      throw UniformCommunicateError(error.str());
+      // unsafe att->name is an xmlChar, xmlChar is a UTF-8 byte
+      std::string name{lowerCase(castXMLCharToChar(att->name))};
+      // issue here is that we don't want to consume the name of the parameter as that has a special status in a parameter tag.
+      // This is due to the <parameter name="parameter_name>  == <parametere_name> tag equivalence :(
+      if(!consume_name && name=="name") {
+	att = att->next;
+	continue;
+      }
+      if (!isAttribute(name))
+      {
+        std::stringstream error;
+        error << "InputSection::readXML name " << name << " is not an attribute of " << section_name << "\n";
+        throw UniformCommunicateError(error.str());
+      }
+      std::istringstream stream(castXMLCharToChar(att->children->content));
+      if (isCustom(name))
+      {
+        std::string ename{lowerCase(castXMLCharToChar(cur->name))};
+        setFromStreamCustom(ename, name, stream);
+      }
+      else
+        setFromStream(name, stream);
+      att = att->next;
     }
     std::istringstream stream(castXMLCharToChar(att->children->content));
     if (isCustom(name))

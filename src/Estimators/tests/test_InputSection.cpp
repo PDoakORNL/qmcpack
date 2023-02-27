@@ -430,10 +430,17 @@ public:
     {
       std::string cus_at;
       std::getline(svalue, cus_at);
+<<<<<<< HEAD
       // if (ename != section_name)
       // 	values_[ename + " " + name] = cus_at;
       // else
       values_[name] = cus_at;
+=======
+      if (ename != section_name)
+	values_[ename + " " + name] = cus_at;
+      else
+	values_[name] = cus_at;
+>>>>>>> a4e08873e (Some fixes to InputSection)
     }
     else
       throw std::runtime_error("bad name passed: " + name +
@@ -489,6 +496,7 @@ TEST_CASE("InputSection::custom", "[estimators]")
   std::array<int, 3> exp_numbers{10, 20, 10};
   CHECK(ws.numbers == exp_numbers);
 
+<<<<<<< HEAD
   cti.report(std::cout);
 
   std::string custom_attribute = cti.get<std::string>("with_custom::custom_attribute");
@@ -496,6 +504,11 @@ TEST_CASE("InputSection::custom", "[estimators]")
   custom_attribute = cti.get<std::string>("custom_attribute");
   CHECK(custom_attribute == "for the section");
 
+=======
+  std::string custom_attribute = cti.get<std::string>("custom_attribute");
+  std::cout << "non fail attribute" << '\n';
+  
+>>>>>>> a4e08873e (Some fixes to InputSection)
   auto repeater = cti.get<decltype(cti)::Repeater>("repeater");
   decltype(cti)::Repeater exp_repeater{{"first", "something"}, {"second", "else"}};
   CHECK(repeater == exp_repeater);
