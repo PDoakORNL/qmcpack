@@ -42,7 +42,10 @@ void InputSection::readXML(xmlNodePtr cur)
       std::istringstream stream(castXMLCharToChar(att->children->content));
       if (isCustom(name))
       {
-        std::string ename{lowerCase(castXMLCharToChar(cur->name))};
+	std::string ename{lowerCase(castXMLCharToChar(cur->name))};
+        std::string par_name(lowerCase(getXMLAttributeValue(cur, "name")));
+	if (ename == "parameter" && par_name.size() > 1)
+	  ename = par_name;
         setFromStreamCustom(ename, name, stream);
       }
       else
@@ -59,8 +62,15 @@ void InputSection::readXML(xmlNodePtr cur)
   {
     std::string ename{lowerCase(castXMLCharToChar(element->name))};
     std::string name(lowerCase(getXMLAttributeValue(element, "name")));
-    if (name.size() < 1)
+
+    // If the name attribute is empty and the element name is not parameter
+    // set name to the tag name. It's contents will get this name as key.
+    if (name.size() < 1 && ename != "parameter")
       name = ename;
+    // If the element is a "parameter" then its name is what the parameter actually is
+    // So set ename to name.
+    if (ename == "parameter" && name.size() > 1)
+      ename = name;
 
     if (isDelegate(ename))
     {
@@ -91,16 +101,10 @@ void InputSection::readXML(xmlNodePtr cur)
     {
       std::istringstream stream(XMLNodeString{element});
       setFromStreamCustom(ename, name, stream);
+      readAttributes(element, false);
     }
-    else if (ename == "parameter" || isParameter(ename))
+    else if (isParameter(ename))
     {
-      if (!isParameter(name))
-      {
-        std::stringstream error;
-        error << "InputSection::readXML name " << name << " is not a parameter of " << section_name << "\n";
-        throw UniformCommunicateError(error.str());
-      }
-      
       std::istringstream stream(XMLNodeString{element});
       setFromStream(name, stream);
       readAttributes(element, false);
@@ -247,6 +251,11 @@ void InputSection::checkValid()
 void InputSection::report() const
 {
   auto& out = app_log();
+  report(out);
+}
+
+void InputSection::report(std::ostream& out) const
+{
   out << "\n" << section_name;
   for (auto& [name, value] : values_)
   {
@@ -259,10 +268,11 @@ void InputSection::report() const
       out << std::any_cast<int>(value);
     else if (isReal(name))
       out << std::any_cast<Real>(value);
-  }
+}
   out << "\n\n";
 }
 
+  
 std::any InputSection::lookupAnyEnum(const std::string& enum_name,
                                      const std::string& enum_value,
                                      const std::unordered_map<std::string, std::any>& enum_map)

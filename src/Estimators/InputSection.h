@@ -206,7 +206,7 @@ protected:
   // debugging function useful when input sections local error reports
   // may be insufficient.
   void report() const;
-
+  void report(std::ostream& out) const;
 private:
   // Query functions
   bool isAttribute(const std::string& name) const { return attributes.find(name) != attributes.end(); }

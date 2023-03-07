@@ -398,13 +398,14 @@ public:
       std::string cus_at;
       std::getline(svalue, cus_at);
       if (ename != section_name)
-	values_[ename + " " + name] = cus_at;
+	values_[ename + "-" + name] = cus_at;
       else
 	values_[name] = cus_at;
     }
     else
       throw std::runtime_error("bad name passed or custom setFromStream not implemented in derived class.");
   }
+  void report(std::ostream& out) { InputSection::report(out); }
 };
 
 class FailCustomTestInput : public InputSection
@@ -453,7 +454,8 @@ TEST_CASE("InputSection::custom", "[estimators]")
   std::array<int, 3> exp_numbers{10, 20, 10};
   CHECK(ws.numbers == exp_numbers);
 
-  std::string custom_attribute = cti.get<std::string>("custom_attribute");
+  cti.report(std::cout);
+  std::string custom_attribute = cti.get<std::string>("with_custom-custom_attribute");
   std::cout << "non fail attribute" << '\n';
   
   auto repeater = cti.get<decltype(cti)::Repeater>("repeater");
