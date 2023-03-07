@@ -364,13 +364,14 @@ public:
   CustomTestInput()
   {
     section_name = "Test";
-    attributes   = {"name", "samples", "kmax", "full", "custom_attribute"};
+    attributes   = {"name", "samples", "kmax", "full"};
     parameters   = {"label", "count", "width", "with_custom"};
     strings      = {"name", "label", "with_custom"};
     reals        = {"kmax"};
     integers     = {"samples", "count"};
     bools        = {"full"};
-    custom       = {"weird_stuff", "repeater", "custom_attribute"};
+    custom_parameters = {"weird_stuff", "repeater","double_custom"};
+    custom_attributes = {"custom_attribute","double_custom_attribute"};
   }
   void setFromStreamCustom(const std::string& ename, const std::string& name, std::istringstream& svalue) override
   {
@@ -392,6 +393,11 @@ public:
         std::any_cast<Repeater>(&(values_[name]))->emplace_back(split_vstrv[0], split_vstrv[1]);
       else
         values_[name] = Repeater{{split_vstrv[0], split_vstrv[1]}};
+    }
+    else if (ename == "double_custom") {
+      std::string just_string;
+      svalue >> just_string;
+      values_[name] = just_string;
     }
     else if (name == "custom_attribute")
     {
@@ -420,13 +426,14 @@ public:
   FailCustomTestInput()
   {
     section_name = "Test";
-    attributes   = {"name", "samples", "kmax", "full", "custom_attribute"};
+    attributes   = {"name", "samples", "kmax", "full"};
     parameters   = {"label", "count", "width", "with_custom"};
     strings      = {"name", "label"};
     reals        = {"kmax"};
     integers     = {"samples", "count"};
     bools        = {"full"};
-    custom       = {"weird_stuff", "repeater", "custom_attribute"};
+    custom_parameters = {"weird_stuff", "repeater","double_custom"};
+    custom_attributes = {"custom_attribute","double_custom_attribute"};
   }
 };
 
@@ -440,6 +447,7 @@ TEST_CASE("InputSection::custom", "[estimators]")
   <Repeater> first:something </Repeater>
   <Repeater> second:else </Repeater>
   <parameter name="with_custom" custom_attribute="This is a custom attribute."/>
+  <double_custom name="a_double_custom" double_custom_attribute="is_this_really_necessary"> a 10 20 30 custom </double_custom>
 </test>
 )XML";
 
@@ -456,7 +464,7 @@ TEST_CASE("InputSection::custom", "[estimators]")
 
   cti.report(std::cout);
   std::string custom_attribute = cti.get<std::string>("with_custom-custom_attribute");
-  std::cout << "non fail attribute" << '\n';
+  CHECK(custom_attribute == "This is a custom attribute.");
   
   auto repeater = cti.get<decltype(cti)::Repeater>("repeater");
   decltype(cti)::Repeater exp_repeater{{"first", "something"}, {"second", "else"}};

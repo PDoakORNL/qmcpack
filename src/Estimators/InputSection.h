@@ -2,7 +2,7 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2021 QMCPACK developers.
+// Copyright (c) 2023 QMCPACK developers.
 //
 // File developed by: Jaron T. Krogel, krogeljt@ornl.gov, Oak Ridge National Laboratory
 //                    Peter W. Doak, doakpw@ornl.gov, Oak Ridge National Laboratory
@@ -27,7 +27,27 @@
 
 namespace qmcplusplus
 {
-
+/** Allows an input section to be specified via a constructor
+ *  and does basic parsing and valdiation of such a section.   
+ *
+ *  The default constructor of a class derived from input section
+ *  constitutes a simple declarative representation of a unit of input.
+ *  Ex:
+ *
+ *    class SampleInputSection : public InputSection
+ *    {
+ *      SampleInputSection()
+ *      {
+ *        section_name   = "Sample";
+ *	  attributes     = {"name", "count"};
+ *	  parameters     = {"persistence"};
+ *	  strings = {"name"};
+ *	  ints = {"count", "peristence"};
+ *      }
+ *    };
+ *
+ *  For more extensive documentation see the QMCPACK manual and for examples see test_InputSection.cpp
+ */
 class InputSection
 {
 public:
@@ -38,45 +58,56 @@ public:
   InputSection(const InputSection& other) = default;
 
 protected:
-  // Internal data below comprise the input specification.
-  //   Most apply attributes to input variables.
-  //   Enables minimal listing of variable classification and default values in derived classes.
-  //   Expand later to include allowed_values for input correctness checking
-
-  // Becuase it hurts to read all the trailing _ in the constructors of input section subtypes
+  std::string section_name; // name of the input section
+  // the following variables are excempt from member naming requirements becasue becuase it hurts to read all the
+  // trailing _ in the constructors of input section subtypes
   // NOLINTBEGIN(readability-indentifier-naming)
 
-  std::string section_name; // name of the input section
+  /** @name Input Specification Members
+   * Internal data below comprise the input specification.
+   * Most apply attributes to input variables.
+   * Enables minimal listing of variable classification and default values in derived classes.
+   * Custom parameters or attributes are not also included in the attributes/parameters handled by this
+   * base class.
+   * Typing is not as flexible as elsewhere in the code.  Reals are parsed as full precision values.
+   * Integers are always int. Mixed precision code elsewhere is assumed to be able to handle doing narrowing casts.
+   *
+   * \todo Expand later to include allowed_values, ranges for input correctness checking
+   *  @{ */
+  std::unordered_set<std::string> attributes;        /// list of attribute variables
+  std::unordered_set<std::string> parameters;        /// list of parameter variables
+  std::unordered_set<std::string> delegates;         /// input nodes delegated to other input classes/sections
+  std::unordered_set<std::string> required;          /// list of required variables
+  std::unordered_set<std::string> multiple;          /// list of variables that can have multiple instances
+  std::unordered_set<std::string> strings;           /// list of string variables that can have one value
+  std::unordered_set<std::string> multi_strings;     /// list of string variables that can one or more values
+  std::unordered_set<std::string> multi_reals;       /// list of string variables that can one or more values
+  std::unordered_set<std::string> bools;             /// list of boolean variables
+  std::unordered_set<std::string> integers;          /// list of integer variables
+  std::unordered_set<std::string> reals;             /// list of real variables
+  std::unordered_set<std::string> positions;         /// list of position variables
+  std::unordered_set<std::string> custom_parameters; /// list of parameter variables that have custom handlers/types
+  std::unordered_set<std::string> custom_attributes; /// list of parameter attributes that have custom handlers/types
 
-  std::unordered_set<std::string> attributes; // list of attribute variables
-  std::unordered_set<std::string> parameters; // list of parameter variables
-  std::unordered_set<std::string> delegates;  // input nodes delegate to next level of input parsing.
-  std::unordered_set<std::string> required;   // list of required variables
-  std::unordered_set<std::string> multiple;      // list of variables that can have multiple instances
-  std::unordered_set<std::string> strings;       // list of string variables that can have one value
-  std::unordered_set<std::string> multi_strings; // list of string variables that can one or more values
-  std::unordered_set<std::string> multi_reals; // list of string variables that can one or more values
-  std::unordered_set<std::string> bools;         // list of boolean variables
-  std::unordered_set<std::string> integers;      // list of integer variables
-  std::unordered_set<std::string> reals;         // list of real variables
-  std::unordered_set<std::string> positions;     // list of position variables
-  std::unordered_set<std::string> custom;        // list of parameter variables that have custom types
   /** list of enum inputs which allow a finite set of strings to map to enum values
    *  The enum class types and values need only be known to IS subtypes
    */
   std::unordered_set<std::string> enums;
   std::unordered_map<std::string, std::any> default_values; // default values for optional variables
   std::unordered_map<std::string, std::function<std::any(xmlNodePtr cur, std::string& value_key)>> delegate_factories_;
+  /// @}
   // NOLINTEND(readability-indentifier-naming)
-  // Storage for variable values read from XML, etc.
+
+  /// All variable values are stored in this unorder map.
   std::unordered_map<std::string, std::any> values_;
 
 public:
-  // Query if a variable has been set
+  /// Query if a variable has been set
   bool has(const std::string& name) const { return values_.find(name) != values_.end(); }
 
-  // Enable read-only access to variable values.
-  //   Needs updating to allow copy-less return.
+  /** Read only access to variable values.
+   *  \todo for large types, consider a return by const reference implementation.
+   */
   template<typename T>
   T get(const std::string& name) const
   {
@@ -85,11 +116,15 @@ public:
       std::any any_enum = assignAnyEnum(name);
       return std::any_cast<T>(any_enum);
     }
-    else {
-      try {
-	return std::any_cast<T>(values_.at(name));
-      } catch (...) {
-	std::throw_with_nested( UniformCommunicateError("Could not access value with name " + name) );
+    else
+    {
+      try
+      {
+        return std::any_cast<T>(values_.at(name));
+      }
+      catch (...)
+      {
+        std::throw_with_nested(UniformCommunicateError("Could not access value with name " + name));
       }
     }
   }
@@ -145,6 +180,13 @@ public:
   }
 
 protected:
+  /** Read attributes for a node.
+   *  This can occur both for the section node and for nodes parameters
+   *  handled by the input section.
+   */
+  void readAttributes(xmlNodePtr cur, bool consume_name);
+
+
   /** Function that returns Input class as std::any
    *   \param[in]   cur                xml_node being delegated by the Input Class
    *   \param[out]  value_name         string key value to store the delegate with
@@ -154,9 +196,7 @@ protected:
    *   \param[in]   tag                parmater name or node ename delgation is controlled by
    *   \param[in]   delegate_handler   factory function for delegated input function.
    */
-  void registerDelegate(const std::string& tag,
-                        DelegateHandler delegate_handler);
-
+  void registerDelegate(const std::string& tag, DelegateHandler delegate_handler);
   /** Do validation for a particular subtype of InputSection
    *  Called by check_valid.
    *  Default implementation is noop
@@ -184,7 +224,9 @@ protected:
   /** Derived class can overrides this to do custom parsing of the element values for Custom elements
    *  These can have a name attribute only.
    */
-  [[noreturn]] virtual void setFromStreamCustom(const std::string& ename, const std::string& name, std::istringstream& svalue)
+  [[noreturn]] virtual void setFromStreamCustom(const std::string& ename,
+                                                const std::string& name,
+                                                std::istringstream& svalue)
   {
     throw std::runtime_error("derived class must provide handleCustom method if custom parameters are used");
   }
@@ -201,14 +243,18 @@ protected:
   static std::any lookupAnyEnum(const std::string& enum_name,
                                 const std::string& enum_value,
                                 const std::unordered_map<std::string, std::any>& enum_map);
+
 protected:
   // Simple dump of contents. Useful for developing and as
   // debugging function useful when input sections local error reports
   // may be insufficient.
   void report() const;
   void report(std::ostream& out) const;
+
 private:
-  // Query functions
+  /** @name Input specification query functions
+   *   with respect to Input Specification Members
+   *  @{ */
   bool isAttribute(const std::string& name) const { return attributes.find(name) != attributes.end(); }
   bool isDelegate(const std::string& name) const { return delegates.find(name) != delegates.end(); }
   bool isParameter(const std::string& name) const { return parameters.find(name) != parameters.end(); }
@@ -222,20 +268,28 @@ private:
   bool isInteger(const std::string& name) const { return integers.find(name) != integers.end(); }
   bool isReal(const std::string& name) const { return reals.find(name) != reals.end(); }
   bool isPosition(const std::string& name) const { return positions.find(name) != positions.end(); }
-  bool isCustom(const std::string& name) const { return custom.find(name) != custom.end(); }
+  bool isCustomParameter(const std::string& name) const
+  {
+    return custom_parameters.find(name) != custom_parameters.end();
+  }
+  bool isCustomAttribute(const std::string& name) const
+  {
+    return custom_attributes.find(name) != custom_attributes.end();
+  }
   bool has_default(const std::string& name) const { return default_values.find(name) != default_values.end(); }
+  /** @} */
 
-  // Set default values for optional inputs.
+  /// Set default values for optional inputs.
   void setDefaults();
 
-  // Perform typed read and assignment of input variables from strings
+  /// Perform typed read and assignment of input variables from strings
   void setFromStream(const std::string& name, std::istringstream& svalue);
 
-  // Perform typed assignment of input variables from intrinsic types
+  /// Perform typed assignment of input variables from intrinsic types
   template<typename T>
   void setFromValue(const std::string& name, const T& svalue);
 
-  // Check validity of inputs
+  /// Check validity of inputs
   void checkValid();
 };
 

@@ -68,9 +68,10 @@ public:
       SpaceGridAxisInputSection()
       {
         section_name = "axis";
-        attributes   = {"label", "grid", "p1", "p2", "scale"};
+        attributes   = {"label", "p1", "p2", "scale"};
         strings      = {"label", "p1", "p2"};
-        custom = {"grid"}, reals = {"scale"};
+        custom_attributes = {"grid"},
+	reals = {"scale"};
         required = {"label", "p1"};
       }
       void setFromStreamCustom(const std::string& ename, const std::string& name, std::istringstream& svalue) override;

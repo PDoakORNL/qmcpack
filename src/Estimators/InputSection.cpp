@@ -2,7 +2,7 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2022 QMCPACK developers.
+// Copyright (c) 2023 QMCPACK developers.
 //
 // File developed by: Jaron T. Krogel, krogeljt@ornl.gov, Oak Ridge National Laboratory
 //                    Peter W. Doak, doakpw@ornl.gov, Oak Ridge National Laboratory
@@ -17,44 +17,49 @@
 namespace qmcplusplus
 {
 
+void InputSection::readAttributes(xmlNodePtr cur, bool consume_name)
+{
+  std::string ename{lowerCase(castXMLCharToChar(cur->name))};
+  std::string par_name(lowerCase(getXMLAttributeValue(cur, "name")));    
+  xmlAttrPtr att = cur->properties;
+  while (att != NULL)
+  {
+    // unsafe att->name is an xmlChar, xmlChar is a UTF-8 byte
+    std::string name{lowerCase(castXMLCharToChar(att->name))};
+    // issue here is that we don't want to consume the name of the parameter as that has a special status in a parameter tag.
+    // This is due to the <parameter name="parameter_name>  == <parametere_name> tag equivalence :(
+    if (!consume_name && name == "name")
+    {
+      att = att->next;
+      continue;
+    }
+    if (!(isAttribute(name) || isCustomAttribute(name)))
+    {
+      std::stringstream error;
+      error << "InputSection::readXML name " << name << " is not an attribute of " << section_name << "\n";
+      throw UniformCommunicateError(error.str());
+    }
+    std::istringstream stream(castXMLCharToChar(att->children->content));
+    if (isCustomAttribute(name))
+    {
+      std::string ename{lowerCase(castXMLCharToChar(cur->name))};
+      std::string par_name(lowerCase(getXMLAttributeValue(cur, "name")));
+      if (ename == "parameter" && par_name.size() > 1)
+        ename = par_name;
+      setFromStreamCustom(ename, name, stream);
+    }
+    else
+      setFromStream(name, stream);
+    att = att->next;
+  }
+}
+
 void InputSection::readXML(xmlNodePtr cur)
 {
   // read attributes both the root node and parameters can have these.
   // But its limited what you can do with attributes of parameter nodes
-  auto readAttributes = [&](auto& cur, bool consume_name) {
-    xmlAttrPtr att = cur->properties;
-    while (att != NULL)
-    {
-      // unsafe att->name is an xmlChar, xmlChar is a UTF-8 byte
-      std::string name{lowerCase(castXMLCharToChar(att->name))};
-      // issue here is that we don't want to consume the name of the parameter as that has a special status in a parameter tag.
-      // This is due to the <parameter name="parameter_name>  == <parametere_name> tag equivalence :(
-      if(!consume_name && name=="name") {
-	att = att->next;
-	continue;
-      }
-      if (!isAttribute(name))
-      {
-        std::stringstream error;
-        error << "InputSection::readXML name " << name << " is not an attribute of " << section_name << "\n";
-        throw UniformCommunicateError(error.str());
-      }
-      std::istringstream stream(castXMLCharToChar(att->children->content));
-      if (isCustom(name))
-      {
-	std::string ename{lowerCase(castXMLCharToChar(cur->name))};
-        std::string par_name(lowerCase(getXMLAttributeValue(cur, "name")));
-	if (ename == "parameter" && par_name.size() > 1)
-	  ename = par_name;
-        setFromStreamCustom(ename, name, stream);
-      }
-      else
-        setFromStream(name, stream);
-      att = att->next;
-    }
-  };
 
-  readAttributes(cur,true);
+  readAttributes(cur, true);
 
   // read parameters
   xmlNodePtr element = cur->xmlChildrenNode;
@@ -97,7 +102,7 @@ void InputSection::readXML(xmlNodePtr cur)
         values_[value_key] = value;
       }
     }
-    else if (isCustom(ename))
+    else if (isCustomParameter(ename))
     {
       std::istringstream stream(XMLNodeString{element});
       setFromStreamCustom(ename, name, stream);
@@ -268,11 +273,11 @@ void InputSection::report(std::ostream& out) const
       out << std::any_cast<int>(value);
     else if (isReal(name))
       out << std::any_cast<Real>(value);
-}
+  }
   out << "\n\n";
 }
 
-  
+
 std::any InputSection::lookupAnyEnum(const std::string& enum_name,
                                      const std::string& enum_value,
                                      const std::unordered_map<std::string, std::any>& enum_map)
