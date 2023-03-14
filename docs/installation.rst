@@ -843,22 +843,21 @@ package. This was successfully tested under OS X 10.15.7 "Catalina" on October 2
 
   ::
 
-    brew install gcc # 10.2.0 when tested
+    brew install gcc # 12.2.0 when tested
     brew install openmpi
+    brew install ninja
     brew install cmake
     brew install fftw
     brew install boost
     brew install hdf5
-    export OMPI_CC=gcc-10
-    export OMPI_CXX=g++-10
+    brew install numpy
 
 3.  Configure and build QMCPACK:
 
   ::
 
-    cmake -DCMAKE_C_COMPILER=/usr/local/bin/mpicc \
-          -DCMAKE_CXX_COMPILER=/usr/local/bin/mpicxx ..
-    make -j 6 # Adjust for available core count
+    rm -rf *; cmake -GNinja -DCMAKE_C_COMPILER="gcc-12" -DCMAKE_CXX_COMPILER="g++-12" -DCMAKE_EXE_LINKER_FLAGS="-L/usr/local/opt/gcc@12/lib/gcc/12 -Wl,-rpath,/usr/local/opt/gcc@12/lib/gcc/12" -DCMAKE_SHARED_LINKER_FLAGS="-L/usr/local/opt/gcc@12/lib/gcc/12 -Wl,-rpath,/usr/local/opt/gcc@12/lib/gcc/12" ..
+
     ls -l bin/qmcpack
 
 4.  Run the deterministic tests
@@ -866,7 +865,7 @@ package. This was successfully tested under OS X 10.15.7 "Catalina" on October 2
   ::
 
     ctest -R deterministic
-
+    
 Installing on ALCF Theta, Cray XC40
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
