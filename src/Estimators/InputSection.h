@@ -238,6 +238,7 @@ protected:
   // debugging function useful when input sections local error reports
   // may be insufficient.
   void report() const;
+  void report(std::ostream& out) const;
 
 protected:
   // Simple dump of contents. Useful for developing and as
