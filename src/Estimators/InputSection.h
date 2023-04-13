@@ -20,7 +20,6 @@
 #include <unordered_map>
 
 #include "Configuration.h"
-#include "OhmmsData/ParameterSet.h"
 #include "Containers/OhmmsPETE/TinyVector.h"
 
 #include "Message/UniformCommunicateError.h"
@@ -49,10 +48,9 @@ protected:
 
   /// "Name" of the input section, you must define this in the subtype and the ename, name, type, or method must match. 
   std::string section_name;
-
   /// For historical reasons some sections must recognize several different names. Assign them to this variable in your subtype.
   std::vector<std::string> section_name_alternates;
-
+  
   std::unordered_set<std::string> attributes;    // list of attribute variables
   std::unordered_set<std::string> parameters;    // list of parameter variables
   std::unordered_set<std::string> delegates;     // input nodes delegate to next level of input parsing.
