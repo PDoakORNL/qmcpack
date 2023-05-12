@@ -101,14 +101,6 @@ public:
    */
   //void collect(const OperatorEstBase&  oeb);
 
-  /** this gets us into the hdf5 file
-   *
-   *  Just parroting for now don't fully understand.
-   *, needs to be unraveled and simplified the hdf5 output is another 
-   *  big state big coupling design.
-   */
-  void registerOperatorEstimator(hdf_archive& file) override;
-
   /** Custom write method since spin density new has its own hdf5 format
    */
   void write(hdf_archive& file) override;

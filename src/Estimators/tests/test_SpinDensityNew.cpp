@@ -471,7 +471,7 @@ TEST_CASE("SpinDensityNew algorithm comparison", "[estimators]")
   checkAlgorithmsForNParticles(3);
 }
 
-TEST_CASE("SpinDensityNew::registerAndWrite", "[estimators]")
+TEST_CASE("SpinDensityNew::write", "[estimators]")
 {
   auto checkWriteForNParticles = [](int n_elec) {
     using MCPWalker = OperatorEstBase::MCPWalker;
@@ -506,7 +506,6 @@ TEST_CASE("SpinDensityNew::registerAndWrite", "[estimators]")
     okay = hd.create(test_file);
     REQUIRE(okay);
 
-    sdn.registerOperatorEstimator(hd);
     sdn.write(hd);
     hd.close();
 
@@ -540,6 +539,7 @@ TEST_CASE("SpinDensityNew::registerAndWrite", "[estimators]")
     std::cout << NativePrint(up_data);
     std::cout << NativePrint(dn_data);
 
+    // In the case of odd particle numbers this insures that both channels are being written as they will not sum to the same value.
     sumAndCheckData(up_data, species_set(i_msize, 0));
     sumAndCheckData(dn_data, species_set(i_msize, 1));
   };
