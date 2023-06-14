@@ -26,6 +26,7 @@
 #include <stdexcept>
 #include "PETE/PETE.h"
 #include "allocator_traits.hpp"
+#include "container_traits.h"
 
 namespace qmcplusplus
 {
@@ -65,6 +66,13 @@ public:
     }
   }
 
+  /** copy constructor from std::vector */
+  Vector(const std::vector<T>& rhs)
+  {
+    resize(rhs.size());
+    construct_copy_elements(rhs.data(), rhs.size(), X);
+  }
+
   /** This allows construction of a Vector on another containers owned memory that is using a dualspace allocator.
    *  It can be any span of that memory.
    *  You're going to get a bunch of compile errors if the Container in questions is not using a the QMCPACK
@@ -100,6 +108,18 @@ public:
       std::copy_n(rhs.data(), nLocal, X);
     else
       qmc_allocator_traits<Alloc>::fill_n(X, nLocal, T());
+    return *this;
+  }
+
+  // assignment operator from std::vector
+  inline Vector& operator=(const std::vector<T>& rhs)
+  {
+    if (nLocal != rhs.size())
+      resize(rhs.size());
+    if (qmc_allocator_traits<Alloc>::is_host_accessible)
+      std::copy_n(rhs.data(), nLocal, X);
+    else
+      std::runtime_error("Only host to host std::vector to Vector assignm,ents are allowed.");
     return *this;
   }
 

@@ -435,7 +435,7 @@ TEST_CASE("Einspline SPO from HDF diamond_2x1x1 5 electrons", "[wavefunction]")
   std::vector<SPOSet::GradType> grads_v(nw);
 
   Vector<SPOSet::ValueType, OffloadPinnedAllocator<SPOSet::ValueType>> inv_row(5);
-  inv_row = {0.1, 0.2, 0.3, 0.4, 0.5};
+  inv_row = decltype(inv_row){0.1, 0.2, 0.3, 0.4, 0.5};
   inv_row.updateTo();
 
   std::vector<const SPOSet::ValueType*> inv_row_ptr(nw, inv_row.device_data());

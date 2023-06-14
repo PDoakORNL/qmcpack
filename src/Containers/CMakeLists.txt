@@ -13,7 +13,7 @@ set(CONTAINER_SRCS MinimalContainers/ConstantSizeMatrix.cpp)
 add_library(containers ${CONTAINER_SRCS})
 
 target_include_directories(containers PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(containers PUBLIC platform_runtime)
+target_link_libraries(containers PUBLIC platform_runtime qmc_type_traits)
 
 if(BUILD_UNIT_TESTS)
   add_subdirectory(tests)

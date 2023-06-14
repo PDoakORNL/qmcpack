@@ -209,7 +209,7 @@ TEST_CASE("hdf_archive_append_pete", "[hdf]")
   hsize_t append_index = 0;
 
   std::string name = "pete_vector_series";
-  hd.append(v1, name, append_index);
+  hd.append(v1, name, append_index++);
 
   Vector<double> v2{4.0, 5.0, 6.0};
 
@@ -220,18 +220,19 @@ TEST_CASE("hdf_archive_append_pete", "[hdf]")
   bool okay = read_hd.open("test_append_pete.hdf");
   REQUIRE(okay);
 
-  Vector<double> v_read;
+  std::vector<double> v_read;
   std::array<int, 2> select_one_vector{0, -1};
   read_hd.readSlabSelection(v_read, select_one_vector, name);
 
-  CHECK(v_read.size() == 3);
-  CHECK(v1 == v_read);
+  Vector<double> v_read_v = v_read;
+  CHECK(v_read_v.size() == 3);
+  CHECK(v1 == v_read_v);
 
   select_one_vector = {1, -1};
-  read_hd.readSlabSelection(v_read, select_one_vector, name);
+  read_hd.readSlabSelection(v_read_v, select_one_vector, name);
 
-  CHECK(v_read.size() == 3);
-  CHECK(v2 == v_read);
+  CHECK(v_read_v.size() == 3);
+  CHECK(v2 == v_read_v);
 }
 
 TEST_CASE("hdf_archive_group", "[hdf]")

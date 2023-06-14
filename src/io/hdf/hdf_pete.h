@@ -17,7 +17,7 @@
 #include "OhmmsPETE/OhmmsVector.h"
 #include "OhmmsPETE/OhmmsMatrix.h"
 #include "OhmmsPETE/OhmmsArray.h"
-
+#include "type_traits/container_traits_ohmms.h"
 namespace qmcplusplus
 {
 /** specialization for Vector<T>

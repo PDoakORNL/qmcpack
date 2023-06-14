@@ -9,6 +9,9 @@
 #// File created by: Ye Luo, yeluo@anl.gov, Argonne National Laboratory
 #//////////////////////////////////////////////////////////////////////////////////////
 
+add_library(qmc_type_traits INTERFACE)
+target_include_directories(qmc_type_traits INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+
 if(BUILD_UNIT_TESTS)
   add_subdirectory(tests)
 endif()
