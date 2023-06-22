@@ -87,7 +87,14 @@ inline T string2Int(const std::string_view svalue) {
 #else
   // atof must be given a null terminated string, string_view is not guaranteed to have a null terminator.
   std::string str_value(svalue);
-  result = static_cast<T>(atoi(str_value.c_str()));
+  if constexpr (std::is_same_v<T, int>)
+    result = atoi(str_value.c_str());
+  else if constexpr(std::is_same_v<T, long>)
+    result = atol(str_value.c_str());
+  else if constexpr(std::is_same_v<T, long long>)
+    result = atol(str_value.c_str());
+  else
+    throw std::runtime_error("unsupported type for string to integral type conversion with pre v.10 stdlibc++!");
 #endif
   return result;
 }

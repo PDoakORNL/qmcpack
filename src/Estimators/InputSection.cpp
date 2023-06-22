@@ -1,8 +1,8 @@
-//////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2022 QMCPACK developers.
+// Copyright (c) 2023 QMCPACK developers.
 //
 // File developed by: Jaron T. Krogel, krogeljt@ornl.gov, Oak Ridge National Laboratory
 //                    Peter W. Doak, doakpw@ornl.gov, Oak Ridge National Laboratory
@@ -40,44 +40,9 @@ void InputSection::readAttributes(xmlNodePtr cur,
 
     if (!isAttribute(qualified_name))
     {
-      // unsafe att->name is an xmlChar, xmlChar is a UTF-8 byte
-      std::string name{lowerCase(castXMLCharToChar(att->name))};
-      // issue here is that we don't want to consume the name of the parameter as that has a special status in a parameter tag.
-      // This is due to the <parameter name="parameter_name>  == <parametere_name> tag equivalence :(
-      if (!consume_name && name == "name")
-      {
-        att = att->next;
-        continue;
-      }
-      if (!isAttribute(name))
-      {
-        std::stringstream error;
-        error << "InputSection::readXML name " << name << " is not an attribute of " << section_name << "\n";
-        throw UniformCommunicateError(error.str());
-      }
-      std::istringstream stream(castXMLCharToChar(att->children->content));
-      if (isCustom(name))
-      {
-        std::string ename{lowerCase(castXMLCharToChar(cur->name))};
-        if (consume_name)
-          setFromStreamCustom(ename, name, stream);
-        else
-        {
-          std::string qualified_name{element_name + "::" + name};
-          setFromStreamCustom(ename, qualified_name, stream);
-        }
-      }
-      else
-      {
-        if (consume_name)
-          setFromStream(name, stream);
-        else
-        {
-          std::string qualified_name{element_name + "__" + name};
-          setFromStream(qualified_name, stream);
-        }
-      }
-      att = att->next;
+      std::stringstream error;
+      error << "InputSection::readXML name " << name << " is not an attribute of " << section_name << "\n";
+      throw UniformCommunicateError(error.str());
     }
     std::istringstream stream(castXMLCharToChar(att->children->content));
     if (isCustom(name))
@@ -290,7 +255,7 @@ void InputSection::assignValue(const std::string& name, const T& value)
   else
   {
     if (has(name))
-      std::any_cast<std::vector<T>>(values_[name]).push_back(value);
+      std::any_cast<std::vector<T>&>(values_[name]).push_back(value);
     else
       values_[name] = std::vector<T>{value};
   }

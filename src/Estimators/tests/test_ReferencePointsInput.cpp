@@ -22,18 +22,21 @@
 namespace qmcplusplus
 {
 
-TEST_CASE("ReferencePointsInput::parseXML", "[estimators]")
+TEST_CASE("ReferencePointsInput::parseXML::valid", "[estimators]")
 {
   for (auto input_xml : testing::valid_reference_points_input_sections)
   {
     Libxml2Document doc;
-    bool okay = doc.parseFromString(input_xml);
+    bool okay       = doc.parseFromString(input_xml);
     xmlNodePtr node = doc.getRoot();
 
     // Will throw if input is invalid.
     ReferencePointsInput rpi(node);
   }
+}
 
+TEST_CASE("ReferencePointsInput::parseXML::invalid", "[estimators]")
+{
   for (auto input_xml : testing::invalid_reference_points_input_sections)
   {
     Libxml2Document doc;
@@ -44,9 +47,5 @@ TEST_CASE("ReferencePointsInput::parseXML", "[estimators]")
     auto constructBadRefPoints = [](xmlNodePtr cur) { ReferencePointsInput rpi(cur); };
     CHECK_THROWS_AS(constructBadRefPoints(node), UniformCommunicateError);
   }
-
 }
-  
-}
-
-
+} // namespace qmcplusplus

@@ -65,7 +65,7 @@ public:
   public:
     ReferencePointsInputSection()
     {
-      section_name = "ReferencePoints";
+      section_name = "reference_points";
       enums        = {"coord"};
       attributes   = {"coord"};
       required     = {"coord"};

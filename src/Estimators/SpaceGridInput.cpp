@@ -14,6 +14,7 @@
 #include "SpaceGridInput.h"
 
 #include <sstream>
+#include <vector>
 
 #include "EstimatorInput.h"
 #include "Message/UniformCommunicateError.h"
@@ -107,7 +108,8 @@ std::any makeSpaceGridInput(xmlNodePtr cur, std::string& value_label)
 
 void SpaceGridInput::SpaceGridInputSection::checkParticularValidity()
 {
-  auto axes       = std::any_cast<std::vector<std::any>>(values_["axis"]);
+  auto axes = std::any_cast<std::vector<std::any>>(values_["axis"]);
+  static_assert(std::is_same<decltype(axes), std::vector<std::any>>::value);
   auto axis_count = axes.size();
   if (axis_count != OHMMS_DIM)
   {

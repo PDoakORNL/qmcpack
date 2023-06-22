@@ -40,7 +40,7 @@ set(SRCS
     test_OneBodyDensityMatrices.cpp
     test_EstimatorManagerCrowd.cpp
     test_MagnetizationDensityInput.cpp
-    test_MagnetizationDensity.cpp)
+    test_MagnetizationDensity.cpp
     test_PerParticleHamiltonianLogger.cpp
     test_ReferencePointsInput.cpp
     test_ReferencePoints.cpp

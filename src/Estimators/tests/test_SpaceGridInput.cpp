@@ -29,6 +29,8 @@ TEST_CASE("SpaceGridInputs::parseXML::valid", "[estimators]")
 
     // Will throw if input is invalid.
     SpaceGridInput spi(node);
+
+    
   }
 }
 
