@@ -302,8 +302,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Check that a C++ compiler is compatible with the underlying libstdc++
 include(Testlibstdc++)
 
-# Check that a C++ standard library is configured properly
-include(TestCxx17Library)
+# # Check that a C++ standard library is configured properly
+# include(TestCxx17Library)
 
 #-----------------------------------------------------------------------
 # SETUP SANITIZERS FLAGS

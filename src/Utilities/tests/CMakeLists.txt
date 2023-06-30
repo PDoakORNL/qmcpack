@@ -39,4 +39,8 @@ add_executable(${UTEST_EXE} test_output_manager.cpp)
 target_link_libraries(${UTEST_EXE} catch_main qmcutil)
 add_unit_test(deterministic-unit_${UTEST_EXE} 1 1 $<TARGET_FILE:${UTEST_EXE}> --turn-on-printout)
 
+set (UTEST_EXE benchmark_random)
+add_executable(${UTEST_EXE} benchmark_Random.cpp)
+target_link_libraries(${UTEST_EXE} catch_main qmcutil qmcparticle)
+
 subdirs(for_testing)
