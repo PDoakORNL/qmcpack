@@ -2,7 +2,7 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2022 QMCPACK developers.
+// Copyright (c) 2023 QMCPACK developers.
 //
 // File developed by: Peter Doak, doakpw@ornl.gov, Oak Ridge National Lab
 //
@@ -24,7 +24,8 @@ namespace qmcplusplus
 
 TEST_CASE("ReferencePointsInput::parseXML::valid", "[estimators]")
 {
-  for (auto input_xml : testing::valid_reference_points_input_sections)
+  using Input = testing::ValidReferencePointsInputs;
+  for (auto input_xml : Input::xml)
   {
     Libxml2Document doc;
     bool okay       = doc.parseFromString(input_xml);
@@ -37,7 +38,8 @@ TEST_CASE("ReferencePointsInput::parseXML::valid", "[estimators]")
 
 TEST_CASE("ReferencePointsInput::parseXML::invalid", "[estimators]")
 {
-  for (auto input_xml : testing::invalid_reference_points_input_sections)
+  using Input = testing::InvalidReferencePointsInputs;
+  for (auto input_xml : Input::xml)
   {
     Libxml2Document doc;
     bool okay = doc.parseFromString(input_xml);

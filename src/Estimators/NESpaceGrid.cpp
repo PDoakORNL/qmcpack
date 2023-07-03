@@ -31,32 +31,34 @@ using std::sqrt;
 NESpaceGrid::NESpaceGrid(SpaceGridInput& sgi,
                          NEReferencePoints::Points& points,
                          const int nvalues,
-                         const bool is_periodic) : NESpaceGrid(sgi, points, 0, nvalues, is_periodic) {}
+                         const bool is_periodic)
+    : NESpaceGrid(sgi, points, 0, nvalues, is_periodic)
+{}
 
 NESpaceGrid::NESpaceGrid(SpaceGridInput& sgi,
                          NEReferencePoints::Points& points,
                          const int ndp,
                          const int nvalues,
                          const bool is_periodic)
-  : input_(sgi), is_periodic_(is_periodic), nvalues_per_domain_(nvalues), points_(points), ndparticles_(ndp)
+    : input_(sgi), is_periodic_(is_periodic), nvalues_per_domain_(nvalues), points_(points), ndparticles_(ndp)
 {
-  ndomains_    = -1;
+  ndomains_         = -1;
   bool init_success = initializeRectilinear(input_, points_);
   if (!init_success)
     throw std::runtime_error("NESpaceGrid initialization failed");
 }
 
-  bool NESpaceGrid::processAxis(SpaceGridInput& input)
+bool NESpaceGrid::processAxis(SpaceGridInput& input)
 {
-    auto& axis_labels = input.get_axis_labels();
-    auto& axis_p1s = input.get_axis_p1s();
-    auto& axis_p2s = input.get_axis_p2s();	
-    auto& axis_scales = input.get_axis_scales();
-    auto& axis_grids = input.get_axis_grids();
+  auto& axis_labels = input.get_axis_labels();
+  auto& axis_p1s    = input.get_axis_p1s();
+  auto& axis_p2s    = input.get_axis_p2s();
+  auto& axis_scales = input.get_axis_scales();
+  auto& axis_grids  = input.get_axis_grids();
 
-    for(int id = 0; id < DIM; ++id)
-      {
-	Real frac = axis_scales[id];
+  for (int id = 0; id < DIM; ++id)
+  {
+    Real frac = axis_scales[id];
 
     for (int d = 0; d < DIM; d++)
       axes_(d, id) = frac * (points_[axis_p1s[id]][id] - points_[axis_p2s[id]][id]);
@@ -179,7 +181,7 @@ NESpaceGrid::NESpaceGrid(SpaceGridInput& sgi,
         ndu_per_interval[iaxis][idom] = ndu_int[i];
         idom++;
       }
-}
+  }
 
   bool NESpaceGrid::initializeRectilinear(SpaceGridInput & input, Points & points_)
   {
@@ -207,13 +209,11 @@ NESpaceGrid::NESpaceGrid(SpaceGridInput& sgi,
     std::string grid;
     std::vector<int> ndu_per_interval[DIM];
     // awful state variables for processAxes
-    int iaxis              = 0;
-    int naxes              = 0;
+    int iaxis = 0;
+    int naxes = 0;
 
 
-    for(int id = 0; id < DIM; ++id)
-    {
-    }
+    for (int id = 0; id < DIM; ++id) {}
 
     process_axis(input_);
 

@@ -21,7 +21,8 @@ namespace qmcplusplus
 
 TEST_CASE("SpaceGridInputs::parseXML::valid", "[estimators]")
 {
-  for (auto input_xml : testing::valid_space_grid_input_sections)
+  using input = qmcplusplus::testing::ValidSpaceGridInput;
+  for (auto input_xml : input::xml)
   {
     Libxml2Document doc;
     bool okay       = doc.parseFromString(input_xml);
@@ -36,7 +37,8 @@ TEST_CASE("SpaceGridInputs::parseXML::valid", "[estimators]")
 
 TEST_CASE("SpaceGridInputs::parseXML::invalid", "[estimators]")
 {
-  for (auto input_xml : testing::invalid_space_grid_input_sections)
+  using input = qmcplusplus::testing::InvalidSpaceGridInput;
+  for (auto input_xml : input::xml)
   {
     Libxml2Document doc;
     bool okay = doc.parseFromString(input_xml);
@@ -55,7 +57,8 @@ bool checkVec(T& vec, T expected_vec) {
   
 TEST_CASE("SpaceGridInputs::parseXML::axes", "[estimators]")
 {
-  auto& input_xml = testing::valid_space_grid_input_sections[testing::valid_space_grid_input];
+  using input = qmcplusplus::testing::ValidSpaceGridInput;
+  auto& input_xml = input::xml[input::WITH_STEP];
   Libxml2Document doc;
   bool okay = doc.parseFromString(input_xml);
   REQUIRE(okay);

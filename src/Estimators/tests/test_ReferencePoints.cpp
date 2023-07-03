@@ -36,9 +36,9 @@ bool approxEquality(const TinyVector<T1, D>& val_a, const TinyVector<T2, D>& val
   
 TEST_CASE("ReferencePoints::Construction", "[estimators]")
 {
-  auto& inputs = testing::valid_reference_points_input_sections;
+  using Input = testing::ValidReferencePointsInputs;
   Libxml2Document doc;
-  bool okay       = doc.parseFromString(inputs[testing::valid_referencepointsinput_cell]);
+  bool okay       = doc.parseFromString(Input::xml[Input::valid::CELL]);
   xmlNodePtr node = doc.getRoot();
   ReferencePointsInput rpi(node);
 

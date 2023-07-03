@@ -14,6 +14,7 @@
 /** \file
  *  This is the port of QMCHamiltonian/SpaceGrid to the new Estimator design.
  *  Name clashes were undesirable as the legacy implementation needed to remain.
+ *  \todo rename to more obvious Spacegrid once QMCHamiltonian/SpaceGrid is removed
  */
 #ifndef QMCPLUSPLUS_NESPACEGRID_H
 #define QMCPLUSPLUS_NESPACEGRID_H
@@ -32,6 +33,10 @@ namespace qmcplusplus
 {
 /** SpaceGrid refactored for use with batched estimator design
  *  NE should be dropped when QMCHamiltonian/SpaceGrid has been deleted.
+ *
+ *  This class has more going on than just representing a spacial grid
+ *  I'm still working out how much of this just because of the Voronoi code that shouldn't be
+ *  part of the same class as the simpler grid and how much is particleset contimination etc.
  */
 class NESpaceGrid
 {
@@ -51,19 +56,21 @@ public:
   };
 
   /** This constructor is used for electron only grids
+   * \param[in]  sgi            input object for space grid.
+   * \param[in]  reference      reference points from which origin and on other reference points referenced in input object are to be found
+   * \param[in]  nvalues        number of fields the owning class wants for each grid point.
+   * \param[in]  is_period      properly names is what is says
    */
-  NESpaceGrid(SpaceGridInput& sgi,
-                         Points& points,
-                         const int nvalues,
-	      const bool is_periodic);
+  NESpaceGrid(SpaceGridInput& sgi, Points& points, const int nvalues, const bool is_periodic);
 
   /** This is the general constructor
+   * \param[in]  sgi            input object for space grid.
+   * \param[in]  reference      reference points from which origin and on other reference points referenced in input object are to be found
+   * \param[in]  ndp            number of ions that can move
+   * \param[in]  nvalues        number of fields the owning class wants for each grid point.
+   * \param[in]  is_period      properly names is what is says
    */
-  NESpaceGrid(SpaceGridInput& sgi,
-              Points& points,
-              const int ndp,
-              const int nvalues,
-              const bool is_periodic);
+  NESpaceGrid(SpaceGridInput& sgi, Points& points, const int ndp, const int nvalues, const bool is_periodic);
 
   void write_description(std::ostream& os, std::string& indent);
   int allocate_buffer_space(BufferType& buf);
@@ -94,7 +101,7 @@ private:
 
   //private:
 
-  int buffer_offset_;
+  int buffer_offset_;  /// Assuming this is just written into a shared buffer of type Real
   int ndomains_;
   int nvalues_per_domain_;
   Matrix<Real> domain_volumes_;
