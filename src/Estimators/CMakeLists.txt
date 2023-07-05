@@ -38,8 +38,8 @@ set(QMCEST_SRC
     NEReferencePoints.cpp
     ReferencePointsInput.cpp
     SpaceGridInput.cpp
-    ParseGridInput.cpp)
-#    NESpaceGrid.cpp)
+    ParseGridInput.cpp
+    NESpaceGrid.cpp)
 
 ####################################
 # create libqmcestimators

@@ -18,7 +18,7 @@
 #include <Configuration.h>
 #include "InputSection.h"
 #include "EstimatorInput.h"
-#include "ParseGridInput.hpp"
+#include "ParseGridInput.hpp" //for AxisGrid
 
 namespace qmcplusplus
 {
@@ -50,7 +50,7 @@ public:
                                                                                         {"coord-spherical",
                                                                                          CoordForm::SPHERICAL}};
 
-  using label_set = std::set<std::string_view>;
+  using label_set = std::vector<std::string_view>;
   // legal labels for each coordinate type.  These are actually effectively enums
   inline static const label_set ax_cartesian{"x", "y", "z"};
   inline static const label_set ax_cylindrical{"r", "phi", "z"};
@@ -155,6 +155,7 @@ public:
   void checkAxes(std::vector<std::any>& axes);
 
   CoordForm get_coord_form() const { return coord_form_; }
+  bool isPeriodic() const { return !(coord_form_ == CoordForm::CYLINDRICAL || coord_form_ == CoordForm::SPHERICAL); }
   const std::array<std::string, OHMMS_DIM>& get_axis_p1s() const { return axis_p1s_; }
   const std::array<std::string, OHMMS_DIM>& get_axis_p2s() const { return axis_p2s_; }
 

@@ -56,11 +56,14 @@ void ReferencePointsInput::readRefPointsXML(xmlNodePtr cur)
       Point rp;
       for (int d = 0; d < OHMMS_DIM; d++)
       {
-	try {
-	  rp[d] = std::stod(std::string(tokens[d + 1].begin(), tokens[d + 1].size()));
-	} catch (const std::invalid_argument& ia) {
-	  throw UniformCommunicateError(ia.what());
-	}
+        try
+        {
+          rp[d] = std::stod(std::string(tokens[d + 1].begin(), tokens[d + 1].size()));
+        }
+        catch (const std::invalid_argument& ia)
+        {
+          throw UniformCommunicateError(ia.what());
+        }
       }
 
       // This must be done in constructor of ReferencePoints

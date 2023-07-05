@@ -73,12 +73,19 @@ public:
     std::any assignAnyEnum(const std::string& name) const override;
   };
 
+  /** Unlike many input classes ReferencePointInputs needs a way to be constructured even if there is no input node.
+   *  The ReferencePoints for a space grid are assumed to just be a default ReferencePoints with
+   *  the same CoordType.
+   */
+  ReferencePointsInput();
+  
   ReferencePointsInput(xmlNodePtr cur);
   Coord get_coord_form() const { return coord_form_; }
   const Points& get_points() const { return points_; }
 private:
   void readRefPointsXML(xmlNodePtr cur);
-  Coord coord_form_;
+  // As far as I can tell if not specified in input this is what is happening in legacy.
+  Coord coord_form_ = Coord::CELL;
   Points points_;
   ReferencePointsInputSection input_section_;
   static constexpr std::string_view error_tag{"ReferencePointsInput input: "};

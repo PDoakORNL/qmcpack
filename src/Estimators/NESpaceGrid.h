@@ -47,7 +47,7 @@ public:
   using BufferType  = PooledData<Real>;
   using POLT        = PtclOnLatticeTraits;
   using ParticlePos = POLT::ParticlePos;
-
+  using AxTensor    = Tensor<Real, OHMMS_DIM>;
   enum class ReferenceEnergy
   {
     vacuum,
@@ -61,7 +61,7 @@ public:
    * \param[in]  nvalues        number of fields the owning class wants for each grid point.
    * \param[in]  is_period      properly names is what is says
    */
-  NESpaceGrid(SpaceGridInput& sgi, Points& points, const int nvalues, const bool is_periodic);
+  NESpaceGrid(SpaceGridInput& sgi, const Points& points, const int nvalues, const bool is_periodic);
 
   /** This is the general constructor
    * \param[in]  sgi            input object for space grid.
@@ -70,7 +70,7 @@ public:
    * \param[in]  nvalues        number of fields the owning class wants for each grid point.
    * \param[in]  is_period      properly names is what is says
    */
-  NESpaceGrid(SpaceGridInput& sgi, Points& points, const int ndp, const int nvalues, const bool is_periodic);
+  NESpaceGrid(SpaceGridInput& sgi, const Points& points, const int ndp, const int nvalues, const bool is_periodic);
 
   void write_description(std::ostream& os, std::string& indent);
   int allocate_buffer_space(BufferType& buf);
@@ -87,13 +87,38 @@ public:
   void sum(const BufferType& buf, Real* vals);
 
 private:
-  bool initializeRectilinear(SpaceGridInput& input, Points& points);
-  static bool processAxis(SpaveGridInput& input_);
+  // The following funciton are static to provide some discipline and actual
+  // visibility of there data dependence and effect on the object state when
+  // called.
+  /** Initialize NESpaceGrid for rectilinear grid
+   *  \param[in]  input     SpaceGridInput object
+   *  \param[in]  points    ReferencePoints object for grid
+   *  Causes side effects updating
+   *    origin_    fixed up origin for grid
+   *    axes_      axes with scaling applied to it.
+   *    axinv_     the inverse of the axes with scaling applied   
+   */
+  bool initializeRectilinear(const SpaceGridInput& input, const Points& points);
+  /** Deal with some Axes issues
+   *  \param[in]  input   input object
+   *  \param[out] axes    axes with scaling applied to it.
+   *  \param[out] axinv   the inverse of the axes with scaling applied
+   *  could just be used for reporting.
+   */
 
+  /** Another function to cut scopes to sort of manageable size.
+   *  does nothing but create many side effects
+   */
+  void someMoreAxisGridStuff();
+    
+  static void processAxis(const SpaceGridInput& input_, AxTensor& axes, AxTensor& axinv);
+
+  static bool checkAxisGridValues(const SpaceGridInput& input_, const AxTensor& axes);
+  
   SpaceGridInput& input_;
   int ndparticles_;
   bool is_periodic_;
-  Points& points_;
+  const Points& points_;
 
   // _NO_
   int buffer_start_;
@@ -101,24 +126,18 @@ private:
 
   //private:
 
-  int buffer_offset_;  /// Assuming this is just written into a shared buffer of type Real
+  int buffer_offset_; /// Assuming this is just written into a shared buffer of type Real
   int ndomains_;
   int nvalues_per_domain_;
   Matrix<Real> domain_volumes_;
   Matrix<Real> domain_centers_;
 
-  //in use if sorting by particle count
-  bool chempot_;
-  int npmin_, npmax_;
-  int npvalues_;
-  Matrix<Real> cellsamples_;
-
   std::vector<int> reference_count_;
 
   //really only used for cartesian-like grids
   Point origin_;
-  Tensor<Real, OHMMS_DIM> axes_;
-  Tensor<Real, OHMMS_DIM> axinv_;
+  AxTensor axes_;
+  AxTensor axinv_;
   Real volume_;
   Matrix<Real> domain_uwidths_;
   std::string axlabel_[OHMMS_DIM];

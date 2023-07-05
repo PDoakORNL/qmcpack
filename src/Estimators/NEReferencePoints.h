@@ -33,6 +33,8 @@ public:
   using Points = std::map<std::string, Point>;
   using Coord  = typename ReferencePointsInput::Coord;
   NEReferencePoints(ReferencePointsInput&& rp_input, ParticleSet& pset, RefVector<ParticleSet>& ref_psets);
+  NEReferencePoints(const NEReferencePoints& nerp) = default;
+
   void processParticleSets(ParticleSet& P, RefVector<ParticleSet>& Pref);
   void write_description(std::ostream& os, const std::string& indent) const;
   void save(std::vector<ObservableHelper>& h5desc, hdf_archive& file) const;

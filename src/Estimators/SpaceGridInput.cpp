@@ -19,7 +19,6 @@
 #include "EstimatorInput.h"
 #include "Message/UniformCommunicateError.h"
 
-
 namespace qmcplusplus
 {
 
