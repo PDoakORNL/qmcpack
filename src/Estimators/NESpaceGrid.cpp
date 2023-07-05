@@ -362,7 +362,7 @@ int NESpaceGrid::allocate_buffer_space(BufferType& buf)
   return buffer_offset_;
 }
 
-void NESpaceGrid::registerCollectables(hdf_archive& file, int grid_index) const
+void NESpaceGrid::registerCollectables(std::vector<ObservableHelper>& h5desc, hid_t gid, int grid_index) const
 {
   using iMatrix = Matrix<int>;
   iMatrix imat;
