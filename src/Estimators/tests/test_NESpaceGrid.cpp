@@ -26,10 +26,24 @@
 
 namespace qmcplusplus
 {
-constexpr bool generate_test_data = false;
 
-TEST_CASE("ReferencePoints::Construction", "[estimators]")
+namespace testing
 {
+template<typename T>
+class NESpaceGridTests
+{
+public:
+  static int getBufferStart(const NESpaceGrid& nesg) { return nesg.buffer_start_; }
+  static int getBufferEnd(const NESpaceGrid& nesg) { return nesg.buffer_end_; }
+};
+}
+
+constexpr bool generate_test_data = false;
+using Real = double;
+
+TEST_CASE("SpaceGrid::Construction", "[estimators]")
+{
+  using Real = double;
   Communicate* comm;
   comm = OHMMS::Controller;
 
@@ -58,7 +72,15 @@ TEST_CASE("ReferencePoints::Construction", "[estimators]")
   // EnergyDensityEstimator gets this from an enum giving indexes into each offset of AOS buffer.
   // It is a smell.
   NESpaceGrid space_grid(sgi, ref_points.get_points(), 3 , false);
-  
+  PooledData<Real> data_pool;
+  space_grid.allocate_buffer_space(data_pool);
+  using NES = testing::NESpaceGridTests<double>;
+  auto buffer_start = NES::getBufferStart(space_grid);
+  auto buffer_end = NES::getBufferEnd(space_grid);
+  std::cout << "buffer_start: " << buffer_start << "   buffer_end_: " << buffer_end << '\n';
+  space_grid.write_description(std::cout, std::string(""));
+  CHECK(buffer_start == 0);
+  CHECK(buffer_end == 0);
 }
 
 }

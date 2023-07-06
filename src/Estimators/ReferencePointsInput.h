@@ -77,7 +77,7 @@ public:
    *  The ReferencePoints for a space grid are assumed to just be a default ReferencePoints with
    *  the same CoordType.
    */
-  ReferencePointsInput();
+  ReferencePointsInput() = default;
   
   ReferencePointsInput(xmlNodePtr cur);
   Coord get_coord_form() const { return coord_form_; }

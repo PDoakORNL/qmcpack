@@ -35,8 +35,8 @@ set(QMCEST_SRC
     MagnetizationDensityInput.cpp
     PerParticleHamiltonianLoggerInput.cpp
     PerParticleHamiltonianLogger.cpp
-    NEReferencePoints.cpp
     ReferencePointsInput.cpp
+    NEReferencePoints.cpp
     SpaceGridInput.cpp
     ParseGridInput.cpp
     NESpaceGrid.cpp)

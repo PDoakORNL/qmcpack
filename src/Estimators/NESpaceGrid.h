@@ -38,6 +38,12 @@ namespace qmcplusplus
  *  I'm still working out how much of this just because of the Voronoi code that shouldn't be
  *  part of the same class as the simpler grid and how much is particleset contimination etc.
  */
+namespace testing
+{
+template<typename T>
+class NESpaceGridTests;
+}
+  
 class NESpaceGrid
 {
 public:
@@ -72,9 +78,9 @@ public:
    */
   NESpaceGrid(SpaceGridInput& sgi, const Points& points, const int ndp, const int nvalues, const bool is_periodic);
 
-  void write_description(std::ostream& os, std::string& indent);
+  void write_description(std::ostream& os, const std::string& indent);
   int allocate_buffer_space(BufferType& buf);
-  void registerCollectables(std::vector<ObservableHelper>& h5desc, hid_t gid, int grid_index) const;
+  void registerGrid(hdf_archive& file, std::vector<ObservableHelper>& h5desc, hid_t gid, int grid_index) const;
   void evaluate(const ParticlePos& R,
                 const Matrix<Real>& values,
                 BufferType& buf,
@@ -110,11 +116,11 @@ private:
    *  does nothing but create many side effects
    */
   void someMoreAxisGridStuff();
-    
+
   static void processAxis(const SpaceGridInput& input_, AxTensor& axes, AxTensor& axinv);
 
   static bool checkAxisGridValues(const SpaceGridInput& input_, const AxTensor& axes);
-  
+
   SpaceGridInput& input_;
   int ndparticles_;
   bool is_periodic_;
@@ -156,9 +162,9 @@ private:
   };
   std::vector<IRPair> nearcell_;
 
-  //used only in evaluate
-  // Then why are they here and not on the stack in evaluate!
-  Point u_, ub_;
+public:
+  template<typename T>
+  friend class testing::NESpaceGridTests;
 };
 
 

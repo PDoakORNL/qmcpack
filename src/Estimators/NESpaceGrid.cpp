@@ -12,6 +12,9 @@
 //////////////////////////////////////////////////////////////////////////////////////
 
 #include "NESpaceGrid.h"
+
+#include <hdf5.h>
+
 #include "OhmmsData/AttributeSet.h"
 #include "Utilities/string_utils.h"
 #include <cmath>
@@ -309,7 +312,7 @@ bool NESpaceGrid::checkAxisGridValues(const SpaceGridInput& input, const AxTenso
   return succeeded;
 }
 
-void NESpaceGrid::write_description(std::ostream& os, std::string& indent)
+void NESpaceGrid::write_description(std::ostream& os, const std::string& indent)
 {
   os << indent + "SpaceGrid" << std::endl;
   std::string s;
@@ -362,7 +365,10 @@ int NESpaceGrid::allocate_buffer_space(BufferType& buf)
   return buffer_offset_;
 }
 
-void NESpaceGrid::registerCollectables(std::vector<ObservableHelper>& h5desc, hid_t gid, int grid_index) const
+void NESpaceGrid::registerGrid(hdf_archive& file,
+                               std::vector<ObservableHelper>& h5desc,
+                               hid_t gid,
+                               int grid_index) const
 {
   using iMatrix = Matrix<int>;
   iMatrix imat;
@@ -370,95 +376,94 @@ void NESpaceGrid::registerCollectables(std::vector<ObservableHelper>& h5desc, hi
   int cshift = 1;
   std::stringstream ss;
   ss << grid_index + cshift;
-  std::string name = "spacegrid" + ss.str();
-  h5desc.emplace_back(name);
+  hdf_path hdf_name{"spacegrid" + ss.str()};
+  h5desc.emplace_back(hdf_name);
   auto& oh = h5desc.back();
-  ng[0] = nvalues_per_domain_ * ndomains_;
+  ng[0]    = nvalues_per_domain_ * ndomains_;
   oh.set_dimensions(ng, buffer_offset_);
-  oh.open(gid);
-  int coord = (int)coordinate;
-  oh.addProperty(const_cast<int&>(coord), "coordinate");
-  oh.addProperty(const_cast<int&>(ndomains_), "ndomains");
-  oh.addProperty(const_cast<int&>(nvalues_per_domain_), "nvalues_per_domain_");
-  oh.addProperty(const_cast<Real&>(volume), "volume");
-  oh.addProperty(const_cast<Matrix<Real>&>(domain_volumes), "domain_volumes");
-  oh.addProperty(const_cast<Matrix<Real>&>(domain_centers), "domain_centers");
-  if (coordinate != voronoi)
-  {
-    oh.addProperty(const_cast<Point&>(origin), "origin");
-    oh.addProperty(const_cast<Tensor_t&>(axes), "axes");
-    oh.addProperty(const_cast<Tensor_t&>(axinv), "axinv");
-    oh.addProperty(const_cast<Matrix<Real>&>(domain_uwidths), "domain_uwidths");
-    //add dimensioned quantities
-    std::map<std::string, int> axtmap;
-    axtmap["x"]     = 0;
-    axtmap["y"]     = 1;
-    axtmap["z"]     = 2;
-    axtmap["r"]     = 3;
-    axtmap["phi"]   = 4;
-    axtmap["theta"] = 5;
-    int axtypes[DIM];
-    for (int d = 0; d < OHMMS_DIM; d++)
-    {
-      axtypes[d] = axtmap[axis_labels[d]];
-    }
-    int n;
-    const int ni = 3;
-    int* ivar[ni];
-    std::string iname[ni];
-    n        = 0;
-    ivar[n]  = (int*)axtypes;
-    iname[n] = "axtypes";
-    n++;
-    ivar[n]  = (int*)dimensions;
-    iname[n] = "dimensions";
-    n++;
-    ivar[n]  = (int*)dm;
-    iname[n] = "dm";
-    n++;
-    const int nr = 3;
-    Real* rvar[nr];
-    std::string rname[nr];
-    n        = 0;
-    rvar[n]  = (Real*)odu;
-    rname[n] = "odu";
-    n++;
-    rvar[n]  = (Real*)umin;
-    rname[n] = "umin";
-    n++;
-    rvar[n]  = (Real*)umax;
-    rname[n] = "umax";
-    n++;
-    imat.resize(DIM, 1);
-    for (int i = 0; i < ni; i++)
-    {
-      for (int d = 0; d < OHMMS_DIM; d++)
-        imat(d, 0) = ivar[i][d];
-      oh.addProperty(const_cast<iMatrix&>(imat), iname[i]);
-    }
-    Matrix<Real> rmat;
-    rmat.resize(DIM, 1);
-    for (int i = 0; i < nr; i++)
-    {
-      for (int d = 0; d < OHMMS_DIM; d++)
-        rmat(d, 0) = rvar[i][d];
-      oh.addProperty(const_cast<Matrix<Real>&>(rmat), rname[i]);
-    }
-    for (int d = 0; d < OHMMS_DIM; d++)
-    {
-      int gsize = gmap[d].size();
-      imat.resize(gsize, 1);
-      for (int i = 0; i < gsize; i++)
-      {
-        int gval   = gmap[d][i];
-        imat(i, 0) = gval;
-      }
-      int ival           = d + 1;
-      std::string gmname = "gmap" + int2string(ival);
-      oh.addProperty(const_cast<iMatrix&>(imat), gmname);
-    }
-  }
 
+  int coord = static_cast<int>(input_.get_coord_form());
+  oh.addProperty(const_cast<int&>(coord), "coordinate", file);
+  oh.addProperty(const_cast<int&>(ndomains_), "ndomains", file);
+  oh.addProperty(const_cast<int&>(nvalues_per_domain_), "nvalues_per_domain_", file);
+  oh.addProperty(const_cast<Real&>(volume_), "volume", file);
+  oh.addProperty(const_cast<Matrix<Real>&>(domain_volumes_), "domain_volumes", file);
+  oh.addProperty(const_cast<Matrix<Real>&>(domain_centers_), "domain_centers", file);
+  oh.addProperty(const_cast<Point&>(origin_), "origin", file);
+  oh.addProperty(const_cast<Tensor<Real, OHMMS_DIM>&>(axes_), "axes", file);
+  oh.addProperty(const_cast<Tensor<Real, OHMMS_DIM>&>(axinv_), "axinv", file);
+  oh.addProperty(const_cast<Matrix<Real>&>(domain_uwidths_), "domain_uwidths", file);
+  //add dimensioned quantities
+  std::map<std::string, int> axtmap;
+  axtmap["x"]     = 0;
+  axtmap["y"]     = 1;
+  axtmap["z"]     = 2;
+  axtmap["r"]     = 3;
+  axtmap["phi"]   = 4;
+  axtmap["theta"] = 5;
+  int axtypes[OHMMS_DIM];
+  auto& axis_labels = input_.get_axis_labels();
+  for (int d = 0; d < OHMMS_DIM; d++)
+  {
+    axtypes[d] = axtmap[axis_labels[d]];
+  }
+  int n;
+  const int ni = 3;
+  // Now we arrive to a bunch of pointers to pointers that assume that all the axis grid
+  // information is laid out soa versus aos
+  int* ivar[ni];
+  std::string iname[ni];
+  n        = 0;
+  ivar[n]  = (int*)axtypes;
+  iname[n] = "axtypes";
+  n++;
+  ivar[n]  = (int*)dimensions_;
+  iname[n] = "dimensions";
+  n++;
+  ivar[n]  = (int*)dm_;
+  iname[n] = "dm";
+  n++;
+  const int nr = 3;
+  Real* rvar[nr];
+  std::string rname[nr];
+  n        = 0;
+  rvar[n]  = (Real*)odu_;
+  rname[n] = "odu";
+  n++;
+  rvar[n]  = (Real*)umin_;
+  rname[n] = "umin";
+  n++;
+  rvar[n]  = (Real*)umax_;
+  rname[n] = "umax";
+  n++;
+  imat.resize(OHMMS_DIM, 1);
+  for (int i = 0; i < ni; i++)
+  {
+    for (int d = 0; d < OHMMS_DIM; d++)
+      imat(d, 0) = ivar[i][d];
+    oh.addProperty(const_cast<iMatrix&>(imat), iname[i], file);
+  }
+  Matrix<Real> rmat;
+  rmat.resize(OHMMS_DIM, 1);
+  for (int i = 0; i < nr; i++)
+  {
+    for (int d = 0; d < OHMMS_DIM; d++)
+      rmat(d, 0) = rvar[i][d];
+    oh.addProperty(const_cast<Matrix<Real>&>(rmat), rname[i], file);
+  }
+  for (int d = 0; d < OHMMS_DIM; d++)
+  {
+    int gsize = gmap_[d].size();
+    imat.resize(gsize, 1);
+    for (int i = 0; i < gsize; i++)
+    {
+      int gval   = gmap_[d][i];
+      imat(i, 0) = gval;
+    }
+    int ival           = d + 1;
+    std::string gmname = "gmap" + int2string(ival);
+    oh.addProperty(const_cast<iMatrix&>(imat), gmname, file);
+  }
   return;
 }
 
@@ -475,243 +480,89 @@ void NESpaceGrid::evaluate(const ParticlePos& R,
   int p, v;
   int nparticles = values.size1();
   int nvalues    = values.size2();
-  int iu[DIM];
+  int iu[OHMMS_DIM];
   int buf_index;
   const Real o2pi = 1.0 / (2.0 * M_PI);
-  if (!chempot)
+  using CoordForm = SpaceGridInput::CoordForm;
+  auto& agr = input_.get_axis_grids();
+  switch (input_.get_coord_form())
   {
-    switch (coordinate)
+  case CoordForm::CARTESIAN:
+    if (input_.isPeriodic())
     {
-    case cartesian:
-      if (periodic)
-      {
-        for (p = 0; p < nparticles; p++)
-        {
-          particles_outside[p] = false;
-          u                    = dot(axinv, (R[p] - origin));
-          for (int d = 0; d < OHMMS_DIM; ++d)
-            iu[d] = gmap[d][floor((u[d] - umin[d]) * odu[d])];
-          buf_index = buffer_offset;
-          for (int d = 0; d < OHMMS_DIM; ++d)
-            buf_index += nvalues * dm[d] * iu[d];
-          for (v = 0; v < nvalues; v++, buf_index++)
-            buf[buf_index] += values(p, v);
-        }
-      }
-      else
-      {
-        for (p = 0; p < nparticles; p++)
-        {
-          u = dot(axinv, (R[p] - origin));
-          if (u[0] > umin[0] && u[0] < umax[0] && u[1] > umin[1] && u[1] < umax[1] && u[2] > umin[2] && u[2] < umax[2])
-          {
-            particles_outside[p] = false;
-            iu[0]                = gmap[0][floor((u[0] - umin[0]) * odu[0])];
-            iu[1]                = gmap[1][floor((u[1] - umin[1]) * odu[1])];
-            iu[2]                = gmap[2][floor((u[2] - umin[2]) * odu[2])];
-            buf_index            = buffer_offset + nvalues * (dm[0] * iu[0] + dm[1] * iu[1] + dm[2] * iu[2]);
-            for (v = 0; v < nvalues; v++, buf_index++)
-              buf[buf_index] += values(p, v);
-          }
-        }
-      }
-      break;
-    case cylindrical:
       for (p = 0; p < nparticles; p++)
       {
-        ub   = dot(axinv, (R[p] - origin));
-        u[0] = sqrt(ub[0] * ub[0] + ub[1] * ub[1]);
-        u[1] = atan2(ub[1], ub[0]) * o2pi + .5;
-        u[2] = ub[2];
-        if (u[0] > umin[0] && u[0] < umax[0] && u[1] > umin[1] && u[1] < umax[1] && u[2] > umin[2] && u[2] < umax[2])
-        {
-          particles_outside[p] = false;
-          iu[0]                = gmap[0][floor((u[0] - umin[0]) * odu[0])];
-          iu[1]                = gmap[1][floor((u[1] - umin[1]) * odu[1])];
-          iu[2]                = gmap[2][floor((u[2] - umin[2]) * odu[2])];
-          buf_index            = buffer_offset + nvalues * (dm[0] * iu[0] + dm[1] * iu[1] + dm[2] * iu[2]);
-          for (v = 0; v < nvalues; v++, buf_index++)
-            buf[buf_index] += values(p, v);
-        }
-      }
-      break;
-    case spherical:
-      for (p = 0; p < nparticles; p++)
-      {
-        ub   = dot(axinv, (R[p] - origin));
-        u[0] = sqrt(ub[0] * ub[0] + ub[1] * ub[1] + ub[2] * ub[2]);
-        u[1] = atan2(ub[1], ub[0]) * o2pi + .5;
-        u[2] = acos(ub[2] / u[0]) * o2pi * 2.0;
-        if (u[0] > umin[0] && u[0] < umax[0] && u[1] > umin[1] && u[1] < umax[1] && u[2] > umin[2] && u[2] < umax[2])
-        {
-          particles_outside[p] = false;
-          iu[0]                = gmap[0][floor((u[0] - umin[0]) * odu[0])];
-          iu[1]                = gmap[1][floor((u[1] - umin[1]) * odu[1])];
-          iu[2]                = gmap[2][floor((u[2] - umin[2]) * odu[2])];
-          buf_index            = buffer_offset + nvalues * (dm[0] * iu[0] + dm[1] * iu[1] + dm[2] * iu[2]);
-          for (v = 0; v < nvalues; v++, buf_index++)
-            buf[buf_index] += values(p, v);
-        }
-      }
-      break;
-    case voronoi:
-      //find cell center nearest to each dynamic particle
-      int nd, nn;
-      Real dist;
-      for (p = 0; p < ndparticles_; p++)
-      {
-        const auto& dist = dtab.getDistRow(p);
-        for (nd = 0; nd < ndomains_; nd++)
-          if (dist[nd] < nearcell[p].r)
-          {
-            nearcell[p].r = dist[nd];
-            nearcell[p].i = nd;
-          }
-      }
-      //accumulate values for each dynamic particle
-      for (p = 0; p < ndparticles_; p++)
-      {
-        buf_index = buffer_offset + nvalues * nearcell[p].i;
+        particles_outside[p] = false;
+        Point u                    = dot(axinv_, (R[p] - origin_));
+        for (int d = 0; d < OHMMS_DIM; ++d)
+          iu[d] = gmap_[d][floor((u[d] - agr[d].umin) * odu_[d])];
+        buf_index = buffer_offset_;
+        for (int d = 0; d < OHMMS_DIM; ++d)
+          buf_index += nvalues * dm_[d] * iu[d];
         for (v = 0; v < nvalues; v++, buf_index++)
           buf[buf_index] += values(p, v);
       }
-      //accumulate values for static particles (static particles == cell centers)
-      buf_index = buffer_offset;
-      for (p = ndparticles_; p < nparticles; p++)
+    }
+    else
+    {
+      for (p = 0; p < nparticles; p++)
+      {
+        Point u = dot(axinv_, (R[p] - origin_));
+        if (u[0] > agr[0].umin && u[0] < agr[0].umax && u[1] > agr[1].umin && u[1] < agr[1].umax && u[2] > agr[2].umin && u[2] < agr[2].umax)
+        {
+          particles_outside[p] = false;
+          iu[0]                = gmap_[0][floor((u[0] - agr[0].umin) * odu_[0])];
+          iu[1]                = gmap_[1][floor((u[1] - agr[1].umin) * odu_[1])];
+          iu[2]                = gmap_[2][floor((u[2] - agr[2].umin) * odu_[2])];
+          buf_index            = buffer_offset_ + nvalues * (dm_[0] * iu[0] + dm_[1] * iu[1] + dm_[2] * iu[2]);
+          for (v = 0; v < nvalues; v++, buf_index++)
+            buf[buf_index] += values(p, v);
+        }
+      }
+    }
+    break;
+  case CoordForm::CYLINDRICAL:
+    for (p = 0; p < nparticles; p++)
+    {
+      Point ub   = dot(axinv_, (R[p] - origin_));
+      Point u{sqrt(ub[0] * ub[0] + ub[1] * ub[1]),
+	atan2(ub[1], ub[0]) * o2pi + .5,
+	ub[2]};
+      if (u[0] > agr[0].umin && u[0] < agr[0].umax && u[1] > agr[1].umin && u[1] < agr[1].umax && u[2] > agr[2].umin && u[2] < agr[2].umax)
+      {
+        particles_outside[p] = false;
+        iu[0]                = gmap_[0][floor((u[0] - agr[0].umin) * odu_[0])];
+        iu[1]                = gmap_[1][floor((u[1] - agr[1].umin) * odu_[1])];
+        iu[2]                = gmap_[2][floor((u[2] - agr[2].umin) * odu_[2])];
+        buf_index            = buffer_offset_ + nvalues * (dm_[0] * iu[0] + dm_[1] * iu[1] + dm_[2] * iu[2]);
         for (v = 0; v < nvalues; v++, buf_index++)
           buf[buf_index] += values(p, v);
-      //each particle belongs to some voronoi cell
-      for (p = 0; p < nparticles; p++)
-        particles_outside[p] = false;
-      //reset distances
-      for (p = 0; p < ndparticles_; p++)
-        nearcell[p].r = std::numeric_limits<Real>::max();
-      break;
-    default:
-      app_log() << "  coordinate type must be cartesian, cylindrical, spherical, or voronoi" << std::endl;
-      APP_ABORT("SpaceGrid::evaluate");
+      }
     }
-  }
-  else
-  //chempot: sort values by particle count in volumes
-  {
-    int cell_index;
-    int nd;
-    std::fill(cellsamples.begin(), cellsamples.end(), 0.0);
-    switch (coordinate)
+    break;
+  case CoordForm::SPHERICAL:
+    for (p = 0; p < nparticles; p++)
     {
-    case cartesian:
-      for (p = 0; p < nparticles; p++)
+      Point ub   = dot(axinv_, (R[p] - origin_));
+      Point u;
+      u[0] = sqrt(ub[0] * ub[0] + ub[1] * ub[1] + ub[2] * ub[2]);
+      u[1] = atan2(ub[1], ub[0]) * o2pi + .5;
+      u[2] = acos(ub[2] / u[0]) * o2pi * 2.0;
+      if (u[0] > agr[0].umin && u[0] < agr[0].umax && u[1] > agr[1].umin && u[1] < agr[1].umax && u[2] > agr[2].umin && u[2] < agr[2].umax)
       {
-        u = dot(axinv, (R[p] - origin));
-        if (u[0] > umin[0] && u[0] < umax[0] && u[1] > umin[1] && u[1] < umax[1] && u[2] > umin[2] && u[2] < umax[2])
-        {
-          particles_outside[p] = false;
-          iu[0]                = gmap[0][floor((u[0] - umin[0]) * odu[0])];
-          iu[1]                = gmap[1][floor((u[1] - umin[1]) * odu[1])];
-          iu[2]                = gmap[2][floor((u[2] - umin[2]) * odu[2])];
-          cell_index           = dm[0] * iu[0] + dm[1] * iu[1] + dm[2] * iu[2];
-          for (v = 0; v < nvalues; v++)
-            cellsamples(cell_index, v) += values(p, v);
-          cellsamples(cell_index, nvalues) += 1.0;
-        }
-      }
-      break;
-    case cylindrical:
-      for (p = 0; p < nparticles; p++)
-      {
-        ub   = dot(axinv, (R[p] - origin));
-        u[0] = sqrt(ub[0] * ub[0] + ub[1] * ub[1]);
-        u[1] = atan2(ub[1], ub[0]) * o2pi + .5;
-        u[2] = ub[2];
-        if (u[0] > umin[0] && u[0] < umax[0] && u[1] > umin[1] && u[1] < umax[1] && u[2] > umin[2] && u[2] < umax[2])
-        {
-          particles_outside[p] = false;
-          iu[0]                = gmap[0][floor((u[0] - umin[0]) * odu[0])];
-          iu[1]                = gmap[1][floor((u[1] - umin[1]) * odu[1])];
-          iu[2]                = gmap[2][floor((u[2] - umin[2]) * odu[2])];
-          cell_index           = dm[0] * iu[0] + dm[1] * iu[1] + dm[2] * iu[2];
-          for (v = 0; v < nvalues; v++)
-            cellsamples(cell_index, v) += values(p, v);
-          cellsamples(cell_index, nvalues) += 1.0;
-        }
-      }
-      break;
-    case spherical:
-      for (p = 0; p < nparticles; p++)
-      {
-        ub   = dot(axinv, (R[p] - origin));
-        u[0] = sqrt(ub[0] * ub[0] + ub[1] * ub[1] + ub[2] * ub[2]);
-        u[1] = atan2(ub[1], ub[0]) * o2pi + .5;
-        u[2] = acos(ub[2] / u[0]) * o2pi * 2.0;
-        if (u[0] > umin[0] && u[0] < umax[0] && u[1] > umin[1] && u[1] < umax[1] && u[2] > umin[2] && u[2] < umax[2])
-        {
-          particles_outside[p] = false;
-          iu[0]                = gmap[0][floor((u[0] - umin[0]) * odu[0])];
-          iu[1]                = gmap[1][floor((u[1] - umin[1]) * odu[1])];
-          iu[2]                = gmap[2][floor((u[2] - umin[2]) * odu[2])];
-          cell_index           = dm[0] * iu[0] + dm[1] * iu[1] + dm[2] * iu[2];
-          for (v = 0; v < nvalues; v++)
-            cellsamples(cell_index, v) += values(p, v);
-          cellsamples(cell_index, nvalues) += 1.0;
-        }
-      }
-      break;
-    case voronoi:
-      //find cell center nearest to each dynamic particle
-      int nn;
-      Real dist;
-      APP_ABORT("SoA transformation needed for Voronoi grids")
-      //for (nd = 0; nd < ndomains_; nd++)
-      //  for (nn = dtab.M[nd], p = 0; nn < dtab.M[nd + 1]; ++nn, ++p)
-      //  {
-      //    dist = dtab.r(nn);
-      //    if (dist < nearcell[p].r)
-      //    {
-      //      nearcell[p].r = dist;
-      //      nearcell[p].i = nd;
-      //    }
-      //  }
-      //accumulate values for each dynamic particle
-      for (p = 0; p < ndparticles_; p++)
-      {
-        cell_index = nearcell[p].i;
-        for (v = 0; v < nvalues; v++)
-          cellsamples(cell_index, v) += values(p, v);
-        cellsamples(cell_index, nvalues) += 1.0;
-      }
-      //accumulate values for static particles (static particles == cell centers)
-      for (p = ndparticles_, cell_index = 0; p < nparticles; p++, cell_index++)
-      {
-        for (v = 0; v < nvalues; v++)
-          cellsamples(cell_index, v) += values(p, v);
-        cellsamples(cell_index, nvalues) += 1.0;
-      }
-      //each particle belongs to some voronoi cell
-      for (p = 0; p < nparticles; p++)
         particles_outside[p] = false;
-      //reset distances
-      for (p = 0; p < ndparticles_; p++)
-        nearcell[p].r = std::numeric_limits<Real>::max();
-      break;
-    default:
-      app_log() << "  coordinate type must be cartesian, cylindrical, spherical, or voronoi" << std::endl;
-      APP_ABORT("SpaceGrid::evaluate");
-    }
-    //now place samples in the buffer according to how
-    // many particles are in each cell
-    int nincell;
-    buf_index = buffer_offset;
-    for (nd = 0; nd < ndomains_; nd++)
-    {
-      nincell = cellsamples(nd, nvalues) - reference_count[nd];
-      if (nincell >= npmin && nincell <= npmax)
-      {
-        buf_index = buffer_offset + (nd * npvalues + nincell - npmin) * nvalues;
+        iu[0]                = gmap_[0][floor((u[0] - agr[0].umin) * odu_[0])];
+        iu[1]                = gmap_[1][floor((u[1] - agr[1].umin) * odu_[1])];
+        iu[2]                = gmap_[2][floor((u[2] - agr[2].umin) * odu_[2])];
+        buf_index            = buffer_offset_ + nvalues * (dm_[0] * iu[0] + dm_[1] * iu[1] + dm_[2] * iu[2]);
         for (v = 0; v < nvalues; v++, buf_index++)
-          buf[buf_index] += cellsamples(nd, v);
+          buf[buf_index] += values(p, v);
       }
     }
+    break;
+  default:
+    app_log() << "  coordinate type must be cartesian, cylindrical, spherical" << std::endl;
+    throw std::runtime_error("SpaceGrid::evaluate received an invalid coordinate type");
   }
 }
 
@@ -722,7 +573,7 @@ void NESpaceGrid::sum(const BufferType& buf, Real* vals)
   {
     vals[v] = 0.0;
   }
-  for (int i = 0, n = buffer_offset; i < ndomains_; i++, n += nvalues_per_domain_)
+  for (int i = 0, n = buffer_offset_; i < ndomains_; i++, n += nvalues_per_domain_)
   {
     for (int v = 0; v < nvalues_per_domain_; v++)
     {
@@ -736,26 +587,29 @@ bool NESpaceGrid::check_grid(void)
 {
   app_log() << "SpaceGrid::check_grid" << std::endl;
   const Real o2pi = 1.0 / (2.0 * M_PI);
-  int iu[DIM];
+  int iu[OHMMS_DIM];
   int idomain;
   bool ok = true;
   Point dc;
+  auto& agr = input_.get_axis_grids();
   for (int i = 0; i < ndomains_; i++)
   {
     for (int d = 0; d < OHMMS_DIM; d++)
-      dc[d] = domain_centers(i, d);
-    ub = dot(axinv, (dc - origin));
-    switch (coordinate)
+      dc[d] = domain_centers_(i, d);
+    Point ub = dot(axinv_, (dc - origin_));
+    Point u;
+    using CoordForm = SpaceGridInput::CoordForm;
+    switch (input_.get_coord_form())
     {
-    case cartesian:
+    case CoordForm::CARTESIAN:
       u = ub;
       break;
-    case cylindrical:
+    case CoordForm::CYLINDRICAL:
       u[0] = sqrt(ub[0] * ub[0] + ub[1] * ub[1]);
       u[1] = atan2(ub[1], ub[0]) * o2pi + .5;
       u[2] = ub[2];
       break;
-    case spherical:
+    case CoordForm::SPHERICAL:
       u[0] = sqrt(ub[0] * ub[0] + ub[1] * ub[1] + ub[2] * ub[2]);
       u[1] = atan2(ub[1], ub[0]) * o2pi + .5;
       u[2] = acos(ub[2] / u[0]) * o2pi * 2.0;
@@ -763,10 +617,10 @@ bool NESpaceGrid::check_grid(void)
     default:
       break;
     }
-    iu[0]   = gmap[0][floor((u[0] - umin[0]) * odu[0])];
-    iu[1]   = gmap[1][floor((u[1] - umin[1]) * odu[1])];
-    iu[2]   = gmap[2][floor((u[2] - umin[2]) * odu[2])];
-    idomain = dm[0] * iu[0] + dm[1] * iu[1] + dm[2] * iu[2];
+    iu[0]   = gmap_[0][floor((u[0] - agr[0].umin) * odu_[0])];
+    iu[1]   = gmap_[1][floor((u[1] - agr[1].umin) * odu_[1])];
+    iu[2]   = gmap_[2][floor((u[2] - agr[2].umin) * odu_[2])];
+    idomain = dm_[0] * iu[0] + dm_[1] * iu[1] + dm_[2] * iu[2];
     if (idomain != i)
     {
       app_log() << "  cell mismatch " << i << " " << idomain << std::endl;
