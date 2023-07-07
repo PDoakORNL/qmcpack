@@ -47,6 +47,7 @@ set(SRCS
     test_SpaceGridInput.cpp
     test_ParseGridInput.cpp
     test_NESpaceGrid.cpp
+    test_EnergyDensityInput.cpp
     )
 
 # Tests incompatible with DiracDeterminantCUDA

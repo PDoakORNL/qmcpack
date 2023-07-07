@@ -57,6 +57,14 @@ void SpaceGridInput::SpaceGridAxisInput::SpaceGridAxisInputSection::setFromStrea
     throw std::runtime_error("bad name passed or custom setFromStream not implemented in derived class.");
 }
 
+SpaceGridInput::SpaceGridOriginInput::SpaceGridOriginInput(xmlNodePtr cur)
+{
+  input_section_.readXML(cur);
+  auto setIfInInput = LAMBDA_setIfInInput;
+  setIfInInput(p1_, "p1");
+  setIfInInput(p2_, "p2");
+  setIfInInput(fraction_, "fraction");
+}
 
 SpaceGridInput::SpaceGridInput(xmlNodePtr cur)
 {
@@ -75,6 +83,13 @@ SpaceGridInput::SpaceGridInput(xmlNodePtr cur)
     axis_p2s_[d]     = axis_input->get_p2();
     axis_grids_[d]   = axis_input->get_grid();
     axis_scales_[d]  = axis_input->get_scale();
+  }
+  if(input_section_.has("origin"))
+  {
+    auto space_grid_origin = input_section_.get<SpaceGridOriginInput>("origin");
+    origin_p1_ = space_grid_origin.get_p1();
+    origin_p2_ = space_grid_origin.get_p2();
+    origin_fraction_ = space_grid_origin.get_fraction();
   }
 }
 

@@ -53,9 +53,10 @@ public:
       strings      = {"name", "type", "dynamic", "static"};
       bools        = {"ion_points"};
       delegates    = {"reference_points", "spacegrid"};
-      required     = {"type", "spacegrid"};
+      multiple     = {"spacegrid"};
+      required     = {"spacegrid"};
       registerDelegate("reference_points", makeReferencePointsInput);
-      //    registerDelegate("spacegrid", makeSpaceGridInput);
+      registerDelegate("spacegrid", makeSpaceGridInput);
     }
     /** Here the delegate input object is registered */
     EnergyDensityInputSection(const EnergyDensityInputSection&) = default;
@@ -69,14 +70,25 @@ public:
   const std::string& get_name() const { return name_; }
   const std::string& get_dynamic() const { return dynamic_; }
   const std::string& get_static() const { return static_; }
-  ReferencePointsInput get_ref_points_input() const { return input_section_.get<ReferencePointsInput>("referencepoints"); }
+  ReferencePointsInput get_ref_points_input() const
+  {
+    return input_section_.get<ReferencePointsInput>("referencepoints");
+  }
+  std::vector<SpaceGridInput> get_space_grid_inputs() const
+  {
+    auto any_vec = input_section_.get<std::vector<std::any>>("spacegrid");
+    std::vector<SpaceGridInput> sgis;
+    for(auto& grid : any_vec)
+      sgis.emplace_back(std::any_cast<SpaceGridInput&>(grid));
+    return sgis;
+  }
   //const std::vector<SpaceGridInput>& get_space_grid_inputs() const { return space_grid_inputs_; }
 
 private:
   std::string name_;
   std::string dynamic_;
   std::string static_;
-  //std::vector<SpaceGridInput> space_grid_inputs_;
+  std::vector<SpaceGridInput> space_grid_inputs_;
   EnergyDensityInputSection input_section_;
 };
 

@@ -120,7 +120,7 @@ public:
     };
 
   public:
-    SpaceGridOriginInput(xmlNodePtr cur) { input_section_.readXML(cur); }
+    SpaceGridOriginInput(xmlNodePtr cur);
 
     static std::any makeOrigin(xmlNodePtr cur, std::string& value_label)
     {
@@ -128,9 +128,14 @@ public:
       value_label = "origin";
       return space_grid_origin;
     }
-
+    const std::string& get_p1() const { return p1_; }
+    const std::string& get_p2() const { return p2_; }
+    const Real get_fraction() const { return fraction_; }
   private:
     SpaceGridOriginInputSection input_section_;
+    std::string p1_{"zero"};
+    std::string p2_{""};
+    Real fraction_{0.0};
   };
 
   class SpaceGridInputSection : public InputSection
@@ -173,9 +178,10 @@ public:
 private:
   SpaceGridInputSection input_section_;
   CoordForm coord_form_;
-  std::string origin_p1_{""};
-  std::string origin_p2_{"zero"};
-  Real origin_fraction_ = 0.0;
+  // origin in optional so this is required.
+  std::string origin_p1_{"zero"};
+  std::string origin_p2_{""};
+  Real origin_fraction_{0.0};
   std::array<std::string, OHMMS_DIM> axis_labels_;
   std::array<std::string, OHMMS_DIM> axis_p1s_;
   std::array<std::string, OHMMS_DIM> axis_p2s_;

@@ -72,11 +72,14 @@ void NESpaceGrid::processAxis(const SpaceGridInput& input, const Points& points,
 NESpaceGrid::Point NESpaceGrid::deriveOrigin(const SpaceGridInput& input, const Points& points)
 {
   const std::string& origin_p1 = input.get_origin_p1();
-  if (origin_p1.size() > 0)
+  const std::string& origin_p2 = input.get_origin_p2();
+  
+  if (origin_p1.size() > 0 && origin_p2.size() > 0)
   {
-    const std::string& origin_p2 = input.get_origin_p2();
     return points.at(origin_p1) + input.get_origin_fraction() * (points.at(origin_p2) - points.at(origin_p1));
   }
+  else if (origin_p1.size() > 0)
+    return points.at(origin_p1);
   else
     return points.at("zero");
 }

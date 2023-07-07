@@ -64,6 +64,7 @@ void InputSection::handleDelegate(const std::string& ename, const xmlNodePtr ele
 
 void InputSection::readXML(xmlNodePtr cur)
 {
+  assert(cur != nullptr);
   // For historical reasons that actual "type" of the element/input section is expressed in a very inconsistent way.
   // It could be coded via the element name i.e. the tag, or at minimum a method, type, or name attribute.
   std::string section_ename{lowerCase(castXMLCharToChar(cur->name))};
