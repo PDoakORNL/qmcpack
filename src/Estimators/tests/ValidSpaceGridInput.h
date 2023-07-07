@@ -22,38 +22,80 @@ namespace testing
 
 struct ValidSpaceGridInput
 {
-  static constexpr std::array<std::string_view, 2> xml{
+  static constexpr std::array<std::string_view, 4> xml{
       R"XML(
-           <spacegrid coord="cartesian">
-             <axis p1="a1" scale=".5" label="x" grid="-1 (.1) 1"/>
-             <axis p1="a2" scale=".5" label="y" grid="-1 (.1) 1"/>
-             <axis p1="a3" scale=".5" label="z" grid="-1 (.1) 1"/>
-           </spacegrid>
+  <spacegrid coord="cartesian">
+    <axis p1="a1" scale=".5" label="x" grid="-1 (.1) 1"/>
+    <axis p1="a2" scale=".5" label="y" grid="-1 (.1) 1"/>
+    <axis p1="a3" scale=".5" label="z" grid="-1 (.1) 1"/>
+  </spacegrid>
       )XML",
       R"XML(
-           <spacegrid coord="cartesian">
-             <origin p1="zero"/>
-             <axis p1="a1" scale=".5" label="x" grid="-1 (.1) 1"/>
-             <axis p1="a2" scale=".5" label="y" grid="-1 (.1) 1"/>
-             <axis p1="a3" scale=".5" label="z" grid="-1 (.1) 1"/>
-           </spacegrid>
-      )XML"};
-  enum valid
-  {
-    DEFAULT = 0,
-    ORIGIN
-  };
+  <spacegrid coord="cartesian">
+     <origin p1="zero"/>
+     <axis p1="a1" scale=".5" label="x" grid="-1 (.1) 1"/>
+     <axis p1="a2" scale=".5" label="y" grid="-1 (.1) 1"/>
+     <axis p1="a3" scale=".5" label="z" grid="-1 (.1) 1"/>
+  </spacegrid>
+      )XML",
+      R"XML(
+  <spacegrid coord="spherical">
+    <origin p1="ion1p"/>
+    <axis p1="r1" scale="6.9" label="r"     grid="0 (0.1) 1"/>
+    <axis p1="r2" scale="6.9" label="phi"   grid="0 (0.1) 1"/>
+    <axis p1="r3" scale="6.9" label="theta" grid="0 (0.1) 1"/>
+  </spacegrid>
+)XML",
+      R"XML(
+  <spacegrid coord="spherical">
+    <origin p1="ion2"/>
+    <axis p1="r1" scale="6.9" label="r"     grid="0 1"/>
+    <axis p1="r2" scale="6.9" label="phi"   grid="0 1"/>
+    <axis p1="r3" scale="6.9" label="theta" grid="0 1"/>
+  </spacegrid>
+)XML"};
+
+enum valid
+{
+  DEFAULT = 0,
+  ORIGIN,
+  WITH_STEP,
+  WITHOUT_STEP
+};
 };
 
 struct InvalidSpaceGridInput
 {
-  static constexpr std::array<std::string_view, 1> xml{
+  static constexpr std::array<std::string_view, 4> xml{
       R"XML(
-           <spacegrid coord="cartesian">
-             <axis p1="a1" scale=".5" label="x" grid="-1 (.1) 1"/>
-             <axis p1="a2" scale=".5" label="y" grid="-1 (.1) 1"/>
-             <axis p1="a3" scale=".5" label="z" grid="-1 (.1) 1"/>
-           </spacegrid>
+  <spacegrid coord="cartesian">
+    <axis p1="a1" scale=".5" label="x" grid="-1 (.1) 1"/>
+    <axis p1="a2" scale=".5" label="y" grid="-1 (.1) 1"/>
+    <axis p1="a3" scale=".5" label="z" grid="-1 (.1) 1"/>
+  </spacegrid>
+      )XML",
+      R"XML(
+  <spacegrid coord="sphericalt">
+    <origin p1="ion1p"/>
+    <axis p1="r6" scale="6.9" label="r"     grid="0 (0.1) 1"/>
+    <axis p1="r2" scale="6.9" label="phi"   grid="0 (0.1) 1"/>
+    <axis p1="r3" scale="6.9" label="theta" grid="0 (0.1) 1"/>
+  </spacegrid>
+      )XML",
+      R"XML(
+  <spacegrid coord="sphericalt">
+    <origin p1="ion2"/>
+    <axis p1="r1" scale="6.9" label="x"     grid="0 1"/>
+    <axis p1="r2" scale="6.9" label="phi"   grid="0 1"/>
+    <axis p1="r3" scale="6.9" label="theta" grid="0 1"/>
+  </spacegrid>
+      )XML",
+      R"XML(
+  <spacegrid coord="spherical">
+    <origin p1="ion2"/>
+    <axis p1="r2" scale="6.9" label="phi"   grid="0 1"/>
+    <axis p1="r3" scale="6.9" label="theta" grid="0 1"/>
+  </spacegrid>
       )XML"};
 };
 } // namespace testing

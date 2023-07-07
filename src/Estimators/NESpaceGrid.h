@@ -43,7 +43,7 @@ namespace testing
 template<typename T>
 class NESpaceGridTests;
 }
-  
+
 class NESpaceGrid
 {
 public:
@@ -96,6 +96,14 @@ private:
   // The following funciton are static to provide some discipline and actual
   // visibility of there data dependence and effect on the object state when
   // called.
+  /** copy AxisGrid data to SoA layout for evaluation
+   */
+  void copyToSoA();
+
+  /** return actual origin point based on input
+   */
+  static Point deriveOrigin(const SpaceGridInput& input, const Points& points);
+
   /** Initialize NESpaceGrid for rectilinear grid
    *  \param[in]  input     SpaceGridInput object
    *  \param[in]  points    ReferencePoints object for grid
@@ -117,7 +125,12 @@ private:
    */
   void someMoreAxisGridStuff();
 
-  static void processAxis(const SpaceGridInput& input_, AxTensor& axes, AxTensor& axinv);
+  /** create axes and axinv tensors
+   *  \param[in]  input   space grid input
+   *  \param[out] axes
+   *  \param[out] axinv
+   */
+  static void processAxis(const SpaceGridInput& input, const Points& points, AxTensor& axes, AxTensor& axinv);
 
   static bool checkAxisGridValues(const SpaceGridInput& input_, const AxTensor& axes);
 
@@ -135,15 +148,20 @@ private:
   int buffer_offset_; /// Assuming this is just written into a shared buffer of type Real
   int ndomains_;
   int nvalues_per_domain_;
+  /** @ingroup Calculated by NESpaceGrid
+   *  These are calculated by NESpaceGrid before accumulation and possibly belong in SpaceGridInput
+   *  as derived inputs.  i.e. they are immutable and only based on the input.
+   *  Alternately they would be appropriate to calculate at construction time.
+   *  @{ */
   Matrix<Real> domain_volumes_;
   Matrix<Real> domain_centers_;
-
-  std::vector<int> reference_count_;
-
   //really only used for cartesian-like grids
   Point origin_;
   AxTensor axes_;
   AxTensor axinv_;
+
+  /// @}
+
   Real volume_;
   Matrix<Real> domain_uwidths_;
   std::string axlabel_[OHMMS_DIM];
@@ -151,7 +169,6 @@ private:
   Real odu_[OHMMS_DIM];
   Real umin_[OHMMS_DIM];
   Real umax_[OHMMS_DIM];
-  int dimensions_[OHMMS_DIM];
   int dm_[OHMMS_DIM];
   ReferenceEnergy reference_energy_;
 

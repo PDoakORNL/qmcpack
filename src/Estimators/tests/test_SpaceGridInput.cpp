@@ -2,7 +2,7 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2022 QMCPACK developers.
+// Copyright (c) 2023 QMCPACK developers.
 //
 // File developed by: Peter Doak, doakpw@ornl.gov, Oak Ridge National Lab
 //
@@ -13,9 +13,8 @@
 #include "catch.hpp"
 
 #include "SpaceGridInput.h"
-#include "TestingSpaceGridInputs.h"
+#include "ValidSpaceGridInput.h"
 #include "OhmmsData/Libxml2Doc.h"
-
 namespace qmcplusplus
 {
 
@@ -57,6 +56,7 @@ bool checkVec(T& vec, T expected_vec) {
   
 TEST_CASE("SpaceGridInputs::parseXML::axes", "[estimators]")
 {
+  using Real = double;
   using input = qmcplusplus::testing::ValidSpaceGridInput;
   auto& input_xml = input::xml[input::WITH_STEP];
   Libxml2Document doc;
@@ -73,7 +73,44 @@ TEST_CASE("SpaceGridInputs::parseXML::axes", "[estimators]")
   auto& axis_label = sgi.get_axis_labels();
   CHECK(checkVec(axis_label, {"r","phi","theta"}));
   auto& axis_grid = sgi.get_axis_grids();
-  //CHECK(checkVec(axis_grid, {{{0.0, 1.0},{0, 1},{0, 1}}}));
+  qmcplusplus::AxisGrid<Real> expected_1{{
+                                10,
+                            }, //ndom_int
+                            {
+                                1,
+                            }, //ndu_int
+                            {
+                                0.1,
+                            },  //du_int
+                            0,  //umin
+                            1,  //umax
+                            10, //odu
+                            {
+                                0,
+                                1,
+                                2,
+                                3,
+                                4,
+                                5,
+                                6,
+                                7,
+                                8,
+                                9,
+                            }, //gmap
+                            {
+                                1,
+                                1,
+                                1,
+                                1,
+                                1,
+                                1,
+                                1,
+                                1,
+                                1,
+                                1,
+                            },   //ndu_per_interval
+                            10}; //dimensions
+  CHECK(axis_grid[0] == expected_1);
 }
   
 } // namespace qmcplusplus

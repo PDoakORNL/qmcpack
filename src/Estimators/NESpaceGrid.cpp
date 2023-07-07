@@ -51,7 +51,7 @@ NESpaceGrid::NESpaceGrid(SpaceGridInput& sgi,
     throw std::runtime_error("NESpaceGrid initialization failed");
 }
 
-void NESpaceGrid::processAxis(const SpaceGridInput& input, AxTensor& axes, AxTensor& axinv)
+void NESpaceGrid::processAxis(const SpaceGridInput& input, const Points& points, AxTensor& axes, AxTensor& axinv)
 {
   auto& axis_labels = input.get_axis_labels();
   auto& axis_p1s    = input.get_axis_p1s();
@@ -64,43 +64,36 @@ void NESpaceGrid::processAxis(const SpaceGridInput& input, AxTensor& axes, AxTen
   {
     Real frac = axis_scales[iaxis];
     for (int d = 0; d < OHMMS_DIM; d++)
-      axes(d, iaxis) = frac * (axis_p1s[iaxis][d] - axis_p2s[iaxis][d]);
+      axes(d, iaxis) = frac * (points.at(axis_p1s[iaxis])[d] - points.at(axis_p2s[iaxis])[d]);
   }
   axinv = inverse(axes);
 }
 
-bool NESpaceGrid::initializeRectilinear(const SpaceGridInput& input, const Points& points_)
+NESpaceGrid::Point NESpaceGrid::deriveOrigin(const SpaceGridInput& input, const Points& points)
 {
-  // This code should be refactored to SpaceGridInput such that a simple map of
-  // axis is available.
-  using CoordForm = typename SpaceGridInput::CoordForm;
-  std::map<std::string, int> cmap;
-  auto coord_form = input.get_coord_form();
-
-  // Belongs in input class?
-  bool is_periodic = input.isPeriodic();
-
   const std::string& origin_p1 = input.get_origin_p1();
   if (origin_p1.size() > 0)
   {
     const std::string& origin_p2 = input.get_origin_p2();
-    origin_ = points_.at(origin_p1) + input.get_origin_fraction() * (points_.at(origin_p2) - points_.at(origin_p1));
+    return points.at(origin_p1) + input.get_origin_fraction() * (points.at(origin_p2) - points.at(origin_p1));
   }
   else
-    origin_ = points_.at("zero");
+    return points.at("zero");
+}
 
-  // variables for loop
-  Real utol = 1e-5;
-  std::string grid;
-  std::vector<int> ndu_per_interval[OHMMS_DIM];
+bool NESpaceGrid::initializeRectilinear(const SpaceGridInput& input, const Points& points)
+{
+  // This code should be refactored to SpaceGridInput such that a simple map of
+  // axis is available.
 
-  // awful state variables for processAxes
-  int iaxis = 0;
-  int naxes = 0;
-  processAxis(input, axes_, axinv_);
+  origin_ = deriveOrigin(input, points);
+  processAxis(input, points, axes_, axinv_);
   bool succeeded = checkAxisGridValues(input, axes_);
 
   someMoreAxisGridStuff();
+
+  copyToSoA();
+
   return succeeded;
 }
 
@@ -343,7 +336,7 @@ void NESpaceGrid::write_description(std::ostream& os, const std::string& indent)
     os << indent + "  axis " << axis_labels[d] << ":" << std::endl;
     os << indent + "    umin = " << agr[d].umin << std::endl;
     os << indent + "    umax = " << agr[d].umax << std::endl;
-    os << indent + "    du   = " << 1.0 / agr[d].odu << std::endl;
+    os << indent + "    du   = " << 1.0 / static_cast<double>(agr[d].odu) << std::endl;
     os << indent + "    dm   = " << dm_[d] << std::endl;
     os << indent + "    gmap = ";
     for (int g = 0; g < gmap_[d].size(); g++)
@@ -382,6 +375,14 @@ void NESpaceGrid::registerGrid(hdf_archive& file,
   ng[0]    = nvalues_per_domain_ * ndomains_;
   oh.set_dimensions(ng, buffer_offset_);
 
+  // Create a bunch of temporary SoA data from input to write the grid attributes
+  auto& agr = input_.get_axis_grids();
+  std::vector<int> dimensions;
+  for (int id = 0; id < OHMMS_DIM; ++id)
+  {
+    dimensions[id] = agr[id].dimensions;
+  }
+
   int coord = static_cast<int>(input_.get_coord_form());
   oh.addProperty(const_cast<int&>(coord), "coordinate", file);
   oh.addProperty(const_cast<int&>(ndomains_), "ndomains", file);
@@ -417,7 +418,7 @@ void NESpaceGrid::registerGrid(hdf_archive& file,
   ivar[n]  = (int*)axtypes;
   iname[n] = "axtypes";
   n++;
-  ivar[n]  = (int*)dimensions_;
+  ivar[n]  = dimensions.data();
   iname[n] = "dimensions";
   n++;
   ivar[n]  = (int*)dm_;
@@ -470,6 +471,16 @@ void NESpaceGrid::registerGrid(hdf_archive& file,
 
 #define NESpaceGrid_CHECK
 
+void NESpaceGrid::copyToSoA()
+{
+  auto& agr = input_.get_axis_grids();
+  for (int id = 0; id < OHMMS_DIM; ++id)
+  {
+    odu_[id]  = agr[id].odu;
+    umin_[id] = agr[id].umin;
+    umax_[id] = agr[id].umax;
+  }
+}
 
 void NESpaceGrid::evaluate(const ParticlePos& R,
                            const Matrix<Real>& values,
@@ -484,7 +495,7 @@ void NESpaceGrid::evaluate(const ParticlePos& R,
   int buf_index;
   const Real o2pi = 1.0 / (2.0 * M_PI);
   using CoordForm = SpaceGridInput::CoordForm;
-  auto& agr = input_.get_axis_grids();
+  auto& agr       = input_.get_axis_grids();
   switch (input_.get_coord_form())
   {
   case CoordForm::CARTESIAN:
@@ -493,9 +504,9 @@ void NESpaceGrid::evaluate(const ParticlePos& R,
       for (p = 0; p < nparticles; p++)
       {
         particles_outside[p] = false;
-        Point u                    = dot(axinv_, (R[p] - origin_));
+        Point u              = dot(axinv_, (R[p] - origin_));
         for (int d = 0; d < OHMMS_DIM; ++d)
-          iu[d] = gmap_[d][floor((u[d] - agr[d].umin) * odu_[d])];
+          iu[d] = gmap_[d][floor((u[d] - umin_[d]) * odu_[d])];
         buf_index = buffer_offset_;
         for (int d = 0; d < OHMMS_DIM; ++d)
           buf_index += nvalues * dm_[d] * iu[d];
@@ -508,12 +519,13 @@ void NESpaceGrid::evaluate(const ParticlePos& R,
       for (p = 0; p < nparticles; p++)
       {
         Point u = dot(axinv_, (R[p] - origin_));
-        if (u[0] > agr[0].umin && u[0] < agr[0].umax && u[1] > agr[1].umin && u[1] < agr[1].umax && u[2] > agr[2].umin && u[2] < agr[2].umax)
+        if (u[0] > umin_[0] && u[0] < umax_[0] && u[1] > umin_[1] && u[1] < umax_[1] && u[2] > umin_[2] &&
+            u[2] < umax_[2])
         {
           particles_outside[p] = false;
-          iu[0]                = gmap_[0][floor((u[0] - agr[0].umin) * odu_[0])];
-          iu[1]                = gmap_[1][floor((u[1] - agr[1].umin) * odu_[1])];
-          iu[2]                = gmap_[2][floor((u[2] - agr[2].umin) * odu_[2])];
+          iu[0]                = gmap_[0][floor((u[0] - umin_[0]) * odu_[0])];
+          iu[1]                = gmap_[1][floor((u[1] - umin_[1]) * odu_[1])];
+          iu[2]                = gmap_[2][floor((u[2] - umin_[2]) * odu_[2])];
           buf_index            = buffer_offset_ + nvalues * (dm_[0] * iu[0] + dm_[1] * iu[1] + dm_[2] * iu[2]);
           for (v = 0; v < nvalues; v++, buf_index++)
             buf[buf_index] += values(p, v);
@@ -524,16 +536,15 @@ void NESpaceGrid::evaluate(const ParticlePos& R,
   case CoordForm::CYLINDRICAL:
     for (p = 0; p < nparticles; p++)
     {
-      Point ub   = dot(axinv_, (R[p] - origin_));
-      Point u{sqrt(ub[0] * ub[0] + ub[1] * ub[1]),
-	atan2(ub[1], ub[0]) * o2pi + .5,
-	ub[2]};
-      if (u[0] > agr[0].umin && u[0] < agr[0].umax && u[1] > agr[1].umin && u[1] < agr[1].umax && u[2] > agr[2].umin && u[2] < agr[2].umax)
+      Point ub = dot(axinv_, (R[p] - origin_));
+      Point u{sqrt(ub[0] * ub[0] + ub[1] * ub[1]), atan2(ub[1], ub[0]) * o2pi + .5, ub[2]};
+      if (u[0] > umin_[0] && u[0] < umax_[0] && u[1] > umin_[1] && u[1] < umax_[1] && u[2] > umin_[2] &&
+          u[2] < umax_[2])
       {
         particles_outside[p] = false;
-        iu[0]                = gmap_[0][floor((u[0] - agr[0].umin) * odu_[0])];
-        iu[1]                = gmap_[1][floor((u[1] - agr[1].umin) * odu_[1])];
-        iu[2]                = gmap_[2][floor((u[2] - agr[2].umin) * odu_[2])];
+        iu[0]                = gmap_[0][floor((u[0] - umin_[0]) * odu_[0])];
+        iu[1]                = gmap_[1][floor((u[1] - umin_[1]) * odu_[1])];
+        iu[2]                = gmap_[2][floor((u[2] - umin_[2]) * odu_[2])];
         buf_index            = buffer_offset_ + nvalues * (dm_[0] * iu[0] + dm_[1] * iu[1] + dm_[2] * iu[2]);
         for (v = 0; v < nvalues; v++, buf_index++)
           buf[buf_index] += values(p, v);
@@ -543,17 +554,18 @@ void NESpaceGrid::evaluate(const ParticlePos& R,
   case CoordForm::SPHERICAL:
     for (p = 0; p < nparticles; p++)
     {
-      Point ub   = dot(axinv_, (R[p] - origin_));
+      Point ub = dot(axinv_, (R[p] - origin_));
       Point u;
       u[0] = sqrt(ub[0] * ub[0] + ub[1] * ub[1] + ub[2] * ub[2]);
       u[1] = atan2(ub[1], ub[0]) * o2pi + .5;
       u[2] = acos(ub[2] / u[0]) * o2pi * 2.0;
-      if (u[0] > agr[0].umin && u[0] < agr[0].umax && u[1] > agr[1].umin && u[1] < agr[1].umax && u[2] > agr[2].umin && u[2] < agr[2].umax)
+      if (u[0] > umin_[0] && u[0] < umax_[0] && u[1] > umin_[1] && u[1] < umax_[1] && u[2] > umin_[2] &&
+          u[2] < umax_[2])
       {
         particles_outside[p] = false;
-        iu[0]                = gmap_[0][floor((u[0] - agr[0].umin) * odu_[0])];
-        iu[1]                = gmap_[1][floor((u[1] - agr[1].umin) * odu_[1])];
-        iu[2]                = gmap_[2][floor((u[2] - agr[2].umin) * odu_[2])];
+        iu[0]                = gmap_[0][floor((u[0] - umin_[0]) * odu_[0])];
+        iu[1]                = gmap_[1][floor((u[1] - umin_[1]) * odu_[1])];
+        iu[2]                = gmap_[2][floor((u[2] - umin_[2]) * odu_[2])];
         buf_index            = buffer_offset_ + nvalues * (dm_[0] * iu[0] + dm_[1] * iu[1] + dm_[2] * iu[2]);
         for (v = 0; v < nvalues; v++, buf_index++)
           buf[buf_index] += values(p, v);

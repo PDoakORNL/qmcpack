@@ -35,7 +35,7 @@ struct AxisGrid
   // I think the parse should just return something like this.
   // std::vector<REAL> points;
   // std::vector<REAL> p_to_p_du;
-  // however the parse is hopelessly tangled up with a great deal of calculation.
+  // however the parse was/is hopelessly tangled up with a great deal of calculation.
   // which produces this
   std::vector<int> ndom_int;
   std::vector<int> ndu_int;
