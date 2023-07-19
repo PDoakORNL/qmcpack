@@ -73,7 +73,7 @@ NESpaceGrid::Point NESpaceGrid::deriveOrigin(const SpaceGridInput& input, const 
 {
   const std::string& origin_p1 = input.get_origin_p1();
   const std::string& origin_p2 = input.get_origin_p2();
-  
+
   if (origin_p1.size() > 0 && origin_p2.size() > 0)
   {
     return points.at(origin_p1) + input.get_origin_fraction() * (points.at(origin_p2) - points.at(origin_p1));
@@ -259,6 +259,7 @@ void NESpaceGrid::someMoreAxisGridStuff()
     break;
   }
   volume_ = vol * det(axes_);
+
   return;
 }
 
@@ -482,14 +483,16 @@ void NESpaceGrid::copyToSoA()
     odu_[id]  = agr[id].odu;
     umin_[id] = agr[id].umin;
     umax_[id] = agr[id].umax;
+    gmap_[id].resize(floor((umax_[id] - umin_[id]) * odu_[id] + .5));
+    gmap_[id] = agr[id].gmap;
   }
 }
 
-void NESpaceGrid::evaluate(const ParticlePos& R,
-                           const Matrix<Real>& values,
-                           BufferType& buf,
-                           std::vector<bool>& particles_outside,
-                           const DistanceTableAB& dtab)
+void NESpaceGrid::accumulate(const ParticlePos& R,
+                             const Matrix<Real>& values,
+                             BufferType& buf,
+                             std::vector<bool>& particles_outside,
+                             const DistanceTableAB& dtab)
 {
   int p, v;
   int nparticles = values.size1();
@@ -508,8 +511,16 @@ void NESpaceGrid::evaluate(const ParticlePos& R,
       {
         particles_outside[p] = false;
         Point u              = dot(axinv_, (R[p] - origin_));
+	try {
         for (int d = 0; d < OHMMS_DIM; ++d)
-          iu[d] = gmap_[d][floor((u[d] - umin_[d]) * odu_[d])];
+          iu[d] = gmap_[d].at(floor((u[d] - umin_[d]) * odu_[d]));
+	}
+	catch (const std::exception& exc)
+	{
+	  std::ostringstream error;
+	  error << "NESpaceGrid: particle: " << p << " position: " << R[p] << " falls outside of the cell, for a period system all particle positions must be in the cell!\n";
+	  std::throw_with_nested(std::runtime_error(error.str()));
+	}
         buf_index = buffer_offset_;
         for (int d = 0; d < OHMMS_DIM; ++d)
           buf_index += nvalues * dm_[d] * iu[d];

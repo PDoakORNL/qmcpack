@@ -70,7 +70,7 @@ struct InvalidSpaceGridInput
       R"XML(
   <spacegrid coord="cartesian">
     <axis p1="a1" scale=".5" label="x" grid="-1 (.1) 1"/>
-    <axis p1="a2" scale=".5" label="y" grid="-1 (.1) 1"/>
+    <axis p1="a2" scale=".5" label="q" grid="-1 (.1) 1"/>
     <axis p1="a3" scale=".5" label="z" grid="-1 (.1) 1"/>
   </spacegrid>
       )XML",

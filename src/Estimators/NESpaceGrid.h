@@ -81,11 +81,26 @@ public:
   void write_description(std::ostream& os, const std::string& indent);
   int allocate_buffer_space(BufferType& buf);
   void registerGrid(hdf_archive& file, std::vector<ObservableHelper>& h5desc, hid_t gid, int grid_index) const;
-  void evaluate(const ParticlePos& R,
-                const Matrix<Real>& values,
-                BufferType& buf,
-                std::vector<bool>& particles_outside,
-                const DistanceTableAB& dtab);
+
+  /// @}
+
+  /** SpaceGridAccumulate not type erased and with its own particular interface.
+   *  the composing class needs to provide the following to spave grid.
+   *  \param[in]      R                    particle positions
+   *  \param[in]      values               matrix indexed particle, value
+   *  \param[in/out]  buf                  buffer to accumulating grid to
+   *  \param[out]     particles_outside    mask vector of particles falling outside the grid box
+   *  \param[in]      dtab                 particle A to Particle B distance table
+   *
+   *  right now cartesian grids are all accumulated as if they were "periodic" which honestly does not
+   *  seem to be well defined with repsect to these grids.  But for the particle cell itself it doesn't make
+   *  sense that it be periodic unless it is exactly comenserate with the particle cell (at least IMHO)
+   */
+  void accumulate(const ParticlePos& R,
+                  const Matrix<Real>& values,
+                  BufferType& buf,
+                  std::vector<bool>& particles_outside,
+		  const DistanceTableAB& dtab);
 
   bool check_grid(void);
   int nDomains(void) const { return ndomains_; }
@@ -165,7 +180,7 @@ private:
   Real volume_;
   Matrix<Real> domain_uwidths_;
   std::string axlabel_[OHMMS_DIM];
-  std::vector<int> gmap_[OHMMS_DIM];
+  std::array<std::vector<int>, 3> gmap_;
   Real odu_[OHMMS_DIM];
   Real umin_[OHMMS_DIM];
   Real umax_[OHMMS_DIM];
