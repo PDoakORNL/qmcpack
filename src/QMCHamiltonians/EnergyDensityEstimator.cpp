@@ -36,9 +36,7 @@ EnergyDensityEstimator::EnergyDensityEstimator(const PSPool& PSP, const std::str
   request_.request_array("LocalPotential");
 }
 
-
 EnergyDensityEstimator::~EnergyDensityEstimator() { delete_iter(spacegrids.begin(), spacegrids.end()); }
-
 
 bool EnergyDensityEstimator::put(xmlNodePtr cur, ParticleSet& Pdyn)
 {

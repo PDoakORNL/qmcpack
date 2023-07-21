@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 #include "Configuration.h"
+#include "type_traits/complex_help.hpp"
 
 namespace qmcplusplus
 {
@@ -36,7 +37,10 @@ private:
 
 public:
   /** why move or not move */
-  void registerVector(ListenerVector<Real>&& listener_vector) { listener_vectors_.push_back(std::move(listener_vector)); }
+  void registerVector(ListenerVector<Real>&& listener_vector)
+  {
+    listener_vectors_.push_back(std::move(listener_vector));
+  }
   void reportVector()
   {
     Vector<Real> vec_part(4);
@@ -76,7 +80,52 @@ TEST_CASE("ListenerVector", "[hamiltonian]")
   mock_ham_report.reportVector();
   CHECK(mock_estimator.receiver_vector_[0] == 0);
   CHECK(mock_estimator.receiver_vector_[3] == 3);
+};
+
+template<typename T>
+void checkCombinePerParticleEnergies()
+{
+  int n_walkers            = 2;
+  int n_ptcl               = 3;
+  CrowdEnergyValues<T> cev = {{"first", {{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}}},
+                              {"second", {{1.1, 2.1, 3.1}, {4.1, 5.1, 6.1}}},
+                              {"third", {{1.2, 2.2, 3.2}, {4.2, 5.2, 6.2}}}};
+
+  std::vector<Vector<T>> reduced_values{Vector<T>(3), Vector<T>(3)};
+  std::vector<Vector<T>> check_values{{3.3, 6.3, 9.3}, {12.3, 15.3, 18.3}};
+
+  if constexpr (IsComplex_t<T>::value)
+  {
+    auto addImaginaryValues = [](auto& componentValues) {
+      for (int iw = 0; iw < componentValues.size(); ++iw)
+      {
+        for (int ip = 0; ip < componentValues[iw].size(); ++ip)
+          componentValues[iw][ip].imag(componentValues[iw][ip].real() / 1000);
+      }
+    };
+    for (auto& [component, values] : cev)
+    {
+      addImaginaryValues(values);
+    }
+    addImaginaryValues(check_values);
+  }
+
+  combinePerParticleEnergies(cev, reduced_values);
+  for (int i = 0; i < n_walkers; ++i)
+    for (int j = 0; j < n_ptcl; ++j)
+      if constexpr (IsComplex_t<T>::value)
+        CHECK(reduced_values[i][j] == ComplexApprox(check_values[i][j]));
+      else
+        CHECK(reduced_values[i][j] == Approx(check_values[i][j]));
 }
+
+TEST_CASE("CrowdEnergyValues::combinePerParticleEnergies", "[hamiltonian][container]")
+{
+  checkCombinePerParticleEnergies<float>();
+  checkCombinePerParticleEnergies<double>();
+  checkCombinePerParticleEnergies<std::complex<double>>();
+  checkCombinePerParticleEnergies<std::complex<float>>();
+};
 
 } // namespace testing
 } // namespace qmcplusplus
