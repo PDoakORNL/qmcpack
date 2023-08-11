@@ -58,5 +58,20 @@ TEST_CASE("EnergyDensityInput::parseXML::axes", "[estimators]")
   auto rpts = edi.get_ref_points_input();
   CHECK(sgis.size() == 2);
 }
- 
+
+TEST_CASE("EnergyDensityInput::default_reference_points", "[estimators]")
+{
+  using input = qmcplusplus::testing::ValidEnergyDensityInput;
+  auto& input_xml = input::xml[input::valid::CELL];
+  Libxml2Document doc;
+  bool okay       = doc.parseFromString(input_xml);
+  xmlNodePtr node = doc.getRoot();
+  EnergyDensityInput edi(node);
+  auto sgis = edi.get_space_grid_inputs();
+  auto rpts = edi.get_ref_points_input();
+  CHECK(sgis.size() == 1);
+  CHECK(rpts.get_coord_form() == ReferencePointsInput::Coord::CELL);
+}
+
+  
 }

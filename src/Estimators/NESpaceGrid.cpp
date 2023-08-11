@@ -51,6 +51,22 @@ NESpaceGrid::NESpaceGrid(SpaceGridInput& sgi,
     throw std::runtime_error("NESpaceGrid initialization failed");
 }
 
+NESpaceGrid::NESpaceGrid(SpaceGridInput& sgi,
+                         const NEReferencePoints::Points& points,
+			 ParticlePos& static_particle_positions,
+			 std::vector<Real>& Z,
+			 const int ndp,
+                         const int nvalues,
+                         const bool is_periodic)
+    : input_(sgi), ndparticles_(ndp), is_periodic_(is_periodic), points_(points), nvalues_per_domain_(nvalues)
+{
+  
+  ndomains_         = -1;
+  bool init_success = initializeRectilinear(input_, points_);
+  if (!init_success)
+    throw std::runtime_error("NESpaceGrid initialization failed");
+}
+  
 void NESpaceGrid::processAxis(const SpaceGridInput& input, const Points& points, AxTensor& axes, AxTensor& axinv)
 {
   auto& axis_labels = input.get_axis_labels();

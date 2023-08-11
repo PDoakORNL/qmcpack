@@ -19,7 +19,7 @@
 
 namespace qmcplusplus
 {
-NEReferencePoints::NEReferencePoints(ReferencePointsInput&& rp_input,
+NEReferencePoints::NEReferencePoints(const ReferencePointsInput& rp_input,
                                      ParticleSet& pset,
                                      RefVector<ParticleSet>& ref_psets)
     : input_(std::move(rp_input))

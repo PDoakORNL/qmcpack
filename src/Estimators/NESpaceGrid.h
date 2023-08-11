@@ -72,11 +72,21 @@ public:
   /** This is the general constructor
    * \param[in]  sgi            input object for space grid.
    * \param[in]  reference      reference points from which origin and on other reference points referenced in input object are to be found
-   * \param[in]  ndp            number of ions that can move
+   * \param[in]  ndp            number of particles that can move
    * \param[in]  nvalues        number of fields the owning class wants for each grid point.
    * \param[in]  is_period      properly names is what is says
    */
   NESpaceGrid(SpaceGridInput& sgi, const Points& points, const int ndp, const int nvalues, const bool is_periodic);
+
+  /** This is the constructor for when PStatic is used.
+   */
+  NESpaceGrid(SpaceGridInput& sgi,
+              const Points& points,
+              ParticlePos& static_particle_positions,
+              std::vector<Real>& static_particle_charges,
+              const int ndp,
+              const int nvalues,
+              const bool is_periodic);
 
   void write_description(std::ostream& os, const std::string& indent);
   int allocate_buffer_space(BufferType& buf);
@@ -98,9 +108,8 @@ public:
    */
   void accumulate(const ParticlePos& R,
                   const Matrix<Real>& values,
-                  BufferType& buf,
                   std::vector<bool>& particles_outside,
-		  const DistanceTableAB& dtab);
+                  const DistanceTableAB& dtab);
 
   bool check_grid(void);
   int nDomains(void) const { return ndomains_; }
@@ -128,12 +137,17 @@ private:
    *    axinv_     the inverse of the axes with scaling applied   
    */
   bool initializeRectilinear(const SpaceGridInput& input, const Points& points);
-  /** Deal with some Axes issues
-   *  \param[in]  input   input object
-   *  \param[out] axes    axes with scaling applied to it.
-   *  \param[out] axinv   the inverse of the axes with scaling applied
-   *  could just be used for reporting.
-   */
+
+  // /** Initialize NESpaceGrid for voronoi grid
+  //  *  \param[in]  input        SpaceGridInput object
+  //  *  \param[in]  points       ReferencePoints object for grid
+  //  *  \param[in]  rs_static    Initial static particle positions
+  //  *  Causes side effects updating
+  //  *    origin_    fixed up origin for grid
+  //  *    axes_      axes with scaling applied to it.
+  //  *    axinv_     the inverse of the axes with scaling applied   
+  //  */
+  // bool initializeVoronoi(const SpaceGridInput& input, const Points& points, ParticlePos& r_static);
 
   /** Another function to cut scopes to sort of manageable size.
    *  does nothing but create many side effects
@@ -186,7 +200,8 @@ private:
   Real umax_[OHMMS_DIM];
   int dm_[OHMMS_DIM];
   ReferenceEnergy reference_energy_;
-
+  std::vector<Real> data_;
+  
   struct IRPair
   {
     Real r;

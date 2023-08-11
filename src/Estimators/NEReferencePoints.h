@@ -32,7 +32,7 @@ public:
   using Point  = TinyVector<Real, OHMMS_DIM>;
   using Points = std::map<std::string, Point>;
   using Coord  = typename ReferencePointsInput::Coord;
-  NEReferencePoints(ReferencePointsInput&& rp_input, ParticleSet& pset, RefVector<ParticleSet>& ref_psets);
+  NEReferencePoints(const ReferencePointsInput& rp_input, ParticleSet& pset, RefVector<ParticleSet>& ref_psets);
   NEReferencePoints(const NEReferencePoints& nerp) = default;
 
   void processParticleSets(ParticleSet& P, RefVector<ParticleSet>& Pref);
@@ -45,7 +45,7 @@ protected:
 
 private:
   Axes axes;
-  ReferencePointsInput input_;
+  const ReferencePointsInput& input_;
 };
 
 std::ostream& operator<<(std::ostream& out, const NEReferencePoints& rhs);

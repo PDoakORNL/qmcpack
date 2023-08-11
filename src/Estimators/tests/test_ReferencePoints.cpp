@@ -57,7 +57,7 @@ TEST_CASE("ReferencePoints::DefaultConstruction", "[estimators]")
 
   RefVector<ParticleSet> ref_psets;
   ref_psets.push_back(pset_ions);
-  NEReferencePoints ref_points(std::move(rpi), pset, ref_psets);
+  NEReferencePoints ref_points(rpi, pset, ref_psets);
 
   if (generate_test_data)
   {
