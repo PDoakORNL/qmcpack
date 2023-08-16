@@ -45,7 +45,6 @@ NESpaceGrid::NESpaceGrid(SpaceGridInput& sgi,
                          const bool is_periodic)
     : input_(sgi), ndparticles_(ndp), is_periodic_(is_periodic), points_(points), nvalues_per_domain_(nvalues)
 {
-  ndomains_         = -1;
   bool init_success = initializeRectilinear(input_, points_);
   if (!init_success)
     throw std::runtime_error("NESpaceGrid initialization failed");
@@ -53,20 +52,18 @@ NESpaceGrid::NESpaceGrid(SpaceGridInput& sgi,
 
 NESpaceGrid::NESpaceGrid(SpaceGridInput& sgi,
                          const NEReferencePoints::Points& points,
-			 ParticlePos& static_particle_positions,
-			 std::vector<Real>& Z,
-			 const int ndp,
+                         ParticlePos& static_particle_positions,
+                         std::vector<Real>& Z,
+                         const int ndp,
                          const int nvalues,
                          const bool is_periodic)
     : input_(sgi), ndparticles_(ndp), is_periodic_(is_periodic), points_(points), nvalues_per_domain_(nvalues)
 {
-  
-  ndomains_         = -1;
   bool init_success = initializeRectilinear(input_, points_);
   if (!init_success)
     throw std::runtime_error("NESpaceGrid initialization failed");
 }
-  
+
 void NESpaceGrid::processAxis(const SpaceGridInput& input, const Points& points, AxTensor& axes, AxTensor& axinv)
 {
   auto& axis_labels = input.get_axis_labels();
@@ -131,7 +128,10 @@ void NESpaceGrid::someMoreAxisGridStuff()
   //dm[2] = dimensions[0]*dimensions[1];
 
   ndomains_ = axis_grids[0].dimensions * axis_grids[1].dimensions * axis_grids[2].dimensions;
-  volume_   = std::abs(det(axes_)) * 8.0; //axes span only one octant
+
+  data_.resize(ndomains_ * nvalues_per_domain_);
+
+  volume_ = std::abs(det(axes_)) * 8.0; //axes span only one octant
   //compute domain volumes, centers, and widths
 
   domain_volumes_.resize(ndomains_, 1);
@@ -347,7 +347,6 @@ void NESpaceGrid::write_description(std::ostream& os, const std::string& indent)
   auto& agr         = input_.get_axis_grids();
   auto& axis_labels = input_.get_axis_labels();
   os << indent + "  SpaceGridInput::lookup_input_ename_value(input_.get_coord_form()  = " + s << std::endl;
-  os << indent + "  buffer_offset = " << buffer_offset_ << std::endl;
   os << indent + "  ndomains_      = " << ndomains_ << std::endl;
   os << indent + "  axes  = " << axes_ << std::endl;
   os << indent + "  axinv = " << axinv_ << std::endl;
@@ -368,20 +367,7 @@ void NESpaceGrid::write_description(std::ostream& os, const std::string& indent)
   os << indent + "end NESpaceGrid" << std::endl;
 }
 
-int NESpaceGrid::allocate_buffer_space(BufferType& buf)
-{
-  buffer_offset_ = buf.size();
-  std::vector<Real> tmp(nvalues_per_domain_ * ndomains_);
-  buf.add(tmp.begin(), tmp.end());
-  buffer_start_ = buffer_offset_;
-  buffer_end_   = buffer_start_ + nvalues_per_domain_ * ndomains_ - 1;
-  return buffer_offset_;
-}
-
-void NESpaceGrid::registerGrid(hdf_archive& file,
-                               std::vector<ObservableHelper>& h5desc,
-                               hid_t gid,
-                               int grid_index) const
+void NESpaceGrid::registerGrid(hdf_archive& file, std::vector<ObservableHelper>& h5desc, int grid_index) const
 {
   using iMatrix = Matrix<int>;
   iMatrix imat;
@@ -506,7 +492,6 @@ void NESpaceGrid::copyToSoA()
 
 void NESpaceGrid::accumulate(const ParticlePos& R,
                              const Matrix<Real>& values,
-                             BufferType& buf,
                              std::vector<bool>& particles_outside,
                              const DistanceTableAB& dtab)
 {
@@ -527,21 +512,23 @@ void NESpaceGrid::accumulate(const ParticlePos& R,
       {
         particles_outside[p] = false;
         Point u              = dot(axinv_, (R[p] - origin_));
-	try {
-        for (int d = 0; d < OHMMS_DIM; ++d)
-          iu[d] = gmap_[d].at(floor((u[d] - umin_[d]) * odu_[d]));
-	}
-	catch (const std::exception& exc)
-	{
-	  std::ostringstream error;
-	  error << "NESpaceGrid: particle: " << p << " position: " << R[p] << " falls outside of the cell, for a period system all particle positions must be in the cell!\n";
-	  std::throw_with_nested(std::runtime_error(error.str()));
-	}
+        try
+        {
+          for (int d = 0; d < OHMMS_DIM; ++d)
+            iu[d] = gmap_[d].at(floor((u[d] - umin_[d]) * odu_[d]));
+        }
+        catch (const std::exception& exc)
+        {
+          std::ostringstream error;
+          error << "NESpaceGrid: particle: " << p << " position: " << R[p]
+                << " falls outside of the cell, for a period system all particle positions must be in the cell!\n";
+          std::throw_with_nested(std::runtime_error(error.str()));
+        }
         buf_index = buffer_offset_;
         for (int d = 0; d < OHMMS_DIM; ++d)
           buf_index += nvalues * dm_[d] * iu[d];
         for (v = 0; v < nvalues; v++, buf_index++)
-          buf[buf_index] += values(p, v);
+          data_[buf_index] += values(p, v);
       }
     }
     else
@@ -558,7 +545,7 @@ void NESpaceGrid::accumulate(const ParticlePos& R,
           iu[2]                = gmap_[2][floor((u[2] - umin_[2]) * odu_[2])];
           buf_index            = buffer_offset_ + nvalues * (dm_[0] * iu[0] + dm_[1] * iu[1] + dm_[2] * iu[2]);
           for (v = 0; v < nvalues; v++, buf_index++)
-            buf[buf_index] += values(p, v);
+            data_[buf_index] += values(p, v);
         }
       }
     }
@@ -577,7 +564,7 @@ void NESpaceGrid::accumulate(const ParticlePos& R,
         iu[2]                = gmap_[2][floor((u[2] - umin_[2]) * odu_[2])];
         buf_index            = buffer_offset_ + nvalues * (dm_[0] * iu[0] + dm_[1] * iu[1] + dm_[2] * iu[2]);
         for (v = 0; v < nvalues; v++, buf_index++)
-          buf[buf_index] += values(p, v);
+          data_[buf_index] += values(p, v);
       }
     }
     break;
@@ -598,7 +585,7 @@ void NESpaceGrid::accumulate(const ParticlePos& R,
         iu[2]                = gmap_[2][floor((u[2] - umin_[2]) * odu_[2])];
         buf_index            = buffer_offset_ + nvalues * (dm_[0] * iu[0] + dm_[1] * iu[1] + dm_[2] * iu[2]);
         for (v = 0; v < nvalues; v++, buf_index++)
-          buf[buf_index] += values(p, v);
+          data_[buf_index] += values(p, v);
       }
     }
     break;
@@ -607,7 +594,6 @@ void NESpaceGrid::accumulate(const ParticlePos& R,
     throw std::runtime_error("SpaceGrid::evaluate received an invalid coordinate type");
   }
 }
-
 
 void NESpaceGrid::sum(const BufferType& buf, Real* vals)
 {
@@ -619,11 +605,21 @@ void NESpaceGrid::sum(const BufferType& buf, Real* vals)
   {
     for (int v = 0; v < nvalues_per_domain_; v++)
     {
-      vals[v] += buf[n + v];
+      vals[v] += data_[n + v];
     }
   }
 }
 
+void NESpaceGrid::collect(NESpaceGrid& reduction_grid, RefVector<NESpaceGrid> grid_for_each_crowd)
+{
+  for (NESpaceGrid& crowd_grid : grid_for_each_crowd)
+  {
+    std::transform(reduction_grid.data_.begin(), reduction_grid.data_.end(), crowd_grid.data_.begin(), reduction_grid.data_.begin(), std::plus<>{});
+    crowd_grid.zero();
+  }
+}
+
+void NESpaceGrid::zero() { data_.clear(); }
 
 bool NESpaceGrid::check_grid(void)
 {

@@ -89,8 +89,12 @@ public:
               const bool is_periodic);
 
   void write_description(std::ostream& os, const std::string& indent);
-  int allocate_buffer_space(BufferType& buf);
-  void registerGrid(hdf_archive& file, std::vector<ObservableHelper>& h5desc, hid_t gid, int grid_index) const;
+
+  /** set up Observable helper(s) for this grid
+   *  almost unchanged from legacy
+   *  \todo use hdf5archive directly
+   */
+  void registerGrid(hdf_archive& file, std::vector<ObservableHelper>& h5desc, int grid_index) const;
 
   /// @}
 
@@ -116,14 +120,16 @@ public:
 
   void sum(const BufferType& buf, Real* vals);
 
+  void static collect(NESpaceGrid& reduction_grid, RefVector<NESpaceGrid> grid_for_each_crowd);
+
 private:
-  // The following funciton are static to provide some discipline and actual
-  // visibility of there data dependence and effect on the object state when
-  // called.
   /** copy AxisGrid data to SoA layout for evaluation
    */
   void copyToSoA();
 
+
+  void zero();
+  
   /** return actual origin point based on input
    */
   static Point deriveOrigin(const SpaceGridInput& input, const Points& points);
@@ -172,10 +178,12 @@ private:
   int buffer_start_;
   int buffer_end_;
 
-  //private:
-
-  int buffer_offset_; /// Assuming this is just written into a shared buffer of type Real
-  int ndomains_;
+  /** in legacy used to be the starting index into the collectibles buffer.
+   *  Maintained to use more legacy code without modificaiton in the short term.
+   *  In the long term its possible the entire way the grid data is structured in memory should be redesigned.
+   */
+  const int buffer_offset_{0}; 
+  int ndomains_{1};
   int nvalues_per_domain_;
   /** @ingroup Calculated by NESpaceGrid
    *  These are calculated by NESpaceGrid before accumulation and possibly belong in SpaceGridInput

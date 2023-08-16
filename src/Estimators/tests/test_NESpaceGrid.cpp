@@ -33,6 +33,7 @@ template<typename T>
 class NESpaceGridTests
 {
 public:
+  static const auto& getData(const NESpaceGrid& nesg) { return nesg.data_; }
   static int getBufferStart(const NESpaceGrid& nesg) { return nesg.buffer_start_; }
   static int getBufferEnd(const NESpaceGrid& nesg) { return nesg.buffer_end_; }
   static auto* getOdu(const NESpaceGrid& nesg) { return nesg.odu_; }
@@ -88,9 +89,7 @@ TEST_CASE("SpaceGrid::Construction", "[estimators]")
   // EnergyDensityEstimator gets this from an enum giving indexes into each offset of SOA buffer.
   // It is a smell.
   NESpaceGrid space_grid(*(sge.sgi_), sge.ref_points_->get_points(), 1, false);
-  PooledData<Real> data_pool;
-  auto buffer_offset = space_grid.allocate_buffer_space(data_pool);
-  CHECK(buffer_offset == 0);
+  
   using NES         = testing::NESpaceGridTests<double>;
   auto buffer_start = NES::getBufferStart(space_grid);
   auto buffer_end   = NES::getBufferEnd(space_grid);
@@ -112,9 +111,6 @@ TEST_CASE("SpaceGrid::Basic", "[estimators]")
   testing::SpaceGridEnv<Input::valid::ORIGIN> sge(comm);
   int num_values = 3;
   NESpaceGrid space_grid(*(sge.sgi_), sge.ref_points_->get_points(), num_values, false);
-  PooledData<Real> data_pool;
-  auto buffer_offset = space_grid.allocate_buffer_space(data_pool);
-  CHECK(buffer_offset == 0);
   using NES         = testing::NESpaceGridTests<double>;
   auto buffer_start = NES::getBufferStart(space_grid);
   auto buffer_end   = NES::getBufferEnd(space_grid);
@@ -138,37 +134,36 @@ TEST_CASE("SpaceGrid::Basic", "[estimators]")
   sge.pset_ions_.update();
 
   std::vector<bool> p_outside(8, false);
-  space_grid.accumulate(sge.pset_elec_.R, values, data_pool, p_outside, sge.pset_elec_.getDistTableAB(ei_tid));
+  space_grid.accumulate(sge.pset_elec_.R, values, p_outside, sge.pset_elec_.getDistTableAB(ei_tid));
 
   // check that what's in data_pool is what is expected.
-  auto* grid_ptr = data_pool.data();
+  const auto& grid_data = NES::getData(space_grid);
 
-  auto tensorAccessor = [](auto* grid_ptr, int i, int j, int k, int iv) {
-    return *(grid_ptr + 1200 * i + 60 * j + 3 * k + iv);
+  auto tensorAccessor = [](const auto& grid_data, int i, int j, int k, int iv) {
+    return grid_data[1200 * i + 60 * j + 3 * k + iv];
   };
 
-
-  CHECK(tensorAccessor(grid_ptr, 10, 17, 9, 0) == Approx(2.0));
-  CHECK(tensorAccessor(grid_ptr, 10, 17, 9, 1) == Approx(2.1));
-  CHECK(tensorAccessor(grid_ptr, 10, 17, 9, 2) == Approx(2.2));
-  CHECK(tensorAccessor(grid_ptr, 12, 15, 7, 0) == Approx(4.0));
-  CHECK(tensorAccessor(grid_ptr, 12, 15, 7, 1) == Approx(4.1));
-  CHECK(tensorAccessor(grid_ptr, 12, 15, 7, 2) == Approx(4.2));
-  CHECK(tensorAccessor(grid_ptr, 12, 16, 11, 0) == Approx(3.0));
-  CHECK(tensorAccessor(grid_ptr, 12, 16, 11, 1) == Approx(3.1));
-  CHECK(tensorAccessor(grid_ptr, 12, 16, 11, 2) == Approx(3.2));
-  CHECK(tensorAccessor(grid_ptr, 13, 11, 15, 0) == Approx(6.0));
-  CHECK(tensorAccessor(grid_ptr, 13, 11, 15, 1) == Approx(6.1));
-  CHECK(tensorAccessor(grid_ptr, 13, 11, 15, 2) == Approx(6.2));
-  CHECK(tensorAccessor(grid_ptr, 14, 13, 13, 0) == Approx(1.0));
-  CHECK(tensorAccessor(grid_ptr, 14, 13, 13, 1) == Approx(1.2));
-  CHECK(tensorAccessor(grid_ptr, 14, 13, 13, 2) == Approx(1.4));
-  CHECK(tensorAccessor(grid_ptr, 15, 11, 10, 0) == Approx(7.0));
-  CHECK(tensorAccessor(grid_ptr, 15, 11, 10, 1) == Approx(7.1));
-  CHECK(tensorAccessor(grid_ptr, 15, 11, 10, 2) == Approx(7.2));
-  CHECK(tensorAccessor(grid_ptr, 17, 12, 9, 0) == Approx(5.0));
-  CHECK(tensorAccessor(grid_ptr, 17, 12, 9, 1) == Approx(5.1));
-  CHECK(tensorAccessor(grid_ptr, 17, 12, 9, 2) == Approx(5.2));
+  CHECK(tensorAccessor(grid_data, 10, 17, 9, 0) == Approx(2.0));
+  CHECK(tensorAccessor(grid_data, 10, 17, 9, 1) == Approx(2.1));
+  CHECK(tensorAccessor(grid_data, 10, 17, 9, 2) == Approx(2.2));
+  CHECK(tensorAccessor(grid_data, 12, 15, 7, 0) == Approx(4.0));
+  CHECK(tensorAccessor(grid_data, 12, 15, 7, 1) == Approx(4.1));
+  CHECK(tensorAccessor(grid_data, 12, 15, 7, 2) == Approx(4.2));
+  CHECK(tensorAccessor(grid_data, 12, 16, 11, 0) == Approx(3.0));
+  CHECK(tensorAccessor(grid_data, 12, 16, 11, 1) == Approx(3.1));
+  CHECK(tensorAccessor(grid_data, 12, 16, 11, 2) == Approx(3.2));
+  CHECK(tensorAccessor(grid_data, 13, 11, 15, 0) == Approx(6.0));
+  CHECK(tensorAccessor(grid_data, 13, 11, 15, 1) == Approx(6.1));
+  CHECK(tensorAccessor(grid_data, 13, 11, 15, 2) == Approx(6.2));
+  CHECK(tensorAccessor(grid_data, 14, 13, 13, 0) == Approx(1.0));
+  CHECK(tensorAccessor(grid_data, 14, 13, 13, 1) == Approx(1.2));
+  CHECK(tensorAccessor(grid_data, 14, 13, 13, 2) == Approx(1.4));
+  CHECK(tensorAccessor(grid_data, 15, 11, 10, 0) == Approx(7.0));
+  CHECK(tensorAccessor(grid_data, 15, 11, 10, 1) == Approx(7.1));
+  CHECK(tensorAccessor(grid_data, 15, 11, 10, 2) == Approx(7.2));
+  CHECK(tensorAccessor(grid_data, 17, 12, 9, 0) == Approx(5.0));
+  CHECK(tensorAccessor(grid_data, 17, 12, 9, 1) == Approx(5.1));
+  CHECK(tensorAccessor(grid_data, 17, 12, 9, 2) == Approx(5.2));
   // new pset R's
   // check again
   auto min_R =
@@ -182,52 +177,52 @@ TEST_CASE("SpaceGrid::Basic", "[estimators]")
   sge.pset_elec_.update();
 
   std::vector<bool> p_outside_2(8, false);
-  space_grid.accumulate(sge.pset_elec_.R, values, data_pool, p_outside_2, sge.pset_elec_.getDistTableAB(ei_tid));
+  space_grid.accumulate(sge.pset_elec_.R, values, p_outside_2, sge.pset_elec_.getDistTableAB(ei_tid));
 
-  CHECK(tensorAccessor(grid_ptr, 1, 13, 15, 0) == Approx(2.0));
-  CHECK(tensorAccessor(grid_ptr, 1, 13, 15, 1) == Approx(2.1));
-  CHECK(tensorAccessor(grid_ptr, 1, 13, 15, 2) == Approx(2.2));
-  CHECK(tensorAccessor(grid_ptr, 2, 6, 7, 0) == Approx(5.0));
-  CHECK(tensorAccessor(grid_ptr, 2, 6, 7, 1) == Approx(5.1));
-  CHECK(tensorAccessor(grid_ptr, 2, 6, 7, 2) == Approx(5.2));
-  CHECK(tensorAccessor(grid_ptr, 4, 0, 11, 1) == Approx(0.1));
-  CHECK(tensorAccessor(grid_ptr, 4, 0, 11, 2) == Approx(0.2));
-  CHECK(tensorAccessor(grid_ptr, 10, 17, 9, 0) == Approx(2.0));
-  CHECK(tensorAccessor(grid_ptr, 10, 17, 9, 1) == Approx(2.1));
-  CHECK(tensorAccessor(grid_ptr, 10, 17, 9, 2) == Approx(2.2));
-  CHECK(tensorAccessor(grid_ptr, 12, 0, 18, 0) == Approx(7.0));
-  CHECK(tensorAccessor(grid_ptr, 12, 0, 18, 1) == Approx(7.1));
-  CHECK(tensorAccessor(grid_ptr, 12, 0, 18, 2) == Approx(7.2));
-  CHECK(tensorAccessor(grid_ptr, 12, 13, 0, 0) == Approx(6.0));
-  CHECK(tensorAccessor(grid_ptr, 12, 13, 0, 1) == Approx(6.1));
-  CHECK(tensorAccessor(grid_ptr, 12, 13, 0, 2) == Approx(6.2));
-  CHECK(tensorAccessor(grid_ptr, 12, 15, 7, 0) == Approx(4.0));
-  CHECK(tensorAccessor(grid_ptr, 12, 15, 7, 1) == Approx(4.1));
-  CHECK(tensorAccessor(grid_ptr, 12, 15, 7, 2) == Approx(4.2));
-  CHECK(tensorAccessor(grid_ptr, 12, 16, 11, 0) == Approx(3.0));
-  CHECK(tensorAccessor(grid_ptr, 12, 16, 11, 1) == Approx(3.1));
-  CHECK(tensorAccessor(grid_ptr, 12, 16, 11, 2) == Approx(3.2));
-  CHECK(tensorAccessor(grid_ptr, 13, 1, 6, 0) == Approx(1.0));
-  CHECK(tensorAccessor(grid_ptr, 13, 1, 6, 1) == Approx(1.1));
-  CHECK(tensorAccessor(grid_ptr, 13, 1, 6, 2) == Approx(1.2));
-  CHECK(tensorAccessor(grid_ptr, 13, 11, 15, 0) == Approx(6.0));
-  CHECK(tensorAccessor(grid_ptr, 13, 11, 15, 1) == Approx(6.1));
-  CHECK(tensorAccessor(grid_ptr, 13, 11, 15, 2) == Approx(6.2));
-  CHECK(tensorAccessor(grid_ptr, 13, 17, 1, 0) == Approx(3.0));
-  CHECK(tensorAccessor(grid_ptr, 13, 17, 1, 1) == Approx(3.1));
-  CHECK(tensorAccessor(grid_ptr, 13, 17, 1, 2) == Approx(3.2));
-  CHECK(tensorAccessor(grid_ptr, 14, 12, 4, 0) == Approx(4.0));
-  CHECK(tensorAccessor(grid_ptr, 14, 12, 4, 1) == Approx(4.1));
-  CHECK(tensorAccessor(grid_ptr, 14, 12, 4, 2) == Approx(4.2));
-  CHECK(tensorAccessor(grid_ptr, 14, 13, 13, 0) == Approx(1.0));
-  CHECK(tensorAccessor(grid_ptr, 14, 13, 13, 1) == Approx(1.2));
-  CHECK(tensorAccessor(grid_ptr, 14, 13, 13, 2) == Approx(1.4));
-  CHECK(tensorAccessor(grid_ptr, 15, 11, 10, 0) == Approx(7.0));
-  CHECK(tensorAccessor(grid_ptr, 15, 11, 10, 1) == Approx(7.1));
-  CHECK(tensorAccessor(grid_ptr, 15, 11, 10, 2) == Approx(7.2));
-  CHECK(tensorAccessor(grid_ptr, 17, 12, 9, 0) == Approx(5.0));
-  CHECK(tensorAccessor(grid_ptr, 17, 12, 9, 1) == Approx(5.1));
-  CHECK(tensorAccessor(grid_ptr, 17, 12, 9, 2) == Approx(5.2));
+  CHECK(tensorAccessor(grid_data, 1, 13, 15, 0) == Approx(2.0));
+  CHECK(tensorAccessor(grid_data, 1, 13, 15, 1) == Approx(2.1));
+  CHECK(tensorAccessor(grid_data, 1, 13, 15, 2) == Approx(2.2));
+  CHECK(tensorAccessor(grid_data, 2, 6, 7, 0) == Approx(5.0));
+  CHECK(tensorAccessor(grid_data, 2, 6, 7, 1) == Approx(5.1));
+  CHECK(tensorAccessor(grid_data, 2, 6, 7, 2) == Approx(5.2));
+  CHECK(tensorAccessor(grid_data, 4, 0, 11, 1) == Approx(0.1));
+  CHECK(tensorAccessor(grid_data, 4, 0, 11, 2) == Approx(0.2));
+  CHECK(tensorAccessor(grid_data, 10, 17, 9, 0) == Approx(2.0));
+  CHECK(tensorAccessor(grid_data, 10, 17, 9, 1) == Approx(2.1));
+  CHECK(tensorAccessor(grid_data, 10, 17, 9, 2) == Approx(2.2));
+  CHECK(tensorAccessor(grid_data, 12, 0, 18, 0) == Approx(7.0));
+  CHECK(tensorAccessor(grid_data, 12, 0, 18, 1) == Approx(7.1));
+  CHECK(tensorAccessor(grid_data, 12, 0, 18, 2) == Approx(7.2));
+  CHECK(tensorAccessor(grid_data, 12, 13, 0, 0) == Approx(6.0));
+  CHECK(tensorAccessor(grid_data, 12, 13, 0, 1) == Approx(6.1));
+  CHECK(tensorAccessor(grid_data, 12, 13, 0, 2) == Approx(6.2));
+  CHECK(tensorAccessor(grid_data, 12, 15, 7, 0) == Approx(4.0));
+  CHECK(tensorAccessor(grid_data, 12, 15, 7, 1) == Approx(4.1));
+  CHECK(tensorAccessor(grid_data, 12, 15, 7, 2) == Approx(4.2));
+  CHECK(tensorAccessor(grid_data, 12, 16, 11, 0) == Approx(3.0));
+  CHECK(tensorAccessor(grid_data, 12, 16, 11, 1) == Approx(3.1));
+  CHECK(tensorAccessor(grid_data, 12, 16, 11, 2) == Approx(3.2));
+  CHECK(tensorAccessor(grid_data, 13, 1, 6, 0) == Approx(1.0));
+  CHECK(tensorAccessor(grid_data, 13, 1, 6, 1) == Approx(1.1));
+  CHECK(tensorAccessor(grid_data, 13, 1, 6, 2) == Approx(1.2));
+  CHECK(tensorAccessor(grid_data, 13, 11, 15, 0) == Approx(6.0));
+  CHECK(tensorAccessor(grid_data, 13, 11, 15, 1) == Approx(6.1));
+  CHECK(tensorAccessor(grid_data, 13, 11, 15, 2) == Approx(6.2));
+  CHECK(tensorAccessor(grid_data, 13, 17, 1, 0) == Approx(3.0));
+  CHECK(tensorAccessor(grid_data, 13, 17, 1, 1) == Approx(3.1));
+  CHECK(tensorAccessor(grid_data, 13, 17, 1, 2) == Approx(3.2));
+  CHECK(tensorAccessor(grid_data, 14, 12, 4, 0) == Approx(4.0));
+  CHECK(tensorAccessor(grid_data, 14, 12, 4, 1) == Approx(4.1));
+  CHECK(tensorAccessor(grid_data, 14, 12, 4, 2) == Approx(4.2));
+  CHECK(tensorAccessor(grid_data, 14, 13, 13, 0) == Approx(1.0));
+  CHECK(tensorAccessor(grid_data, 14, 13, 13, 1) == Approx(1.2));
+  CHECK(tensorAccessor(grid_data, 14, 13, 13, 2) == Approx(1.4));
+  CHECK(tensorAccessor(grid_data, 15, 11, 10, 0) == Approx(7.0));
+  CHECK(tensorAccessor(grid_data, 15, 11, 10, 1) == Approx(7.1));
+  CHECK(tensorAccessor(grid_data, 15, 11, 10, 2) == Approx(7.2));
+  CHECK(tensorAccessor(grid_data, 17, 12, 9, 0) == Approx(5.0));
+  CHECK(tensorAccessor(grid_data, 17, 12, 9, 1) == Approx(5.1));
+  CHECK(tensorAccessor(grid_data, 17, 12, 9, 2) == Approx(5.2));
 
   // hdf_archive file(comm, false);
   // file.create("space_grid_test.hdf");
@@ -238,7 +233,7 @@ TEST_CASE("SpaceGrid::Basic", "[estimators]")
   // file.push(hdf_name);
   // Vector<Real> data;
   // std::size_t offset = 0;
-  // data.attachReference(grid_ptr, nvalues);
+  // data.attachReference(grid_data, nvalues);
   // file.write(data, "value");
   // file.pop();
 }
@@ -251,8 +246,7 @@ TEST_CASE("SpaceGrid::BadPeriodic", "[estimators]")
   testing::SpaceGridEnv<Input::valid::ORIGIN> sge(comm);
   int num_values = 3;
   NESpaceGrid space_grid(*(sge.sgi_), sge.ref_points_->get_points(), num_values, false);
-  PooledData<Real> data_pool;
-  space_grid.allocate_buffer_space(data_pool);
+
   using NES         = testing::NESpaceGridTests<double>;
   auto buffer_start = NES::getBufferStart(space_grid);
   auto buffer_end   = NES::getBufferEnd(space_grid);
@@ -280,7 +274,7 @@ TEST_CASE("SpaceGrid::BadPeriodic", "[estimators]")
 
   std::vector<bool> p_outside(8, false);
 
-  CHECK_THROWS_AS(space_grid.accumulate(sge.pset_elec_.R, values, data_pool, p_outside,
+  CHECK_THROWS_AS(space_grid.accumulate(sge.pset_elec_.R, values, p_outside,
                                         sge.pset_elec_.getDistTableAB(ei_tid)),
                   std::runtime_error);
 }
