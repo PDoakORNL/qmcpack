@@ -108,7 +108,7 @@ EnergyDensityEstimator::EnergyDensityEstimator(const EnergyDensityEstimator& ede
   ref_points_    = std::make_unique<NEReferencePoints>(*ref_points_);
 }
 
-EnergyDensityEstimator::~EnergyDensityEstimator() {}
+inline EnergyDensityEstimator::~EnergyDensityEstimator() {}
 
 void EnergyDensityEstimator::registerListeners(QMCHamiltonian& ham_leader)
 {
