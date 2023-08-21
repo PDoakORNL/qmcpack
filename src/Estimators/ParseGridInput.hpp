@@ -32,6 +32,36 @@ namespace qmcplusplus
 template<typename REAL>
 struct AxisGrid
 {
+  AxisGrid() = default;
+
+  /** "aggregate" style constructor
+   */
+  AxisGrid(std::vector<int>&& rhs_ndom_int, std::vector<int>&& rhs_ndu_int, std::vector<REAL>&& rhs_du_int, REAL rhs_umin, REAL rhs_umax, REAL rhs_odu, std::vector<int>&& rhs_gmap, std::vector<int>&& rhs_ndu_per_interval, int rhs_dimensions);
+  
+  AxisGrid(const AxisGrid& rhs);
+  // AxisGrid& operator=(const AxisGrid& rhs) {
+  //   ndom_int = rhs.ndom_int;
+  //   ndu_int = rhs.ndu_int;
+  //   du_int = rhs.du_int;
+  //   umin = rhs.umin;
+  //   umax = rhs.umax;
+  //   odu = rhs.odu;
+  //   gmap = rhs.gmap;
+  //   ndu_per_interval = rhs.ndu_per_interval;
+  //   dimensions = rhs.dimensions;
+  // }
+
+  AxisGrid& operator=(AxisGrid rhs);
+
+  /** equality operator, all values must be equal.
+   *  In C++20 this will just be the defaulted operator==.
+   */
+  bool operator==(const AxisGrid& ag) const {
+    return (ag.ndom_int == ndom_int && ag.ndu_int == ndu_int && ag.du_int == du_int
+	    && ag.umin == umin && ag.umax == umax && ag.odu == odu && ag.gmap == gmap &&
+	    ag.ndu_per_interval == ndu_per_interval && ag.dimensions == dimensions);
+  }
+
   // I think the parse should just return something like this.
   // std::vector<REAL> points;
   // std::vector<REAL> p_to_p_du;
@@ -46,15 +76,6 @@ struct AxisGrid
   std::vector<int> gmap;
   std::vector<int> ndu_per_interval;
   int dimensions;
-
-  /** equality operator, all values must be equal.
-   *  In C++20 this will just be the defaulted operator==.
-   */
-  bool operator==(const AxisGrid& ag) const {
-    return (ag.ndom_int == ndom_int && ag.ndu_int == ndu_int && ag.du_int == du_int
-	    && ag.umin == umin && ag.umax == umax && ag.odu == odu && ag.gmap == gmap &&
-	    ag.ndu_per_interval == ndu_per_interval && ag.dimensions == dimensions);
-  }
 };
 
 /** Parses the one dimensional grid specification format originated for EnergyDensity

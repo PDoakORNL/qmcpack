@@ -22,7 +22,7 @@ namespace qmcplusplus
 NEReferencePoints::NEReferencePoints(const ReferencePointsInput& rp_input,
                                      ParticleSet& pset,
                                      RefVector<ParticleSet>& ref_psets)
-    : input_(std::move(rp_input))
+    : input_(rp_input)
 {
   processParticleSets(pset, ref_psets);
   for (int i = 0; i < OHMMS_DIM; i++)

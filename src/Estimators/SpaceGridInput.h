@@ -74,10 +74,12 @@ public:
         required = {"label", "p1"};
       }
       void setFromStreamCustom(const std::string& ename, const std::string& name, std::istringstream& svalue) override;
+      SpaceGridAxisInputSection(const SpaceGridAxisInputSection& sgais) = default;
     };
 
   public:
     SpaceGridAxisInput(xmlNodePtr cur);
+    SpaceGridAxisInput(const SpaceGridAxisInput& sgai) = default;
 
     static std::any makeAxis(xmlNodePtr cur, std::string& value_label)
     {
@@ -117,6 +119,7 @@ public:
         strings      = {"p1", "p2"};
         reals        = {"fraction"};
       }
+      SpaceGridOriginInputSection(const SpaceGridOriginInputSection& sgois) = default;
     };
 
   public:
@@ -153,9 +156,11 @@ public:
     }
     std::any assignAnyEnum(const std::string& name) const override;
     void checkParticularValidity() override;
+    SpaceGridInputSection(const SpaceGridInputSection& sgis) = default;
   };
 
   SpaceGridInput(xmlNodePtr cur);
+  SpaceGridInput(const SpaceGridInput& sgi) = default;
 
   void checkAxes(std::vector<std::any>& axes);
 

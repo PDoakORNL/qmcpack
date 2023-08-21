@@ -45,7 +45,7 @@ protected:
 
 private:
   Axes axes;
-  const ReferencePointsInput& input_;
+  ReferencePointsInput input_;
 };
 
 std::ostream& operator<<(std::ostream& out, const NEReferencePoints& rhs);
@@ -55,7 +55,7 @@ namespace testing
 class TestableNEReferencePoints : public NEReferencePoints
 {
 public:
-  TestableNEReferencePoints(NEReferencePoints& nerp) : NEReferencePoints(nerp) {}
+  TestableNEReferencePoints(const NEReferencePoints& nerp) : NEReferencePoints(nerp) {}
   void write_testable_description(std::ostream& os) const;
 };
 } // namespace testing

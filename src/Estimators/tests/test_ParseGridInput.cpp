@@ -145,4 +145,51 @@ TEMPLATE_TEST_CASE("ParseGridInput::Bad", "[estimators]", float, double)
 
 }
 
+TEMPLATE_TEST_CASE("ParseGridInput_constructors", "[estimators]", float, double)
+{
+  using Real = TestType;
+  AxisGrid<Real> start_grid{{
+                                10,
+                            }, //ndom_int
+                            {
+                                1,
+                            }, //ndu_int
+                            {
+                                0.1,
+                            },  //du_int
+                            0,  //umin
+                            1,  //umax
+                            10, //odu
+                            {
+                                0,
+                                1,
+                                2,
+                                3,
+                                4,
+                                5,
+                                6,
+                                7,
+                                8,
+                                9,
+                            }, //gmap
+                            {
+                                1,
+                                1,
+                                1,
+                                1,
+                                1,
+                                1,
+                                1,
+                                1,
+                                1,
+                                1,
+                            },   //ndu_per_interval
+                            10}; //dimensions
+  AxisGrid<Real> copied_grid(start_grid);
+  AxisGrid<Real> assigned_grid(start_grid);
+
+  CHECK(start_grid == copied_grid);
+  CHECK(start_grid == assigned_grid);
+}
+  
 } // namespace qmcplusplus

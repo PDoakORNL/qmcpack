@@ -67,7 +67,7 @@ public:
    * \param[in]  nvalues        number of fields the owning class wants for each grid point.
    * \param[in]  is_period      properly names is what is says
    */
-  NESpaceGrid(SpaceGridInput& sgi, const Points& points, const int nvalues, const bool is_periodic);
+  NESpaceGrid(const SpaceGridInput& sgi, const Points& points, const int nvalues, const bool is_periodic);
 
   /** This is the general constructor
    * \param[in]  sgi            input object for space grid.
@@ -76,11 +76,11 @@ public:
    * \param[in]  nvalues        number of fields the owning class wants for each grid point.
    * \param[in]  is_period      properly names is what is says
    */
-  NESpaceGrid(SpaceGridInput& sgi, const Points& points, const int ndp, const int nvalues, const bool is_periodic);
+  NESpaceGrid(const SpaceGridInput& sgi, const Points& points, const int ndp, const int nvalues, const bool is_periodic);
 
   /** This is the constructor for when PStatic is used.
    */
-  NESpaceGrid(SpaceGridInput& sgi,
+  NESpaceGrid(const SpaceGridInput& sgi,
               const Points& points,
               ParticlePos& static_particle_positions,
               std::vector<Real>& static_particle_charges,
@@ -88,6 +88,8 @@ public:
               const int nvalues,
               const bool is_periodic);
 
+  NESpaceGrid(const NESpaceGrid& sg) = default;
+  
   void write_description(std::ostream& os, const std::string& indent);
 
   /** set up Observable helper(s) for this grid
@@ -97,6 +99,10 @@ public:
   void registerGrid(hdf_archive& file, std::vector<ObservableHelper>& h5desc, int grid_index) const;
 
   /// @}
+
+  void accumulate(const ParticlePos& R,
+                  const Matrix<Real>& values,
+                  std::vector<bool>& particles_outside);
 
   /** SpaceGridAccumulate not type erased and with its own particular interface.
    *  the composing class needs to provide the following to spave grid.
@@ -113,7 +119,7 @@ public:
   void accumulate(const ParticlePos& R,
                   const Matrix<Real>& values,
                   std::vector<bool>& particles_outside,
-                  const DistanceTableAB& dtab);
+		  const DistanceTableAB& dtab);
 
   bool check_grid(void);
   int nDomains(void) const { return ndomains_; }
@@ -169,9 +175,15 @@ private:
 
   static bool checkAxisGridValues(const SpaceGridInput& input_, const AxTensor& axes);
 
-  SpaceGridInput& input_;
+  /** refrence points for the space grid
+   *  this reference it to the EstimatorManagers EDE's spacegrid_inputs_
+   */
+  const SpaceGridInput& input_;
   int ndparticles_;
   bool is_periodic_;
+  /** refrence points for the space grid
+   *  this reference is to the EstimatorManagers EDE's reference points
+   */
   const Points& points_;
 
   // _NO_

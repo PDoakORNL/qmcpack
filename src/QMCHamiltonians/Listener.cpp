@@ -32,6 +32,13 @@ template void combinePerParticleEnergies<std::complex<float>>(const CrowdEnergyV
 template<typename T>
 void combinePerParticleEnergies(const CrowdEnergyValues<T>& cev_in, std::vector<Vector<T>>& values_out)
 {
+  const auto num_walkers = cev_in.begin()->second.size();
+  const auto num_particles = cev_in.begin()->second[0].size();
+
+  values_out.resize(num_walkers);
+  for (int iw = 0; iw < num_walkers; ++iw)
+    values_out[iw].resize(num_particles);
+
   assert(cev_in.begin()->second.size() == values_out.size());
   assert(cev_in.begin()->second[0].size() == values_out[0].size());
 

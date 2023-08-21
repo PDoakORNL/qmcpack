@@ -23,32 +23,33 @@ namespace qmcplusplus
 TEST_CASE("EnergyDensityInput::parseXML::valid", "[estimators]")
 {
   using input = qmcplusplus::testing::ValidEnergyDensityInput;
+  int test_num = 0;
   for (auto input_xml : input::xml)
-    {
-      Libxml2Document doc;
+  {
+    std::cout << "input number: " << test_num++ << '\n'; 
+    Libxml2Document doc;
     bool okay       = doc.parseFromString(input_xml);
     xmlNodePtr node = doc.getRoot();
     EnergyDensityInput edi(node);
-    }
-
+  }
 }
 
 TEST_CASE("EnergyDensityInput::parseXML::invalid", "[estimators]")
 {
   using input = qmcplusplus::testing::InvalidEnergyDensityInput;
   for (auto input_xml : input::xml)
-    {
-      Libxml2Document doc;
-    bool okay       = doc.parseFromString(input_xml);
-    xmlNodePtr node = doc.getRoot();
+  {
+    Libxml2Document doc;
+    bool okay                           = doc.parseFromString(input_xml);
+    xmlNodePtr node                     = doc.getRoot();
     auto constructBadEnergyDensityInput = [](xmlNodePtr cur) { EnergyDensityInput edi(cur); };
-    CHECK_THROWS_AS(constructBadEnergyDensityInput(node), UniformCommunicateError);    
-    }
+    CHECK_THROWS_AS(constructBadEnergyDensityInput(node), UniformCommunicateError);
+  }
 }
 
 TEST_CASE("EnergyDensityInput::parseXML::axes", "[estimators]")
 {
-  using input = qmcplusplus::testing::ValidEnergyDensityInput;
+  using input     = qmcplusplus::testing::ValidEnergyDensityInput;
   auto& input_xml = input::xml[input::valid::ION];
   Libxml2Document doc;
   bool okay       = doc.parseFromString(input_xml);
@@ -61,7 +62,7 @@ TEST_CASE("EnergyDensityInput::parseXML::axes", "[estimators]")
 
 TEST_CASE("EnergyDensityInput::default_reference_points", "[estimators]")
 {
-  using input = qmcplusplus::testing::ValidEnergyDensityInput;
+  using input     = qmcplusplus::testing::ValidEnergyDensityInput;
   auto& input_xml = input::xml[input::valid::CELL];
   Libxml2Document doc;
   bool okay       = doc.parseFromString(input_xml);
@@ -73,5 +74,5 @@ TEST_CASE("EnergyDensityInput::default_reference_points", "[estimators]")
   CHECK(rpts.get_coord_form() == ReferencePointsInput::Coord::CELL);
 }
 
-  
-}
+
+} // namespace qmcplusplus

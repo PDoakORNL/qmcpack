@@ -31,14 +31,14 @@ using std::floor;
 using std::sin;
 using std::sqrt;
 
-NESpaceGrid::NESpaceGrid(SpaceGridInput& sgi,
+NESpaceGrid::NESpaceGrid(const SpaceGridInput& sgi,
                          const NEReferencePoints::Points& points,
                          const int nvalues,
                          const bool is_periodic)
     : NESpaceGrid(sgi, points, 0, nvalues, is_periodic)
 {}
 
-NESpaceGrid::NESpaceGrid(SpaceGridInput& sgi,
+NESpaceGrid::NESpaceGrid(const SpaceGridInput& sgi,
                          const NEReferencePoints::Points& points,
                          const int ndp,
                          const int nvalues,
@@ -50,7 +50,7 @@ NESpaceGrid::NESpaceGrid(SpaceGridInput& sgi,
     throw std::runtime_error("NESpaceGrid initialization failed");
 }
 
-NESpaceGrid::NESpaceGrid(SpaceGridInput& sgi,
+NESpaceGrid::NESpaceGrid(const SpaceGridInput& sgi,
                          const NEReferencePoints::Points& points,
                          ParticlePos& static_particle_positions,
                          std::vector<Real>& Z,
@@ -495,6 +495,42 @@ void NESpaceGrid::accumulate(const ParticlePos& R,
                              std::vector<bool>& particles_outside,
                              const DistanceTableAB& dtab)
 {
+      // //find cell center nearest to each dynamic particle
+      // int nd, nn;
+      // RealType dist;
+      // for (p = 0; p < ndparticles; p++)
+      // {
+      //   const auto& dist = dtab.getDistRow(p);
+      //   for (nd = 0; nd < ndomains; nd++)
+      //     if (dist[nd] < nearcell[p].r)
+      //     {
+      //       nearcell[p].r = dist[nd];
+      //       nearcell[p].i = nd;
+      //     }
+      // }
+      // //accumulate values for each dynamic particle
+      // for (p = 0; p < ndparticles; p++)
+      // {
+      //   buf_index = buffer_offset + nvalues * nearcell[p].i;
+      //   for (v = 0; v < nvalues; v++, buf_index++)
+      //     buf[buf_index] += values(p, v);
+      // }
+      // //accumulate values for static particles (static particles == cell centers)
+      // buf_index = buffer_offset;
+      // for (p = ndparticles; p < nparticles; p++)
+      //   for (v = 0; v < nvalues; v++, buf_index++)
+      //     buf[buf_index] += values(p, v);
+      // //each particle belongs to some voronoi cell
+      // for (p = 0; p < nparticles; p++)
+      //   particles_outside[p] = false;
+      // //reset distances
+      // for (p = 0; p < ndparticles; p++)
+      //   nearcell[p].r = std::numeric_limits<RealType>::max();
+  accumulate(R, values, particles_outside);
+}
+
+void NESpaceGrid::accumulate(const ParticlePos& R, const Matrix<Real>& values, std::vector<bool>& particles_outside)
+{
   int p, v;
   int nparticles = values.size1();
   int nvalues    = values.size2();
@@ -614,7 +650,8 @@ void NESpaceGrid::collect(NESpaceGrid& reduction_grid, RefVector<NESpaceGrid> gr
 {
   for (NESpaceGrid& crowd_grid : grid_for_each_crowd)
   {
-    std::transform(reduction_grid.data_.begin(), reduction_grid.data_.end(), crowd_grid.data_.begin(), reduction_grid.data_.begin(), std::plus<>{});
+    std::transform(reduction_grid.data_.begin(), reduction_grid.data_.end(), crowd_grid.data_.begin(),
+                   reduction_grid.data_.begin(), std::plus<>{});
     crowd_grid.zero();
   }
 }

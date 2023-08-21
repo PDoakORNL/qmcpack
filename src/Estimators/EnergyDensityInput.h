@@ -25,7 +25,7 @@ template<typename T>
 class EnergyDensityTests;
 }
 
-class EnergyDensityEstimator;
+class NEEnergyDensityEstimator;
 class NESpaceGrid;
 
 /** EnergyDensity has two other XML input reading objects that it delegates to.
@@ -41,7 +41,7 @@ class NESpaceGrid;
 class EnergyDensityInput
 {
 public:
-  using Consumer = EnergyDensityEstimator;
+  using Consumer = NEEnergyDensityEstimator;
 
   class EnergyDensityInputSection : public InputSection
   {
@@ -71,14 +71,14 @@ public:
   const std::string& get_name() const { return name_; }
   const std::string& get_dynamic() const { return dynamic_; }
   const std::string& get_static() const { return static_; }
-  const ReferencePointsInput& get_ref_points_input() const { return ref_points_input_; }
-  RefVector<SpaceGridInput> get_space_grid_inputs() const;
+  ReferencePointsInput get_ref_points_input() const { return ref_points_input_; }
+  std::vector<SpaceGridInput> get_space_grid_inputs() const;
   const bool& get_ion_points() const { return ion_points_; }
 private:
   std::string name_;
   std::string dynamic_;
   std::string static_;
-  bool ion_points_;
+  bool ion_points_{false};
   EnergyDensityInputSection input_section_;
   ReferencePointsInput ref_points_input_;
 };

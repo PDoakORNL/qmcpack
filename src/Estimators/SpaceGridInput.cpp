@@ -93,7 +93,6 @@ SpaceGridInput::SpaceGridInput(xmlNodePtr cur)
   }
 }
 
-
 void SpaceGridInput::checkAxes(std::vector<std::any>& axes)
 {
   auto& ax_labels = axes_label_sets.at(coord_form_);

@@ -30,7 +30,7 @@ constexpr bool generate_test_data = false;
 namespace qmcplusplus
 {
 
-TEST_CASE("EnergyDensityEstimator::Constructor", "[estimators]")
+TEST_CASE("NEEnergyDensityEstimator::Constructor", "[estimators]")
 {
   using Input = testing::ValidEnergyDensityInput;
   Communicate* comm;
@@ -48,14 +48,15 @@ TEST_CASE("EnergyDensityEstimator::Constructor", "[estimators]")
                                {1.657151589, 0.883870516, 1.201243939}, {0.97317591, 1.245644974, 0.284564732}};
 
   Libxml2Document doc;
-  bool okay       = doc.parseFromString(Input::xml[Input::valid::ION]);
+  bool okay       = doc.parseFromString(Input::xml[Input::valid::CELL]);
   xmlNodePtr node = doc.getRoot();
-  UPtr<EnergyDensityInput> edein;
-  edein            = std::make_unique<EnergyDensityInput>(node);
-  EnergyDensityEstimator e_den_est(*edein, particle_pool.getPool());
+  EnergyDensityInput edein{node};
+  {
+    NEEnergyDensityEstimator e_den_est(edein, particle_pool.getPool());
+  }
 }
 
-TEST_CASE("EnergyDensityEstimator::AccumulateIntegration", "[estimators]")
+TEST_CASE("NEEnergyDensityEstimator::AccumulateIntegration", "[estimators]")
 {
   using Input = testing::ValidEnergyDensityInput;
   Communicate* comm;
@@ -78,15 +79,15 @@ TEST_CASE("EnergyDensityEstimator::AccumulateIntegration", "[estimators]")
                                {0.033228526, 1.391869137, 0.654413566}, {1.114198787, 1.654334594, 0.231075822},
                                {1.657151589, 0.883870516, 1.201243939}, {0.97317591, 1.245644974, 0.284564732}};
 
-  auto& pset_target      = *(particle_pool.getParticleSet("e"));
+  auto& pset_target        = *(particle_pool.getParticleSet("e"));
   auto& trial_wavefunction = *(wavefunction_pool.getPrimary());
 
   Libxml2Document doc;
-  bool okay       = doc.parseFromString(Input::xml[Input::valid::ION]);
+  bool okay       = doc.parseFromString(Input::xml[Input::valid::CELL]);
   xmlNodePtr node = doc.getRoot();
   UPtr<EnergyDensityInput> edein;
-  edein            = std::make_unique<EnergyDensityInput>(node);
-  EnergyDensityEstimator e_den_est(*edein, particle_pool.getPool());
+  edein = std::make_unique<EnergyDensityInput>(node);
+  NEEnergyDensityEstimator e_den_est(*edein, particle_pool.getPool());
 
   UPtrVector<QMCHamiltonian> hams;
   UPtrVector<TrialWaveFunction> twfs;
@@ -108,13 +109,16 @@ TEST_CASE("EnergyDensityEstimator::AccumulateIntegration", "[estimators]")
 
   auto walker_refs = makeRefVector<MCPWalker>(walkers);
   RefVectorWithLeader<MCPWalker> walker_list{walker_refs[0], walker_refs};
-  
-  RefVector<QMCHamiltonian> ham_refs = convertUPtrToRefVector(hams);
-  RefVectorWithLeader<QMCHamiltonian> ham_list{ham_refs[0], ham_refs};
 
+  RefVector<QMCHamiltonian> ham_refs = convertUPtrToRefVector(hams);
+
+  RefVectorWithLeader<QMCHamiltonian> ham_list{ham_refs[0], ham_refs};
+  ResourceCollection ham_res("test_ham_res");
+  ham_list.getLeader().createResource(ham_res);
+  ResourceCollectionTeamLock<QMCHamiltonian> ham_lock(ham_res, ham_list);
   e_den_est.registerListeners(ham_list.getLeader());
 
-    auto p_refs = makeRefVector<ParticleSet>(psets);
+  auto p_refs = makeRefVector<ParticleSet>(psets);
   RefVectorWithLeader<ParticleSet> p_list{p_refs[0], p_refs};
 
   ResourceCollection pset_res("test_pset_res");
@@ -128,7 +132,7 @@ TEST_CASE("EnergyDensityEstimator::AccumulateIntegration", "[estimators]")
   twf_list.getLeader().createResource(wfc_res);
   ResourceCollectionTeamLock<TrialWaveFunction> mw_wfc_lock(wfc_res, twf_list);
 
- 
+
   p_refs[0].get().L[0] = 1.0;
   p_refs[1].get().L[1] = 1.0;
   p_refs[2].get().L[2] = 1.0;
@@ -205,8 +209,8 @@ TEST_CASE("EnergyDensityEstimator::AccumulateIntegration", "[estimators]")
   StdRandom<double> rng;
   rng.init(101);
 
-  //e_den_est.accumulate(walker_refs, p_list, twf_list, rng);
+  e_den_est.accumulate(walker_refs, p_list, twf_list, rng);
 }
-  
+
 
 } // namespace qmcplusplus

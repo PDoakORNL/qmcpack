@@ -73,7 +73,7 @@ TEST_CASE("SpaceGridInputs::parseXML::axes", "[estimators]")
   auto& axis_label = sgi.get_axis_labels();
   CHECK(checkVec(axis_label, {"r","phi","theta"}));
   auto& axis_grid = sgi.get_axis_grids();
-  qmcplusplus::AxisGrid<Real> expected_1{{
+  qmcplusplus::AxisGrid<Real> expected_1({
                                 10,
                             }, //ndom_int
                             {
@@ -109,11 +109,11 @@ TEST_CASE("SpaceGridInputs::parseXML::axes", "[estimators]")
                                 1,
                                 1,
                             },   //ndu_per_interval
-                            10}; //dimensions
+    10); //dimensions
   CHECK(axis_grid[0] == expected_1);
   CHECK(sgi.get_origin_p1() == "ion01");
   CHECK(sgi.get_origin_p2().empty());
   CHECK(sgi.get_origin_fraction() == 0.0);  
 }
-  
+
 } // namespace qmcplusplus

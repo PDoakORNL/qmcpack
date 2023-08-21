@@ -37,7 +37,8 @@ public:
 
   InputSection()                          = default;
   InputSection(const InputSection& other) = default;
-
+  InputSection& operator=(const InputSection& other) = default;
+  
 protected:
   // Internal data below comprise the input specification.
   //   Most apply attributes to input variables.

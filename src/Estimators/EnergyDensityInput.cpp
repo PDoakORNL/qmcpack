@@ -30,12 +30,12 @@ EnergyDensityInput::EnergyDensityInput(xmlNodePtr cur)
 	     
 }
 
-RefVector<SpaceGridInput> EnergyDensityInput::get_space_grid_inputs() const
+std::vector<SpaceGridInput> EnergyDensityInput::get_space_grid_inputs() const
 {
-  auto any_vec = input_section_.get<std::vector<std::any>>("spacegrids");
-  RefVector<SpaceGridInput> sgis;
+  auto any_vec = input_section_.get<std::vector<std::any>>("spacegrid");
+  std::vector<SpaceGridInput> sgis;
   for (auto& grid : any_vec)
-    sgis.emplace_back(std::any_cast<SpaceGridInput&>(grid));
+    sgis.emplace_back(std::any_cast<SpaceGridInput>(grid));
   return sgis;
 }
 

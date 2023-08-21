@@ -22,25 +22,37 @@
 
 namespace qmcplusplus
 {
-class EnergyDensityEstimator : public OperatorEstBase
+class NEEnergyDensityEstimator : public OperatorEstBase
 {
 public:
   using Real        = QMCTraits::RealType;
+  using FullPrecReal = QMCTraits::FullPrecRealType;
   using Point       = typename NEReferencePoints::Point;
   using Points      = typename NEReferencePoints::Points;
   using POLT        = PtclOnLatticeTraits;
   using ParticlePos = POLT::ParticlePos;
   using PSPool      = std::map<std::string, const UPtr<ParticleSet>>;
   
-  EnergyDensityEstimator(const EnergyDensityInput& input, const PSPool& PSP, DataLocality dl = DataLocality::crowd);
+  NEEnergyDensityEstimator(const EnergyDensityInput& input, const PSPool& PSP, DataLocality dl = DataLocality::crowd);
 
-  EnergyDensityEstimator(const EnergyDensityEstimator& ede, const DataLocality dl);
-  
+  NEEnergyDensityEstimator(const NEEnergyDensityEstimator& ede, const DataLocality dl);
+
+private:
+  /** shared construction code
+   *  stateful setup from legacy.
+   * removed redundant turnOnPerParticleSK this is handled via the EstimatorManagerNew if listeners are detected through
+   * CoulombPBCAA{AB} which are the actual operators that need it.
+   * Although it is possible that our copies of the particle sets will need per particle structure factors I don't think
+   * they do. I think it is needed for the actual particle sets involved in walking.
+   */
+  void constructToReferencePoints(ParticleSet& pset_dynamic, const std::optional<ParticleSet>& pset_static);
+
+public:
   /** @ingroup OperatorEstBase Overrides
    *  should NESpaceGrid have anything to do with OperatorEstBase API?
    *  @{
    */
-  ~EnergyDensityEstimator() override;
+  ~NEEnergyDensityEstimator() override;
 
   /** Register listeners for energy values
    */
@@ -53,7 +65,7 @@ public:
   void accumulate(const RefVector<MCPWalker>& walkers,
                   const RefVector<ParticleSet>& psets,
                   const RefVector<TrialWaveFunction>& wfns,
-                  RandomGenerator& rng) override;
+                  RandomBase<FullPrecReal>& rng) override;
 
   void evaluate(ParticleSet& pset, const MCPWalker& walker, const int walker_index);
 
@@ -101,13 +113,16 @@ private:
 
   ParticleSet pset_dynamic_;
   std::optional<ParticleSet> pset_static_;
-  int dtable_index_;
+  int dtable_index_ = -1;
 
-  int n_ions_;
   int n_particles_;
+  int n_ions_;
 
   UPtr<NEReferencePoints> ref_points_;
 
+  /// unboxed SpaceGridInputs for child and clone objects to refrence
+  std::vector<SpaceGridInput> spacegrid_inputs_;
+  
   /** EnergyDenstity quantities
    *  legacy style enum into vector not ideal.
    */

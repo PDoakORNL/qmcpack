@@ -1,4 +1,4 @@
-//////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
@@ -19,11 +19,11 @@ namespace qmcplusplus
 
 struct PosCharge
 {
-  EnergyDensityEstimator::ParticlePos r_ptcls;
-  std::vector<EnergyDensityEstimator::Real> z_ptcls;
+  NEEnergyDensityEstimator::ParticlePos r_ptcls;
+  std::vector<NEEnergyDensityEstimator::Real> z_ptcls;
 };
 
-auto EnergyDensityEstimator::extractIonPositionsAndCharge(const ParticleSet& pset)
+auto NEEnergyDensityEstimator::extractIonPositionsAndCharge(const ParticleSet& pset)
 {
   const SpeciesSet& species(pset.getSpeciesSet());
   int charge_index = species.findAttribute("charge");
@@ -46,34 +46,80 @@ auto EnergyDensityEstimator::extractIonPositionsAndCharge(const ParticleSet& pse
   return PosCharge{r_ptcls, z_ptcls};
 }
 
-EnergyDensityEstimator::EnergyDensityEstimator(const EnergyDensityInput& input,
-                                               const PSPool& pset_pool,
-                                               DataLocality data_locality)
+NEEnergyDensityEstimator::NEEnergyDensityEstimator(const EnergyDensityInput& input,
+                                                   const PSPool& pset_pool,
+                                                   DataLocality data_locality)
     : OperatorEstBase(data_locality), input_(input), pset_dynamic_(getParticleSet(pset_pool, input.get_dynamic()))
+{
+  requires_listener_=true;
+  my_name_ = "NEEnergyDensityEstimator";
+  n_particles_ = pset_dynamic_.getTotalNum();
+  if (!(input_.get_static().empty()))
+  {
+    pset_static_.emplace(getParticleSet(pset_pool, input.get_static()));
+    if (!input.get_ion_points()) {
+      n_ions_ = pset_static_->getTotalNum();
+      n_particles_ += n_ions_;
+      ed_ion_values_.resize(n_ions_, N_EDVALS);
+      r_ion_work_.resize(n_ions_, OHMMS_DIM);
+    }
+  }
+  
+  constructToReferencePoints(pset_dynamic_, pset_static_);
+
+  bool periodic = pset_dynamic_.getLattice().SuperCellEnum != SUPERCELL_OPEN;
+
+  auto space_grid_inputs = input.get_space_grid_inputs();
+  spacegrids_.reserve(space_grid_inputs.size());
+  for (int ig = 0; ig < space_grid_inputs.size(); ++ig)
+  {
+    if (pset_static_)
+    {
+      auto [r_ptcls, z_ptcls] = extractIonPositionsAndCharge(*pset_static_);
+      spacegrids_.emplace_back(std::make_unique<NESpaceGrid>(space_grid_inputs[ig], ref_points_->get_points(), r_ptcls,
+							     z_ptcls, pset_dynamic_.getTotalNum(), N_EDVALS, periodic));
+    }
+    else
+      spacegrids_.emplace_back(std::make_unique<NESpaceGrid>(space_grid_inputs[ig], ref_points_->get_points(), N_EDVALS, periodic));
+  }
+#ifndef NDEBUG
+  std::cout << "Instantiated " << spacegrids_.size() << " spacegrids\n";
+#endif
+}
+
+NEEnergyDensityEstimator::NEEnergyDensityEstimator(const NEEnergyDensityEstimator& ede, const DataLocality dl)
+    : OperatorEstBase(dl), input_(ede.input_), pset_dynamic_(ede.pset_dynamic_), pset_static_(ede.pset_static_), n_particles_(ede.n_particles_), n_ions_(ede.n_ions_)
+{  
+  data_locality_ = dl;
+
+  constructToReferencePoints(pset_dynamic_, pset_static_);
+  
+  for (const auto& space_grid : ede.spacegrids_)
+    spacegrids_.emplace_back(std::make_unique<NESpaceGrid>(*space_grid));
+}
+
+void NEEnergyDensityEstimator::constructToReferencePoints(ParticleSet& pset_dynamic, const std::optional<ParticleSet>& pset_static)
 {
   // Bringing a bunch of adhoc setup from legacy.
   // removed redundant turnOnPerParticleSK this is handled via the EstimatorManagerNew if listeners are detected through
   // CoulombPBCAA{AB} which are the actual operators that need it.
   // Although it is possible that our copies of the particle sets will need per particle structure factors I don't think
   // they do.
+
   RefVector<ParticleSet> pset_refs;
-  if (input.get_static().empty())
-  {
-    dtable_index_ = -1;
-  }
-  else
-  {
-    pset_static_.emplace(getParticleSet(pset_pool, input.get_static()));
+
+  if (pset_static_) {
     dtable_index_ = pset_dynamic_.addTable(pset_static_.value());
     pset_refs.push_back(pset_static_.value());
-    if (!input.get_ion_points())
-      n_particles_ += pset_static_->getTotalNum();
   }
+  
   r_work_.resize(n_particles_);
   ed_values_.resize(n_particles_, N_EDVALS);
-  if (input.get_ion_points())
+
+  
+  // right now this is only the case when pset_static_ && input.get_ion_points_ are true
+  if (n_ions_ > 0)
   {
-    n_ions_ = pset_static_->getTotalNum();
     ed_ion_values_.resize(n_ions_, N_EDVALS);
     r_ion_work_.resize(n_ions_, OHMMS_DIM);
     for (int i = 0; i < n_ions_; ++i)
@@ -81,36 +127,12 @@ EnergyDensityEstimator::EnergyDensityEstimator(const EnergyDensityInput& input,
         r_ion_work_(i, d) = pset_static_->R[i][d];
   }
   particles_outside_.resize(n_particles_, true);
-  ref_points_ = std::make_unique<NEReferencePoints>(input.get_ref_points_input(), pset_dynamic_, pset_refs);
-
-  bool periodic = pset_dynamic_.getLattice().SuperCellEnum != SUPERCELL_OPEN;
-
-  auto space_grid_inputs = input.get_space_grid_inputs();
-  spacegrids_.reserve(space_grid_inputs.size());
-  for (int ig = 0; ig < spacegrids_.size(); ++ig)
-  {
-    if (pset_static_)
-    {
-      auto [r_ptcls, z_ptcls] = extractIonPositionsAndCharge(*pset_static_);
-      spacegrids_[ig]         = std::make_unique<NESpaceGrid>(space_grid_inputs[ig], ref_points_->get_points(), r_ptcls,
-                                                      z_ptcls, pset_dynamic_.getTotalNum(), N_EDVALS, periodic);
-    }
-    else
-      spacegrids_[ig] =
-          std::make_unique<NESpaceGrid>(space_grid_inputs[ig], ref_points_->get_points(), N_EDVALS, periodic);
-  }
+  ref_points_ = std::make_unique<NEReferencePoints>(input_.get_ref_points_input(), pset_dynamic_, pset_refs);
 }
 
-EnergyDensityEstimator::EnergyDensityEstimator(const EnergyDensityEstimator& ede, const DataLocality dl)
-    : OperatorEstBase(dl), input_(ede.input_), pset_dynamic_(ede.pset_dynamic_)
-{
-  data_locality_ = dl;
-  ref_points_    = std::make_unique<NEReferencePoints>(*ref_points_);
-}
+NEEnergyDensityEstimator::~NEEnergyDensityEstimator(){};
 
-inline EnergyDensityEstimator::~EnergyDensityEstimator() {}
-
-void EnergyDensityEstimator::registerListeners(QMCHamiltonian& ham_leader)
+void NEEnergyDensityEstimator::registerListeners(QMCHamiltonian& ham_leader)
 {
   ListenerVector<Real> kinetic_listener("kinetic", getListener(kinetic_values_));
   QMCHamiltonian::mw_registerKineticListener(ham_leader, kinetic_listener);
@@ -125,7 +147,7 @@ void EnergyDensityEstimator::registerListeners(QMCHamiltonian& ham_leader)
  *  could also be an insiginificant cost versus the frequently large number of values handled.
  *  The values themselves are a vector of size particle_num.
  */
-ListenerVector<QMCTraits::RealType>::ReportingFunction EnergyDensityEstimator::getListener(
+ListenerVector<QMCTraits::RealType>::ReportingFunction NEEnergyDensityEstimator::getListener(
     CrowdEnergyValues<Real>& values)
 {
   auto& local_values = values;
@@ -136,26 +158,36 @@ ListenerVector<QMCTraits::RealType>::ReportingFunction EnergyDensityEstimator::g
   };
 }
 
-const ParticleSet& EnergyDensityEstimator::getParticleSet(const PSPool& psetpool, const std::string& psname) const
+const ParticleSet& NEEnergyDensityEstimator::getParticleSet(const PSPool& psetpool, const std::string& psname) const
 {
   auto pset_iter(psetpool.find(psname));
   if (pset_iter == psetpool.end())
   {
     throw UniformCommunicateError("Particle set pool does not contain \"" + psname +
-                                  "so EnergyDensityEstimator::get_particleset fails!");
+                                  "\" so NEEnergyDensityEstimator::get_particleset fails!");
   }
   return *(pset_iter->second.get());
 }
 
-void EnergyDensityEstimator::accumulate(const RefVector<MCPWalker>& walkers,
-                                        const RefVector<ParticleSet>& psets,
-                                        const RefVector<TrialWaveFunction>& wfns,
-                                        RandomGenerator& rng)
+void NEEnergyDensityEstimator::accumulate(const RefVector<MCPWalker>& walkers,
+                                          const RefVector<ParticleSet>& psets,
+                                          const RefVector<TrialWaveFunction>& wfns,
+                                          RandomBase<FullPrecReal>& rng)
 {
-  combinePerParticleEnergies(local_pot_values_, reduced_local_pot_values_);
-  combinePerParticleEnergies(kinetic_values_, reduced_local_kinetic_values_);
-  if (pset_static_)
-    combinePerParticleEnergies(local_ion_pot_values_, reduced_local_ion_pot_values_);
+  // Variable population is possible during DMC.
+  reduced_local_kinetic_values_.resize(walkers.size());
+  reduced_local_pot_values_.resize(walkers.size());
+  reduced_local_ion_pot_values_.resize(walkers.size());
+
+  // Depending on Hamiltonian setup one or more of these values could be absent.
+  if(!local_pot_values_.empty())
+    combinePerParticleEnergies(local_pot_values_, reduced_local_pot_values_);
+  if(!kinetic_values_.empty())
+    combinePerParticleEnergies(kinetic_values_, reduced_local_kinetic_values_);
+  if (pset_static_) {
+    if(!local_ion_pot_values_.empty())
+      combinePerParticleEnergies(local_ion_pot_values_, reduced_local_ion_pot_values_);
+  }
   for (int iw = 0; iw < walkers.size(); ++iw)
   {
     walkers_weight_ += walkers[iw].get().Weight;
@@ -163,7 +195,7 @@ void EnergyDensityEstimator::accumulate(const RefVector<MCPWalker>& walkers,
   }
 }
 
-void EnergyDensityEstimator::evaluate(ParticleSet& pset, const MCPWalker& walker, const int walker_index)
+void NEEnergyDensityEstimator::evaluate(ParticleSet& pset, const MCPWalker& walker, const int walker_index)
 {
   //Collect positions from ParticleSets
   int p_count = 0;
@@ -184,6 +216,7 @@ void EnergyDensityEstimator::evaluate(ParticleSet& pset, const MCPWalker& walker
       p_count++;
     }
   }
+
   if (pset.getLattice().SuperCellEnum != SUPERCELL_OPEN)
     pset.applyMinimumImage(r_work_);
   //Convert information accumulated in ParticleSets into EnergyDensity quantities
@@ -209,7 +242,8 @@ void EnergyDensityEstimator::evaluate(ParticleSet& pset, const MCPWalker& walker
       {
         ed_values_(p_count, W) = weight;
         ed_values_(p_count, T) = 0.0;
-        ed_values_(p_count, V) = weight * Vs[i];
+        if (Vs.size() > i)
+	  ed_values_(p_count, V) = weight * Vs[i];
         p_count++;
       }
     else
@@ -221,12 +255,12 @@ void EnergyDensityEstimator::evaluate(ParticleSet& pset, const MCPWalker& walker
       }
   }
   //Accumulate energy density in spacegrids
-  const auto& dtab(pset.getDistTableAB(dtable_index_));
+  //const auto& dtab(pset.getDistTableAB(dtable_index_));
   fill(particles_outside_.begin(), particles_outside_.end(), true);
   for (int i = 0; i < spacegrids_.size(); i++)
   {
     NESpaceGrid& sg = *(spacegrids_[i]);
-    sg.accumulate(r_work_, ed_values_, particles_outside_, dtab);
+    sg.accumulate(r_work_, ed_values_, particles_outside_); //, dtab);
   }
 
   //Accumulate energy density of particles outside any spacegrid
@@ -255,7 +289,7 @@ void EnergyDensityEstimator::evaluate(ParticleSet& pset, const MCPWalker& walker
   nsamples++;
 }
 
-void EnergyDensityEstimator::collect(const RefVector<OperatorEstBase>& type_erased_operator_estimators)
+void NEEnergyDensityEstimator::collect(const RefVector<OperatorEstBase>& type_erased_operator_estimators)
 {
   int num_crowds = type_erased_operator_estimators.size();
   for (int ig = 0; ig < spacegrids_.size(); ++ig)
@@ -264,7 +298,7 @@ void EnergyDensityEstimator::collect(const RefVector<OperatorEstBase>& type_eras
     crowd_grids.reserve(num_crowds);
     for (OperatorEstBase& crowd_oeb : type_erased_operator_estimators)
     {
-      EnergyDensityEstimator& crowd_ede = dynamic_cast<EnergyDensityEstimator&>(crowd_oeb);
+      NEEnergyDensityEstimator& crowd_ede = dynamic_cast<NEEnergyDensityEstimator&>(crowd_oeb);
       NESpaceGrid& grid_ref             = *(crowd_ede.spacegrids_[ig]);
       crowd_grids.push_back(grid_ref);
     }
@@ -273,7 +307,7 @@ void EnergyDensityEstimator::collect(const RefVector<OperatorEstBase>& type_eras
   OperatorEstBase::collect(type_erased_operator_estimators);
 }
 
-void EnergyDensityEstimator::registerOperatorEstimator(hdf_archive& file)
+void NEEnergyDensityEstimator::registerOperatorEstimator(hdf_archive& file)
 {
   hdf_path hdf_name{my_name_};
   h5desc_.emplace_back(hdf_name / "variables");
@@ -312,15 +346,15 @@ void EnergyDensityEstimator::registerOperatorEstimator(hdf_archive& file)
   }
 }
 
-std::unique_ptr<OperatorEstBase> EnergyDensityEstimator::spawnCrowdClone() const
+std::unique_ptr<OperatorEstBase> NEEnergyDensityEstimator::spawnCrowdClone() const
 {
   auto spawn_data_locality = data_locality_;
   auto data_size           = this->data_.size();
-  UPtr<EnergyDensityEstimator> spawn(std::make_unique<EnergyDensityEstimator>(*this, spawn_data_locality));
+  UPtr<NEEnergyDensityEstimator> spawn(std::make_unique<NEEnergyDensityEstimator>(*this, spawn_data_locality));
   spawn->get_data().resize(data_size);
   return spawn;
 }
 
-void EnergyDensityEstimator::startBlock(int steps) {}
+void NEEnergyDensityEstimator::startBlock(int steps) {}
 
 } // namespace qmcplusplus

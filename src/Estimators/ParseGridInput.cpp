@@ -165,6 +165,58 @@ AxisGrid<REAL> parseGridInput(std::istringstream& grid_input_stream)
   return agr;
 }
 
+template<typename REAL>
+AxisGrid<REAL>::AxisGrid(std::vector<int>&& rhs_ndom_int,
+                         std::vector<int>&& rhs_ndu_int,
+                         std::vector<REAL>&& rhs_du_int,
+                         REAL rhs_umin,
+                         REAL rhs_umax,
+                         REAL rhs_odu,
+                         std::vector<int>&& rhs_gmap,
+                         std::vector<int>&& rhs_ndu_per_interval,
+                         int rhs_dimensions)
+{
+  ndom_int         = rhs_ndom_int;
+  ndu_int          = rhs_ndu_int;
+  du_int           = rhs_du_int;
+  umin             = rhs_umin;
+  umax             = rhs_umax;
+  odu              = rhs_odu;
+  gmap             = rhs_gmap;
+  ndu_per_interval = rhs_ndu_per_interval;
+  dimensions       = rhs_dimensions;
+}
+
+template<typename REAL>
+AxisGrid<REAL>::AxisGrid(const AxisGrid& rhs)
+{
+  ndom_int         = rhs.ndom_int;
+  ndu_int          = rhs.ndu_int;
+  du_int           = rhs.du_int;
+  umin             = rhs.umin;
+  umax             = rhs.umax;
+  odu              = rhs.odu;
+  gmap             = rhs.gmap;
+  ndu_per_interval = rhs.ndu_per_interval;
+  dimensions       = rhs.dimensions;
+}
+
+template<typename REAL>
+AxisGrid<REAL>& AxisGrid<REAL>::operator=(AxisGrid<REAL> rhs)
+{
+  std::swap(ndom_int, rhs.ndom_int);
+  std::swap(ndu_int, rhs.ndu_int);
+  std::swap(du_int, rhs.du_int);
+  std::swap(umin, rhs.umin);
+  std::swap(umax, rhs.umax);
+  std::swap(odu, rhs.odu);
+  std::swap(gmap, rhs.gmap);
+  std::swap(ndu_per_interval, rhs.ndu_per_interval);
+  std::swap(dimensions, rhs.dimensions);
+  return *this;
+}
+
+
 // explicit instantiation
 template struct AxisGrid<float>;
 template struct AxisGrid<double>;
