@@ -69,18 +69,18 @@ NEEnergyDensityEstimator::NEEnergyDensityEstimator(const EnergyDensityInput& inp
 
   bool periodic = pset_dynamic_.getLattice().SuperCellEnum != SUPERCELL_OPEN;
 
-  auto space_grid_inputs = input.get_space_grid_inputs();
-  spacegrids_.reserve(space_grid_inputs.size());
-  for (int ig = 0; ig < space_grid_inputs.size(); ++ig)
+  spacegrid_inputs_ = input.get_space_grid_inputs();
+  spacegrids_.reserve(spacegrid_inputs_.size());
+  for (int ig = 0; ig < spacegrid_inputs_.size(); ++ig)
   {
     if (pset_static_)
     {
       auto [r_ptcls, z_ptcls] = extractIonPositionsAndCharge(*pset_static_);
-      spacegrids_.emplace_back(std::make_unique<NESpaceGrid>(space_grid_inputs[ig], ref_points_->get_points(), r_ptcls,
+      spacegrids_.emplace_back(std::make_unique<NESpaceGrid>(spacegrid_inputs_[ig], ref_points_->get_points(), r_ptcls,
 							     z_ptcls, pset_dynamic_.getTotalNum(), N_EDVALS, periodic));
     }
     else
-      spacegrids_.emplace_back(std::make_unique<NESpaceGrid>(space_grid_inputs[ig], ref_points_->get_points(), N_EDVALS, periodic));
+      spacegrids_.emplace_back(std::make_unique<NESpaceGrid>(spacegrid_inputs_[ig], ref_points_->get_points(), N_EDVALS, periodic));
   }
 #ifndef NDEBUG
   std::cout << "Instantiated " << spacegrids_.size() << " spacegrids\n";
@@ -88,7 +88,7 @@ NEEnergyDensityEstimator::NEEnergyDensityEstimator(const EnergyDensityInput& inp
 }
 
 NEEnergyDensityEstimator::NEEnergyDensityEstimator(const NEEnergyDensityEstimator& ede, const DataLocality dl)
-    : OperatorEstBase(dl), input_(ede.input_), pset_dynamic_(ede.pset_dynamic_), pset_static_(ede.pset_static_), n_particles_(ede.n_particles_), n_ions_(ede.n_ions_)
+    : OperatorEstBase(dl), input_(ede.input_), pset_dynamic_(ede.pset_dynamic_), pset_static_(ede.pset_static_), n_particles_(ede.n_particles_), n_ions_(ede.n_ions_), spacegrid_inputs_(ede.spacegrid_inputs_)
 {  
   data_locality_ = dl;
 
@@ -353,6 +353,10 @@ std::unique_ptr<OperatorEstBase> NEEnergyDensityEstimator::spawnCrowdClone() con
   UPtr<NEEnergyDensityEstimator> spawn(std::make_unique<NEEnergyDensityEstimator>(*this, spawn_data_locality));
   spawn->get_data().resize(data_size);
   return spawn;
+}
+
+RefVector<NESpaceGrid> NEEnergyDensityEstimator::getSpaceGrids() {
+  return convertUPtrToRefVector(spacegrids_);
 }
 
 void NEEnergyDensityEstimator::startBlock(int steps) {}

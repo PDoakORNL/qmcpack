@@ -2,7 +2,7 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2022 QMCPACK developers.
+// Copyright (c) 2023 QMCPACK developers.
 //
 // File developed by: Peter Doak, doakpw@ornl.gov, Oak Ridge National Lab
 //
@@ -25,6 +25,7 @@
 #include "ValidOneBodyDensityMatricesInput.h"
 #include "InvalidOneBodyDensityMatricesInput.h"
 #include "EstimatorTesting.h"
+#include "GenerateRandomParticleSets.h"
 #include "EstimatorInput.h"
 #include "ParticleSet.h"
 #include "TrialWaveFunction.h"
@@ -47,36 +48,6 @@ namespace qmcplusplus
 constexpr bool generate_test_data = false;
 // set to true to dump obdm for same R but perhaps different RNG effecting the integration.
 constexpr bool dump_obdm = false;
-
-std::vector<ParticleSet> generateRandomParticleSets(ParticleSet& pset_target,
-                                                    ParticleSet& pset_source,
-                                                    std::vector<ParticleSet::ParticlePos>& deterministic_rs,
-                                                    int num_psets)
-{
-  int nwalkers = num_psets;
-  std::vector<ParticleSet> psets(num_psets, pset_target);
-  if constexpr (generate_test_data)
-  {
-    std::cout << "Initialize OneBodyDensityMatrices::accumulate psets with:\n{";
-    std::vector<ParticleSet> psets;
-    for (int iw = 0; iw < nwalkers; ++iw)
-    {
-      //psets.emplace_back(pset_target);
-      psets.back().randomizeFromSource(pset_source);
-      std::cout << "{";
-      for (auto r : psets.back().R)
-        std::cout << NativePrint(r) << ",";
-      std::cout << "},\n";
-    }
-    std::cout << "}\n";
-  }
-  else
-  {
-    for (int iw = 0; iw < nwalkers; ++iw)
-      psets[iw].R = deterministic_rs[iw];
-  }
-  return psets;
-}
 
 namespace testing
 {
@@ -421,7 +392,7 @@ TEST_CASE("OneBodyDensityMatrices::accumulate", "[estimators]")
                                                                 {-0.03547382355, 2.279159069, 3.057915211},
                                                                 {2.535993099, 1.637133598, 3.689830303},
                                                             }};
-  std::vector<ParticleSet> psets = generateRandomParticleSets(pset_target, pset_source, deterministic_rs, nwalkers);
+  std::vector<ParticleSet> psets = generateRandomParticleSets<generate_test_data>(pset_target, pset_source, deterministic_rs, nwalkers);
 
   auto& trial_wavefunction = *(wavefunction_pool.getPrimary());
   std::vector<UPtr<TrialWaveFunction>> twfcs(nwalkers);

@@ -96,6 +96,7 @@ public:
 
   size_t getFullDataSize();
 
+  RefVector<NESpaceGrid> getSpaceGrids();
 private:
 
   auto extractIonPositionsAndCharge(const ParticleSet& pset);

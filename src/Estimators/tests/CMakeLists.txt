@@ -24,6 +24,8 @@ set(SRCS
     EstimatorManagerBaseTest.cpp
     EstimatorManagerNewTest.cpp
     EstimatorManagerInputTest.cpp
+    GenerateRandomParticleSets.cpp
+    MockGoldWalkerElements.cpp
     test_manager.cpp
     test_EnergyDensityInput.cpp
     test_EstimatorManagerNew.cpp

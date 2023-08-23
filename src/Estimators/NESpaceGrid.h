@@ -128,6 +128,7 @@ public:
 
   void static collect(NESpaceGrid& reduction_grid, RefVector<NESpaceGrid> grid_for_each_crowd);
 
+  auto& getDataVector() { return data_; }
 private:
   /** copy AxisGrid data to SoA layout for evaluation
    */

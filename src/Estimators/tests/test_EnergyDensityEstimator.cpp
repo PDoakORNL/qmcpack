@@ -15,6 +15,8 @@
 #include "EnergyDensityEstimator.h"
 #include <iostream>
 #include "EstimatorTesting.h"
+#include "MockGoldWalkerElements.h"
+#include "GenerateRandomParticleSets.h"
 #include "ValidEnergyDensityInput.h"
 #include "Particle/Walker.h"
 #include "Particle/tests/MinimalParticlePool.h"
@@ -56,20 +58,14 @@ TEST_CASE("NEEnergyDensityEstimator::Constructor", "[estimators]")
   }
 }
 
-TEST_CASE("NEEnergyDensityEstimator::AccumulateIntegration", "[estimators]")
+TEST_CASE("NEEnergyDensityEstimator::spawnCrowdClone", "[estimators]")
 {
   using Input = testing::ValidEnergyDensityInput;
   Communicate* comm;
   comm = OHMMS::Controller;
 
-  ProjectData test_project("test", ProjectData::DriverVersion::BATCH);
+  ParticleSetPool particle_pool{MinimalParticlePool::make_diamondC_1x1x1(comm)};
 
-  auto particle_pool = MinimalParticlePool::make_diamondC_1x1x1(comm);
-  auto wavefunction_pool =
-      MinimalWaveFunctionPool::make_diamondC_1x1x1(test_project.getRuntimeOptions(), comm, particle_pool);
-  auto hamiltonian_pool = MinimalHamiltonianPool::make_hamWithEE(comm, particle_pool, wavefunction_pool);
-  auto& twf             = *(wavefunction_pool.getWaveFunction("wavefunction"));
-  auto& ham             = *(hamiltonian_pool.getPrimary());
   ParticleSet pset_elec{*(particle_pool.getParticleSet("e"))};
   ParticleSet pset_ions{*(particle_pool.getParticleSet("ion"))};
 
@@ -79,82 +75,39 @@ TEST_CASE("NEEnergyDensityEstimator::AccumulateIntegration", "[estimators]")
                                {0.033228526, 1.391869137, 0.654413566}, {1.114198787, 1.654334594, 0.231075822},
                                {1.657151589, 0.883870516, 1.201243939}, {0.97317591, 1.245644974, 0.284564732}};
 
-  auto& pset_target        = *(particle_pool.getParticleSet("e"));
-  auto& trial_wavefunction = *(wavefunction_pool.getPrimary());
-
   Libxml2Document doc;
   bool okay       = doc.parseFromString(Input::xml[Input::valid::CELL]);
   xmlNodePtr node = doc.getRoot();
-  UPtr<EnergyDensityInput> edein;
-  edein = std::make_unique<EnergyDensityInput>(node);
-  NEEnergyDensityEstimator e_den_est(*edein, particle_pool.getPool());
+  EnergyDensityInput edein{node};
+  {
+    NEEnergyDensityEstimator original_e_den_est(edein, particle_pool.getPool());
+
+    auto clone = original_e_den_est.spawnCrowdClone();
+    REQUIRE(clone != nullptr);
+    REQUIRE(clone.get() != &original_e_den_est);
+    REQUIRE(dynamic_cast<decltype(&original_e_den_est)>(clone.get()) != nullptr);
+  }
+}
+
+TEST_CASE("NEEnergyDensityEstimator::AccumulateIntegration", "[estimators]")
+{
+  using Input = testing::ValidEnergyDensityInput;
+  Communicate* comm;
+  comm = OHMMS::Controller;
+
+  ProjectData test_project("test", ProjectData::DriverVersion::BATCH);
+
+  auto gold_elem = makeGoldWalkerElementsWithEE(comm, test_project.getRuntimeOptions());
+
+  int num_walkers   = 4;
 
   UPtrVector<QMCHamiltonian> hams;
   UPtrVector<TrialWaveFunction> twfs;
-  std::vector<ParticleSet> psets;
-  hamiltonian_pool.getPrimary()->informOperatorsOfListener();
-  int num_walkers   = 4;
-  int num_electrons = particle_pool.getParticleSet("e")->getTotalNum();
-  int num_ions      = particle_pool.getParticleSet("ion")->getTotalNum();
-  for (int iw = 0; iw < num_walkers; ++iw)
-  {
-    psets.emplace_back(pset_target);
-    psets.back().randomizeFromSource(*particle_pool.getParticleSet("ion"));
-    twfs.emplace_back(trial_wavefunction.makeClone(psets.back()));
-    hams.emplace_back(hamiltonian_pool.getPrimary()->makeClone(psets.back(), *twfs.back()));
-  }
+  gold_elem.ham.informOperatorsOfListener();
+  int num_electrons = gold_elem.pset_elec.getTotalNum();
+  int num_ions      = gold_elem.pset_ions.getTotalNum();
 
-  using MCPWalker = typename OperatorEstBase::MCPWalker;
-  std::vector<OperatorEstBase::MCPWalker> walkers(num_walkers, MCPWalker(pset_target.getTotalNum()));
-
-  auto walker_refs = makeRefVector<MCPWalker>(walkers);
-  RefVectorWithLeader<MCPWalker> walker_list{walker_refs[0], walker_refs};
-
-  RefVector<QMCHamiltonian> ham_refs = convertUPtrToRefVector(hams);
-
-  RefVectorWithLeader<QMCHamiltonian> ham_list{ham_refs[0], ham_refs};
-  ResourceCollection ham_res("test_ham_res");
-  ham_list.getLeader().createResource(ham_res);
-  ResourceCollectionTeamLock<QMCHamiltonian> ham_lock(ham_res, ham_list);
-  e_den_est.registerListeners(ham_list.getLeader());
-
-  auto p_refs = makeRefVector<ParticleSet>(psets);
-  RefVectorWithLeader<ParticleSet> p_list{p_refs[0], p_refs};
-
-  ResourceCollection pset_res("test_pset_res");
-  p_list.getLeader().createResource(pset_res);
-  ResourceCollectionTeamLock<ParticleSet> pset_lock(pset_res, p_list);
-
-  auto twf_refs = convertUPtrToRefVector(twfs);
-  RefVectorWithLeader<TrialWaveFunction> twf_list{twf_refs[0], twf_refs};
-
-  ResourceCollection wfc_res("test_wfc_res");
-  twf_list.getLeader().createResource(wfc_res);
-  ResourceCollectionTeamLock<TrialWaveFunction> mw_wfc_lock(wfc_res, twf_list);
-
-
-  p_refs[0].get().L[0] = 1.0;
-  p_refs[1].get().L[1] = 1.0;
-  p_refs[2].get().L[2] = 1.0;
-  p_refs[3].get().L[3] = 1.0;
-
-  if constexpr (generate_test_data)
-  {
-    std::cout << "QMCHamiltonian-registerListeners initialize psets with:\n{";
-
-    for (int iw = 0; iw < num_walkers; ++iw)
-    {
-      //psets.emplace_back(pset_target);
-      std::cout << "{";
-      for (auto r : p_refs[iw].get().R)
-        std::cout << NativePrint(r) << ",";
-      std::cout << "},\n";
-    }
-    std::cout << "}\n";
-  }
-  else
-  {
-    std::vector<ParticleSet::ParticlePos> deterministic_rs = {
+  std::vector<ParticleSet::ParticlePos> deterministic_rs = {
         {
             {0.515677886, 0.9486072745, -1.17423246},
             {-0.3166678423, 1.376550506, 1.445290031},
@@ -196,11 +149,56 @@ TEST_CASE("NEEnergyDensityEstimator::AccumulateIntegration", "[estimators]")
             {2.284020089, 1.173071915, 1.044597715},
         },
     };
-    for (int iw = 0; iw < num_walkers; ++iw)
-    {
-      p_refs[iw].get().R = deterministic_rs[iw];
-    }
+  std::vector<ParticleSet> psets = testing::generateRandomParticleSets<generate_test_data>(gold_elem.pset_elec, gold_elem.pset_ions, deterministic_rs, num_walkers);
+
+  auto pset_refs(makeRefVector<ParticleSet>(psets));  
+  auto& trial_wavefunction = gold_elem.twf;
+
+  Libxml2Document doc;
+  bool okay       = doc.parseFromString(Input::xml[Input::valid::CELL]);
+  xmlNodePtr node = doc.getRoot();
+  UPtr<EnergyDensityInput> edein;
+  edein = std::make_unique<EnergyDensityInput>(node);
+  NEEnergyDensityEstimator e_den_est(*edein, gold_elem.particle_pool.getPool());
+
+  for (int iw = 0; iw < num_walkers; ++iw)
+  {
+    twfs.emplace_back(gold_elem.twf.makeClone(psets[iw]));
+    hams.emplace_back(gold_elem.ham.makeClone(psets[iw], *twfs.back()));
   }
+
+  using MCPWalker = typename OperatorEstBase::MCPWalker;
+  std::vector<OperatorEstBase::MCPWalker> walkers(num_walkers, MCPWalker(gold_elem.pset_elec.getTotalNum()));
+
+  auto walker_refs = makeRefVector<MCPWalker>(walkers);
+  RefVectorWithLeader<MCPWalker> walker_list{walker_refs[0], walker_refs};
+
+  RefVector<QMCHamiltonian> ham_refs = convertUPtrToRefVector(hams);
+
+  RefVectorWithLeader<QMCHamiltonian> ham_list{ham_refs[0], ham_refs};
+  ResourceCollection ham_res("test_ham_res");
+  ham_list.getLeader().createResource(ham_res);
+  ResourceCollectionTeamLock<QMCHamiltonian> ham_lock(ham_res, ham_list);
+  e_den_est.registerListeners(ham_list.getLeader());
+
+  RefVectorWithLeader<ParticleSet> p_list{pset_refs[0], pset_refs};
+
+  ResourceCollection pset_res("test_pset_res");
+  p_list.getLeader().createResource(pset_res);
+  ResourceCollectionTeamLock<ParticleSet> pset_lock(pset_res, p_list);
+
+  auto twf_refs = convertUPtrToRefVector(twfs);
+  RefVectorWithLeader<TrialWaveFunction> twf_list{twf_refs[0], twf_refs};
+
+  ResourceCollection wfc_res("test_wfc_res");
+  twf_list.getLeader().createResource(wfc_res);
+
+  ResourceCollectionTeamLock<TrialWaveFunction> mw_wfc_lock(wfc_res, twf_list);
+
+  pset_refs[0].get().L[0] = 1.0;
+  pset_refs[1].get().L[1] = 1.0;
+  pset_refs[2].get().L[2] = 1.0;
+  pset_refs[3].get().L[3] = 1.0;
 
   ParticleSet::mw_update(p_list);
   TrialWaveFunction::mw_evaluateLog(twf_list, p_list);
@@ -210,6 +208,11 @@ TEST_CASE("NEEnergyDensityEstimator::AccumulateIntegration", "[estimators]")
   rng.init(101);
 
   e_den_est.accumulate(walker_refs, p_list, twf_list, rng);
+  auto spacegrids = e_den_est.getSpaceGrids();
+
+  NESpaceGrid grid  = spacegrids[0];
+  double summed_grid = std::accumulate(grid.getDataVector().begin(),grid.getDataVector().end(),0.0);
+  std::cout << summed_grid << '\n';
 }
 
 
