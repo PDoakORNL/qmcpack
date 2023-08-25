@@ -26,13 +26,19 @@
 
 namespace qmcplusplus
 {
-
+namespace testing
+{
 class MockGoldWalkerElements
 {
 public:
-  using WaveFunctionPoolFactoryFunc = std::function<WaveFunctionPool(RuntimeOptions run_time_opt, Communicate* comm, ParticleSetPool& psp)>;
-  using HamPoolFactoryFunc          = std::function<HamiltonianPool(Communicate* comm, ParticleSetPool& psp, WaveFunctionPool& wfp)>;
-  MockGoldWalkerElements(Communicate* comm, RuntimeOptions& runtime_opt, WaveFunctionPoolFactoryFunc wfp_func, HamPoolFactoryFunc ham_pool_fac_func);
+  using WaveFunctionPoolFactoryFunc =
+      std::function<WaveFunctionPool(RuntimeOptions run_time_opt, Communicate* comm, ParticleSetPool& psp)>;
+  using HamPoolFactoryFunc =
+      std::function<HamiltonianPool(Communicate* comm, ParticleSetPool& psp, WaveFunctionPool& wfp)>;
+  MockGoldWalkerElements(Communicate* comm,
+                         RuntimeOptions& runtime_opt,
+                         WaveFunctionPoolFactoryFunc wfp_func,
+                         HamPoolFactoryFunc ham_pool_fac_func);
 
   ParticleSetPool particle_pool;
   ParticleSet& pset_elec;
@@ -43,10 +49,9 @@ public:
   QMCHamiltonian& ham;
 };
 
-MockGoldWalkerElements
-makeGoldWalkerElementsWithEE(Communicate*, RuntimeOptions run_time_opt);
+MockGoldWalkerElements makeGoldWalkerElementsWithEE(Communicate*, RuntimeOptions run_time_opt);
 MockGoldWalkerElements makeGoldWalkerElementsWithEEEI(Communicate*, RuntimeOptions run_time_opt);
-
+} // namespace testing
 } // namespace qmcplusplus
 
 #endif
