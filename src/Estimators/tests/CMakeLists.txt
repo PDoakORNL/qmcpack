@@ -105,3 +105,17 @@ if(HAVE_MPI)
   # Right now the unified driver mpi tests are hard coded for 3 MPI ranks
   add_unit_test(${UTEST_NAME} 3 1 $<TARGET_FILE:${UTEST_EXE}>)
 endif()
+
+set(UTEST_EXE test_${SRC_DIR}_energy_density)
+set(UTEST_NAME deterministic-unit_test_${SRC_DIR}_energy_density)
+set(SRCS
+    test_EnergyDensityInput.cpp
+    EstimatorTesting.cpp
+    test_ReferencePointsInput.cpp
+    test_SpaceGridInput.cpp
+    test_ParseGridInput.cpp
+    test_OneBodyDensityMatricesInput.cpp
+    test_EnergyDensityInput.cpp)
+add_executable(${UTEST_EXE} ${SRCS})
+target_link_libraries(${UTEST_EXE} catch_main qmcestimators_input qmcwfs qmcparticle qmcham qmcwfs_omptarget qmcutil utilities_for_test)
+add_unit_Test(${UTEST_NAME} 1 1 $<TARGET_FILE:${UTEST_EXE}>)

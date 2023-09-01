@@ -19,6 +19,7 @@
 #include "NEReferencePoints.h"
 #include "NESpaceGrid.h"
 #include "EnergyDensityInput.h"
+#include <ParticleSetPool.h>
 
 namespace qmcplusplus
 {
@@ -31,10 +32,16 @@ public:
   using Points      = typename NEReferencePoints::Points;
   using POLT        = PtclOnLatticeTraits;
   using ParticlePos = POLT::ParticlePos;
-  using PSPool      = std::map<std::string, const UPtr<ParticleSet>>;
+  using PSPool = typename ParticleSetPool::PoolType;
   
+  /** Constructor
+   *
+   *  \param[in] input        immutable parameters from user input
+   *  \param[in] pset_pool    global particle set pool object to allow arbitrarily named static pset to be used. (Necessary?)
+   *  \param[in] dl           datalocality tag for alternate memory management implementations. Currently EDE only implements
+   *                          crowd locality which duplicates the full estimator data object per crowd + 1 at ranks scope.
+   */
   NEEnergyDensityEstimator(const EnergyDensityInput& input, const PSPool& PSP, DataLocality dl = DataLocality::crowd);
-
   NEEnergyDensityEstimator(const NEEnergyDensityEstimator& ede, const DataLocality dl);
 
 private:
@@ -98,7 +105,6 @@ public:
 
   RefVector<NESpaceGrid> getSpaceGrids();
 private:
-
   auto extractIonPositionsAndCharge(const ParticleSet& pset);
 
   EnergyDensityInput input_;
@@ -154,15 +160,20 @@ private:
    *  Do not use for persistent state.
    *  @{ */
 
-  //particle positions
+  /// particle positions includes ion positions if pset_stat_ and !input_.get_ion_points()
   ParticlePos r_work_;
+  /// ion positions if pset_static_ && input.get_ion_points_ are true
   Matrix<Real> r_ion_work_;
 
-  // values, seems like these should just be return values
+  /** preallocated value matrices
+   *  It seems like these should be local variables in evaluate,
+   *  but this is how it was done in legacy so just ported for now.
+   *  depending on these as state doesn't seem to be done now and shouldn't be.
+   */
   Matrix<Real> ed_values_;
+  /// if input_.get_ion_points and pset_static_ then ion values end up here
   Matrix<Real> ed_ion_values_;
   /// @}
-
 
   //number of samples accumulated
   int nsamples;

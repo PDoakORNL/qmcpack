@@ -102,7 +102,6 @@ public:
    */
   OneBodyDensityMatricesInput(const OneBodyDensityMatricesInput&) = default;
   OneBodyDensityMatricesInput(xmlNodePtr cur);
-
 private:
   OneBodyDensityMatricesInputSection input_section_;
 

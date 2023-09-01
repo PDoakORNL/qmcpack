@@ -53,6 +53,7 @@ QMCFixedSampleLinearOptimizeBatched::QMCFixedSampleLinearOptimizeBatched(
     VMCDriverInput&& vmcdriver_input,
     WalkerConfigurations& wc,
     MCPopulation&& population,
+    const PSPool& pset_pool,
     SampleStack& samples,
     Communicate* comm)
     : QMCDriverNew(
@@ -62,6 +63,7 @@ QMCFixedSampleLinearOptimizeBatched::QMCFixedSampleLinearOptimizeBatched(
               nullopt, // this class is not a real QMCDriverNew as far as I can tell so we don't give it the actual global_emi_
           wc,
           std::move(population),
+	  pset_pool,
           "QMCLinearOptimizeBatched::",
           comm,
           "QMCLinearOptimizeBatched"),

@@ -74,5 +74,19 @@ TEST_CASE("EnergyDensityInput::default_reference_points", "[estimators]")
   CHECK(rpts.get_coord_form() == ReferencePointsInput::Coord::CELL);
 }
 
+TEST_CASE("EnergyDensityInput::copy_construction", "[estimators]")
+{
+  using input     = qmcplusplus::testing::ValidEnergyDensityInput;
+  auto& input_xml = input::xml[input::valid::CELL];
+  Libxml2Document doc;
+  bool okay       = doc.parseFromString(input_xml);
+  xmlNodePtr node = doc.getRoot();
+  EnergyDensityInput edi(node);
+
+  static_assert(std::is_copy_constructible_v<EnergyDensityInput>);
+  
+  EnergyDensityInput edi2(edi);
+}
+
 
 } // namespace qmcplusplus

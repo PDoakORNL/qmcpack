@@ -71,6 +71,7 @@ public:
       required     = {"coord"};
     }
     std::any assignAnyEnum(const std::string& name) const override;
+    ReferencePointsInputSection(const ReferencePointsInputSection&) = default;
   };
 
   /** Unlike many input classes ReferencePointInputs needs a way to be constructured even if there is no input node.
@@ -80,6 +81,8 @@ public:
   ReferencePointsInput() = default;
   
   ReferencePointsInput(xmlNodePtr cur);
+  ReferencePointsInput(const ReferencePointsInput& rpi) = default;
+
   Coord get_coord_form() const { return coord_form_; }
   const Points& get_points() const { return points_; }
 private:

@@ -59,6 +59,7 @@ public:
                                       VMCDriverInput&& vmcdriver_input,
                                       WalkerConfigurations& wc,
                                       MCPopulation&& population,
+				      const EstimatorManagerNew::PSPool& pset_pool,
                                       SampleStack& samples,
                                       Communicate* comm);
 

@@ -2,7 +2,7 @@
 #// This file is distributed under the University of Illinois/NCSA Open Source License.
 #// See LICENSE file in top directory for details.
 #//
-#// Copyright (c) 2021 QMCPACK developers.
+#// Copyright (c) 2023 QMCPACK developers.
 #//
 #// File developed by: Peter Doak, , doakpw@ornl.gov, Oak Ridge National Laboratory
 #//////////////////////////////////////////////////////////////////////////////////////
@@ -10,6 +10,26 @@
 ####################################
 # Estimators which accumulate observables
 ####################################
+
+set(QMCEST_INPUT_SRC
+  InputSection.cpp
+  EstimatorInput.cpp
+  EnergyDensityInput.cpp
+  OneBodyDensityMatricesInput.cpp
+  ReferencePointsInput.cpp
+  NEReferencePoints.cpp
+  SpaceGridInput.cpp
+  ParseGridInput.cpp)
+
+if(USE_OBJECT_TARGET)
+  add_library(qmcestimators_input OBJECT ${QMCEST_INPUT_SRC})
+else()
+  add_library(qmcestimators_input ${QMCEST_INPUT_SRC})
+endif()
+
+target_include_directories(qmcestimators_input PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(qmcestimators_input PUBLIC containers qmcham qmcparticle qmcutil)
+
 
 set(QMCEST_SRC
     InputSection.cpp

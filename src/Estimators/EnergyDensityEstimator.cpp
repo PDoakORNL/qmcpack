@@ -116,7 +116,6 @@ void NEEnergyDensityEstimator::constructToReferencePoints(ParticleSet& pset_dyna
   r_work_.resize(n_particles_);
   ed_values_.resize(n_particles_, N_EDVALS);
 
-  
   // right now this is only the case when pset_static_ && input.get_ion_points_ are true
   if (n_ions_ > 0)
   {
