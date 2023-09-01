@@ -49,7 +49,7 @@ TEST_CASE("QMCDriverNew tiny case", "[drivers]")
   QMCDriverNewTestWrapper qmcdriver(test_project, std::move(qmcdriver_input), walker_confs,
                                     MCPopulation(comm->size(), comm->rank(), particle_pool.getParticleSet("e"),
                                                  wavefunction_pool.getPrimary(), hamiltonian_pool.getPrimary()),
-                                    comm);
+                                    particle_pool.getPool(), comm);
 
   // setStatus must be called before process
   std::string root_name{"Test"};
@@ -171,6 +171,7 @@ TEST_CASE("QMCDriverNew test driver operations", "[drivers]")
   QMCDriverNewTestWrapper qmcdriver(test_project, std::move(qmcdriver_input), walker_confs,
                                     MCPopulation(comm->size(), comm->rank(), particle_pool.getParticleSet("e"),
                                                  wavefunction_pool.getPrimary(), hamiltonian_pool.getPrimary()),
+				    particle_pool.getPool(),
                                     comm);
 
 

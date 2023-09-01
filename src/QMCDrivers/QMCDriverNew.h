@@ -90,8 +90,13 @@ public:
   };
 
   using MCPWalker = MCPopulation::MCPWalker;
+  /** This type provides all the functionality needed by drivers to instantiate estimators so we use it to reduce coupling
+   *  with ParticleSetPool
+   */
+  using PSPool = ParticleSetPool::PoolType;
   using WFBuffer  = MCPopulation::WFBuffer;
-
+  
+  
   using SetNonLocalMoveHandler = std::function<void(QMCHamiltonian&)>;
   /** bits to classify QMCDriver
    *
@@ -143,7 +148,7 @@ public:
                const std::optional<EstimatorManagerInput>& global_emi,
                WalkerConfigurations& wc,
                MCPopulation&& population,
-	       const EstimatorManagerNew::PSPool& pset_pool,
+	       const PSPool& pset_pool,
                const std::string timer_prefix,
                Communicate* comm,
                const std::string& QMC_driver_type,

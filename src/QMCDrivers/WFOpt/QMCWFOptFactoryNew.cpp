@@ -35,7 +35,7 @@ std::unique_ptr<QMCFixedSampleLinearOptimizeBatched> QMCWFOptLinearFactoryNew(
   }
 
   auto opt = std::make_unique<QMCFixedSampleLinearOptimizeBatched>(project_data, std::move(qmcdriver_input), global_emi,
-                                                                   std::move(vmcdriver_input), wc, std::move(pop),
+                                                                   std::move(vmcdriver_input), wc, std::move(pop), pset_pool,
                                                                    samples, comm);
   return opt;
 }
