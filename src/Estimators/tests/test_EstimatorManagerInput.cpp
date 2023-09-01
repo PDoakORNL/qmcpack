@@ -68,7 +68,7 @@ TEST_CASE("EstimatorManagerInput::readXML", "[estimators]")
   Libxml2Document estimators_doc = createEstimatorManagerNewInputXML();
   EstimatorManagerInput emi(estimators_doc.getRoot());
 
-  CHECK(emi.get_estimator_inputs().size() == 2);
+  CHECK(emi.get_estimator_inputs().size() == 3);
   CHECK(emi.get_scalar_estimator_inputs().size() == 5);
 
   // CHECK EMI throws if unparsable estimators are in input.
