@@ -67,7 +67,7 @@ public:
    * \param[in]  nvalues        number of fields the owning class wants for each grid point.
    * \param[in]  is_period      properly names is what is says
    */
-  NESpaceGrid(const SpaceGridInput& sgi, const Points& points, const int nvalues, const bool is_periodic);
+  NESpaceGrid(SpaceGridInput& sgi, const Points& points, const int nvalues, const bool is_periodic);
 
   /** This is the general constructor
    * \param[in]  sgi            input object for space grid.
@@ -76,11 +76,11 @@ public:
    * \param[in]  nvalues        number of fields the owning class wants for each grid point.
    * \param[in]  is_period      properly names is what is says
    */
-  NESpaceGrid(const SpaceGridInput& sgi, const Points& points, const int ndp, const int nvalues, const bool is_periodic);
+  NESpaceGrid(SpaceGridInput& sgi, const Points& points, const int ndp, const int nvalues, const bool is_periodic);
 
   /** This is the constructor for when PStatic is used.
    */
-  NESpaceGrid(const SpaceGridInput& sgi,
+  NESpaceGrid(SpaceGridInput& sgi,
               const Points& points,
               ParticlePos& static_particle_positions,
               std::vector<Real>& static_particle_charges,
@@ -89,15 +89,17 @@ public:
               const bool is_periodic);
 
   NESpaceGrid(const NESpaceGrid& sg) = default;
+  NESpaceGrid& operator=(const NESpaceGrid& sg) = default;
   
   void write_description(std::ostream& os, const std::string& indent);
 
   /** set up Observable helper(s) for this grid
    *  almost unchanged from legacy
-   *  \todo use hdf5archive directly
+   *  \todo uses Observable helper unpleasantly in implementation, remove
    */
-  void registerGrid(hdf_archive& file, std::vector<ObservableHelper>& h5desc, int grid_index) const;
+  void registerGrid(hdf_archive& file, std::vector<ObservableHelper>& h5desc, int grid_index);
 
+  void write(hdf_archive& file) const;
   /// @}
 
   void accumulate(const ParticlePos& R,
@@ -179,7 +181,7 @@ private:
   /** refrence points for the space grid
    *  this reference it to the EstimatorManagers EDE's spacegrid_inputs_
    */
-  const SpaceGridInput& input_;
+  SpaceGridInput& input_;
   int ndparticles_;
   bool is_periodic_;
   /** refrence points for the space grid
@@ -222,6 +224,7 @@ private:
   int dm_[OHMMS_DIM];
   ReferenceEnergy reference_energy_;
   std::vector<Real> data_;
+  std::shared_ptr<ObservableHelper> observable_helper_;
   
   struct IRPair
   {

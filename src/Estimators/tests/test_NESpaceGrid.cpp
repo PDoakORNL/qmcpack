@@ -89,7 +89,7 @@ TEST_CASE("SpaceGrid::Construction", "[estimators]")
   // EnergyDensityEstimator gets this from an enum giving indexes into each offset of SOA buffer.
   // It is a smell.
   NESpaceGrid space_grid(*(sge.sgi_), sge.ref_points_->get_points(), 1, false);
-  
+
   using NES         = testing::NESpaceGridTests<double>;
   auto buffer_start = NES::getBufferStart(space_grid);
   auto buffer_end   = NES::getBufferEnd(space_grid);
@@ -274,10 +274,49 @@ TEST_CASE("SpaceGrid::BadPeriodic", "[estimators]")
 
   std::vector<bool> p_outside(8, false);
 
-  CHECK_THROWS_AS(space_grid.accumulate(sge.pset_elec_.R, values, p_outside,
-                                        sge.pset_elec_.getDistTableAB(ei_tid)),
+  CHECK_THROWS_AS(space_grid.accumulate(sge.pset_elec_.R, values, p_outside, sge.pset_elec_.getDistTableAB(ei_tid)),
                   std::runtime_error);
 }
 
+TEST_CASE("SpaceGrid::Basic", "[estimators]")
+{
+  using Input = testing::ValidSpaceGridInput;
+  Communicate* comm;
+  comm = OHMMS::Controller;
+  testing::SpaceGridEnv<Input::valid::ORIGIN> sge(comm);
+  int num_values = 3;
+  NESpaceGrid space_grid(*(sge.sgi_), sge.ref_points_->get_points(), num_values, false);
+  using NES         = testing::NESpaceGridTests<double>;
+  auto buffer_start = NES::getBufferStart(space_grid);
+  auto buffer_end   = NES::getBufferEnd(space_grid);
+  space_grid.write_description(std::cout, std::string(""));
+  auto& sgi = *(sge.sgi_);
+  auto& agr = sgi.get_axis_grids();
+  for (int id = 0; id < OHMMS_DIM; ++id)
+    CHECK(NES::getOdu(space_grid)[id] == agr[id].odu);
+  //CHECK(buffer_start == 0);
+  //CHECK(buffer_end == 23999);
 
+  Matrix<Real> values;
+  values.resize(sge.pset_elec_.getTotalNum(), num_values);
+
+  for (int ip = 0; ip < sge.pset_elec_.getTotalNum(); ++ip)
+    for (int iv = 0; iv < num_values; ++iv)
+      values(ip, iv) = ip + 0.1 * iv;
+
+  const int ei_tid = sge.pset_elec_.addTable(sge.pset_ions_);
+  sge.pset_elec_.update();
+  sge.pset_ions_.update();
+
+  hdf_archive hd;
+  std::string test_file{"ede_test.hdf"};
+  bool okay = hd.create(test_file);
+  REQUIRE(okay);
+
+  std::vector<ObservableHelper> h5desc;
+  space_grid.registerGrid(hd, h5desc, 0);
+
+  std::vector<bool> p_outside(8, false);
+  space_grid.accumulate(sge.pset_elec_.R, values, p_outside, sge.pset_elec_.getDistTableAB(ei_tid));
+}
 } // namespace qmcplusplus

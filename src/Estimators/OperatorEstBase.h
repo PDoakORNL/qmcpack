@@ -107,7 +107,7 @@ public:
    *  if you haven't registered Operator Estimator 
    *  this will do nothing.
    */
-  void write(hdf_archive& file);
+  virtual void write(hdf_archive& file);
 
   /** zero data appropriately for the DataLocality
    */

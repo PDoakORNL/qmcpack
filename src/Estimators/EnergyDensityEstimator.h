@@ -26,14 +26,14 @@ namespace qmcplusplus
 class NEEnergyDensityEstimator : public OperatorEstBase
 {
 public:
-  using Real        = QMCTraits::RealType;
+  using Real         = QMCTraits::RealType;
   using FullPrecReal = QMCTraits::FullPrecRealType;
-  using Point       = typename NEReferencePoints::Point;
-  using Points      = typename NEReferencePoints::Points;
-  using POLT        = PtclOnLatticeTraits;
-  using ParticlePos = POLT::ParticlePos;
-  using PSPool = typename ParticleSetPool::PoolType;
-  
+  using Point        = typename NEReferencePoints::Point;
+  using Points       = typename NEReferencePoints::Points;
+  using POLT         = PtclOnLatticeTraits;
+  using ParticlePos  = POLT::ParticlePos;
+  using PSPool       = typename ParticleSetPool::PoolType;
+
   /** Constructor
    *
    *  \param[in] input        immutable parameters from user input
@@ -101,9 +101,12 @@ public:
 
   void registerOperatorEstimator(hdf_archive& file) override;
 
+  void write(hdf_archive& file) override;
+
   size_t getFullDataSize();
 
   RefVector<NESpaceGrid> getSpaceGrids();
+
 private:
   auto extractIonPositionsAndCharge(const ParticleSet& pset);
 
@@ -129,7 +132,7 @@ private:
 
   /// unboxed SpaceGridInputs for child and clone objects to refrence
   std::vector<SpaceGridInput> spacegrid_inputs_;
-  
+
   /** EnergyDenstity quantities
    *  legacy style enum into vector not ideal.
    */

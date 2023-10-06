@@ -45,8 +45,8 @@ public:
   /**
    * delete copy constructor as hdf5 handlers must have unique owners
    */
-  ObservableHelper(const ObservableHelper&)            = delete;
-  ObservableHelper& operator=(const ObservableHelper&) = delete;
+  ObservableHelper(const ObservableHelper&)            = default;
+  ObservableHelper& operator=(const ObservableHelper&) = default;
 
   /**
    * Move constructor.

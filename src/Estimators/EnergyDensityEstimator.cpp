@@ -51,20 +51,21 @@ NEEnergyDensityEstimator::NEEnergyDensityEstimator(const EnergyDensityInput& inp
                                                    DataLocality data_locality)
     : OperatorEstBase(data_locality), input_(input), pset_dynamic_(getParticleSet(pset_pool, input.get_dynamic()))
 {
-  requires_listener_=true;
-  my_name_ = "NEEnergyDensityEstimator";
-  n_particles_ = pset_dynamic_.getTotalNum();
+  requires_listener_ = true;
+  my_name_           = "NEEnergyDensityEstimator";
+  n_particles_       = pset_dynamic_.getTotalNum();
   if (!(input_.get_static().empty()))
   {
     pset_static_.emplace(getParticleSet(pset_pool, input.get_static()));
-    if (!input.get_ion_points()) {
+    if (!input.get_ion_points())
+    {
       n_ions_ = pset_static_->getTotalNum();
       n_particles_ += n_ions_;
       ed_ion_values_.resize(n_ions_, N_EDVALS);
       r_ion_work_.resize(n_ions_, OHMMS_DIM);
     }
   }
-  
+
   constructToReferencePoints(pset_dynamic_, pset_static_);
 
   bool periodic = pset_dynamic_.getLattice().SuperCellEnum != SUPERCELL_OPEN;
@@ -77,10 +78,11 @@ NEEnergyDensityEstimator::NEEnergyDensityEstimator(const EnergyDensityInput& inp
     {
       auto [r_ptcls, z_ptcls] = extractIonPositionsAndCharge(*pset_static_);
       spacegrids_.emplace_back(std::make_unique<NESpaceGrid>(spacegrid_inputs_[ig], ref_points_->get_points(), r_ptcls,
-							     z_ptcls, pset_dynamic_.getTotalNum(), N_EDVALS, periodic));
+                                                             z_ptcls, pset_dynamic_.getTotalNum(), N_EDVALS, periodic));
     }
     else
-      spacegrids_.emplace_back(std::make_unique<NESpaceGrid>(spacegrid_inputs_[ig], ref_points_->get_points(), N_EDVALS, periodic));
+      spacegrids_.emplace_back(
+          std::make_unique<NESpaceGrid>(spacegrid_inputs_[ig], ref_points_->get_points(), N_EDVALS, periodic));
   }
 #ifndef NDEBUG
   std::cout << "Instantiated " << spacegrids_.size() << " spacegrids\n";
@@ -88,17 +90,24 @@ NEEnergyDensityEstimator::NEEnergyDensityEstimator(const EnergyDensityInput& inp
 }
 
 NEEnergyDensityEstimator::NEEnergyDensityEstimator(const NEEnergyDensityEstimator& ede, const DataLocality dl)
-    : OperatorEstBase(dl), input_(ede.input_), pset_dynamic_(ede.pset_dynamic_), pset_static_(ede.pset_static_), n_particles_(ede.n_particles_), n_ions_(ede.n_ions_), spacegrid_inputs_(ede.spacegrid_inputs_)
-{  
+    : OperatorEstBase(dl),
+      input_(ede.input_),
+      pset_dynamic_(ede.pset_dynamic_),
+      pset_static_(ede.pset_static_),
+      n_particles_(ede.n_particles_),
+      n_ions_(ede.n_ions_),
+      spacegrid_inputs_(ede.spacegrid_inputs_)
+{
   data_locality_ = dl;
 
   constructToReferencePoints(pset_dynamic_, pset_static_);
-  
+
   for (const auto& space_grid : ede.spacegrids_)
     spacegrids_.emplace_back(std::make_unique<NESpaceGrid>(*space_grid));
 }
 
-void NEEnergyDensityEstimator::constructToReferencePoints(ParticleSet& pset_dynamic, const std::optional<ParticleSet>& pset_static)
+void NEEnergyDensityEstimator::constructToReferencePoints(ParticleSet& pset_dynamic,
+                                                          const std::optional<ParticleSet>& pset_static)
 {
   // Bringing a bunch of adhoc setup from legacy.
   // removed redundant turnOnPerParticleSK this is handled via the EstimatorManagerNew if listeners are detected through
@@ -108,11 +117,12 @@ void NEEnergyDensityEstimator::constructToReferencePoints(ParticleSet& pset_dyna
 
   RefVector<ParticleSet> pset_refs;
 
-  if (pset_static_) {
+  if (pset_static_)
+  {
     dtable_index_ = pset_dynamic_.addTable(pset_static_.value());
     pset_refs.push_back(pset_static_.value());
   }
-  
+
   r_work_.resize(n_particles_);
   ed_values_.resize(n_particles_, N_EDVALS);
 
@@ -179,12 +189,13 @@ void NEEnergyDensityEstimator::accumulate(const RefVector<MCPWalker>& walkers,
   reduced_local_ion_pot_values_.resize(walkers.size());
 
   // Depending on Hamiltonian setup one or more of these values could be absent.
-  if(!local_pot_values_.empty())
+  if (!local_pot_values_.empty())
     combinePerParticleEnergies(local_pot_values_, reduced_local_pot_values_);
-  if(!kinetic_values_.empty())
+  if (!kinetic_values_.empty())
     combinePerParticleEnergies(kinetic_values_, reduced_local_kinetic_values_);
-  if (pset_static_) {
-    if(!local_ion_pot_values_.empty())
+  if (pset_static_)
+  {
+    if (!local_ion_pot_values_.empty())
       combinePerParticleEnergies(local_ion_pot_values_, reduced_local_ion_pot_values_);
   }
   for (int iw = 0; iw < walkers.size(); ++iw)
@@ -242,7 +253,7 @@ void NEEnergyDensityEstimator::evaluate(ParticleSet& pset, const MCPWalker& walk
         ed_values_(p_count, W) = weight;
         ed_values_(p_count, T) = 0.0;
         if (Vs.size() > i)
-	  ed_values_(p_count, V) = weight * Vs[i];
+          ed_values_(p_count, V) = weight * Vs[i];
         p_count++;
       }
     else
@@ -298,7 +309,7 @@ void NEEnergyDensityEstimator::collect(const RefVector<OperatorEstBase>& type_er
     for (OperatorEstBase& crowd_oeb : type_erased_operator_estimators)
     {
       NEEnergyDensityEstimator& crowd_ede = dynamic_cast<NEEnergyDensityEstimator&>(crowd_oeb);
-      NESpaceGrid& grid_ref             = *(crowd_ede.spacegrids_[ig]);
+      NESpaceGrid& grid_ref               = *(crowd_ede.spacegrids_[ig]);
       crowd_grids.push_back(grid_ref);
     }
     NESpaceGrid::collect(*(spacegrids_[ig]), crowd_grids);
@@ -345,6 +356,16 @@ void NEEnergyDensityEstimator::registerOperatorEstimator(hdf_archive& file)
   }
 }
 
+void NEEnergyDensityEstimator::write(hdf_archive& file)
+{
+  // this is going to be complicated
+
+  for (int i = 0; i < spacegrids_.size(); i++)
+  {
+    spacegrids_[i]->write(file);
+  }
+}
+
 std::unique_ptr<OperatorEstBase> NEEnergyDensityEstimator::spawnCrowdClone() const
 {
   auto spawn_data_locality = data_locality_;
@@ -354,9 +375,7 @@ std::unique_ptr<OperatorEstBase> NEEnergyDensityEstimator::spawnCrowdClone() con
   return spawn;
 }
 
-RefVector<NESpaceGrid> NEEnergyDensityEstimator::getSpaceGrids() {
-  return convertUPtrToRefVector(spacegrids_);
-}
+RefVector<NESpaceGrid> NEEnergyDensityEstimator::getSpaceGrids() { return convertUPtrToRefVector(spacegrids_); }
 
 void NEEnergyDensityEstimator::startBlock(int steps) {}
 

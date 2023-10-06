@@ -31,14 +31,14 @@ using std::floor;
 using std::sin;
 using std::sqrt;
 
-NESpaceGrid::NESpaceGrid(const SpaceGridInput& sgi,
+NESpaceGrid::NESpaceGrid(SpaceGridInput& sgi,
                          const NEReferencePoints::Points& points,
                          const int nvalues,
                          const bool is_periodic)
     : NESpaceGrid(sgi, points, 0, nvalues, is_periodic)
 {}
 
-NESpaceGrid::NESpaceGrid(const SpaceGridInput& sgi,
+NESpaceGrid::NESpaceGrid(SpaceGridInput& sgi,
                          const NEReferencePoints::Points& points,
                          const int ndp,
                          const int nvalues,
@@ -50,7 +50,7 @@ NESpaceGrid::NESpaceGrid(const SpaceGridInput& sgi,
     throw std::runtime_error("NESpaceGrid initialization failed");
 }
 
-NESpaceGrid::NESpaceGrid(const SpaceGridInput& sgi,
+NESpaceGrid::NESpaceGrid(SpaceGridInput& sgi,
                          const NEReferencePoints::Points& points,
                          ParticlePos& static_particle_positions,
                          std::vector<Real>& Z,
@@ -367,7 +367,7 @@ void NESpaceGrid::write_description(std::ostream& os, const std::string& indent)
   os << indent + "end NESpaceGrid" << std::endl;
 }
 
-void NESpaceGrid::registerGrid(hdf_archive& file, std::vector<ObservableHelper>& h5desc, int grid_index) const
+  void NESpaceGrid::registerGrid(hdf_archive& file, std::vector<ObservableHelper>& h5desc, int grid_index)
 {
   using iMatrix = Matrix<int>;
   iMatrix imat;
@@ -376,14 +376,14 @@ void NESpaceGrid::registerGrid(hdf_archive& file, std::vector<ObservableHelper>&
   std::stringstream ss;
   ss << grid_index + cshift;
   hdf_path hdf_name{"spacegrid" + ss.str()};
-  h5desc.emplace_back(hdf_name);
-  auto& oh = h5desc.back();
+  observable_helper_ = std::make_shared<ObservableHelper>(hdf_name);
+  auto& oh = *observable_helper_;
   ng[0]    = nvalues_per_domain_ * ndomains_;
   oh.set_dimensions(ng, buffer_offset_);
 
   // Create a bunch of temporary SoA data from input to write the grid attributes
   auto& agr = input_.get_axis_grids();
-  std::vector<int> dimensions;
+  std::vector<int> dimensions(OHMMS_DIM);
   for (int id = 0; id < OHMMS_DIM; ++id)
   {
     dimensions[id] = agr[id].dimensions;
@@ -474,6 +474,20 @@ void NESpaceGrid::registerGrid(hdf_archive& file, std::vector<ObservableHelper>&
   return;
 }
 
+void NESpaceGrid::write(hdf_archive& file) const
+{
+#ifdef MIXED_PRECISION
+  std::vector<QMCT::FullPrecRealType> expanded_data(data_.size(), 0.0);
+  std::copy_n(data_.begin(), data_.size(), expanded_data.begin());
+  assert(!data_.empty());
+  // auto total = std::accumulate(data_->begin(), data_->end(), 0.0);
+  // std::cout << "data size: " << data_->size() << " : " << total << '\n';
+  observable_helper_->write(expanded_data.data(), file);
+#else
+  observable_helper_->write(data_.data(), file);
+#endif
+  file.pop();
+}
 
 #define NESpaceGrid_CHECK
 
@@ -495,37 +509,37 @@ void NESpaceGrid::accumulate(const ParticlePos& R,
                              std::vector<bool>& particles_outside,
                              const DistanceTableAB& dtab)
 {
-      // //find cell center nearest to each dynamic particle
-      // int nd, nn;
-      // RealType dist;
-      // for (p = 0; p < ndparticles; p++)
-      // {
-      //   const auto& dist = dtab.getDistRow(p);
-      //   for (nd = 0; nd < ndomains; nd++)
-      //     if (dist[nd] < nearcell[p].r)
-      //     {
-      //       nearcell[p].r = dist[nd];
-      //       nearcell[p].i = nd;
-      //     }
-      // }
-      // //accumulate values for each dynamic particle
-      // for (p = 0; p < ndparticles; p++)
-      // {
-      //   buf_index = buffer_offset + nvalues * nearcell[p].i;
-      //   for (v = 0; v < nvalues; v++, buf_index++)
-      //     buf[buf_index] += values(p, v);
-      // }
-      // //accumulate values for static particles (static particles == cell centers)
-      // buf_index = buffer_offset;
-      // for (p = ndparticles; p < nparticles; p++)
-      //   for (v = 0; v < nvalues; v++, buf_index++)
-      //     buf[buf_index] += values(p, v);
-      // //each particle belongs to some voronoi cell
-      // for (p = 0; p < nparticles; p++)
-      //   particles_outside[p] = false;
-      // //reset distances
-      // for (p = 0; p < ndparticles; p++)
-      //   nearcell[p].r = std::numeric_limits<RealType>::max();
+  // //find cell center nearest to each dynamic particle
+  // int nd, nn;
+  // RealType dist;
+  // for (p = 0; p < ndparticles; p++)
+  // {
+  //   const auto& dist = dtab.getDistRow(p);
+  //   for (nd = 0; nd < ndomains; nd++)
+  //     if (dist[nd] < nearcell[p].r)
+  //     {
+  //       nearcell[p].r = dist[nd];
+  //       nearcell[p].i = nd;
+  //     }
+  // }
+  // //accumulate values for each dynamic particle
+  // for (p = 0; p < ndparticles; p++)
+  // {
+  //   buf_index = buffer_offset + nvalues * nearcell[p].i;
+  //   for (v = 0; v < nvalues; v++, buf_index++)
+  //     buf[buf_index] += values(p, v);
+  // }
+  // //accumulate values for static particles (static particles == cell centers)
+  // buf_index = buffer_offset;
+  // for (p = ndparticles; p < nparticles; p++)
+  //   for (v = 0; v < nvalues; v++, buf_index++)
+  //     buf[buf_index] += values(p, v);
+  // //each particle belongs to some voronoi cell
+  // for (p = 0; p < nparticles; p++)
+  //   particles_outside[p] = false;
+  // //reset distances
+  // for (p = 0; p < ndparticles; p++)
+  //   nearcell[p].r = std::numeric_limits<RealType>::max();
   accumulate(R, values, particles_outside);
 }
 

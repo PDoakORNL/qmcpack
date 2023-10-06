@@ -742,6 +742,26 @@ if(add_estimator_tests)
     -r
     qmc-ref/qmc_edens_cell_short.s000.stat_ref_energydensity.dat)
 
+simple_run_and_check(
+    short-diamondC_1x1x1_pp-vmcbatch-estimator-energydensity-cell
+    "${qmcpack_SOURCE_DIR}/tests/solids/diamondC_1x1x1_pp"
+    qmc_edens_cell_short_batch${IFEXT}.in.xml
+    ${NMPI}
+    ${NOMP}
+    check_stats.py
+    -s
+    0
+    -q
+    'energydensity,EDcell'
+    -e
+    20
+    -c
+    8
+    -p
+    qmc_edens_cell_short
+    -r
+    qmc-ref/qmc_edens_cell_short.s000.stat_ref_energydensity.dat)
+  
   simple_run_and_check(
     short-diamondC_1x1x1_pp-vmc-estimator-energydensity-voronoi
     "${qmcpack_SOURCE_DIR}/tests/solids/diamondC_1x1x1_pp"

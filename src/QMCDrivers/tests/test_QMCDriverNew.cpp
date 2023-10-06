@@ -102,7 +102,7 @@ TEST_CASE("QMCDriverNew more crowds than threads", "[drivers]")
   QMCDriverNewTestWrapper qmc_batched(test_project, std::move(qmcdriver_copy), walker_confs,
                                       MCPopulation(comm->size(), comm->rank(), particle_pool.getParticleSet("e"),
                                                    wavefunction_pool.getPrimary(), hamiltonian_pool.getPrimary()),
-                                      comm);
+                                      particle_pool.getPool(), comm);
   QMCDriverNewTestWrapper::TestNumCrowdsVsNumThreads<ParallelExecutor<>> testNumCrowds;
   testNumCrowds(9);
   testNumCrowds(8);
@@ -141,7 +141,7 @@ TEST_CASE("QMCDriverNew walker counts", "[drivers]")
   QMCDriverNewTestWrapper qmc_batched(test_project, std::move(qmcdriver_copy), walker_confs,
                                       MCPopulation(comm->size(), comm->rank(), particle_pool.getParticleSet("e"),
                                                    wavefunction_pool.getPrimary(), hamiltonian_pool.getPrimary()),
-                                      comm);
+                                      particle_pool.getPool(), comm);
 
   qmc_batched.testAdjustGlobalWalkerCount();
 }
@@ -171,8 +171,7 @@ TEST_CASE("QMCDriverNew test driver operations", "[drivers]")
   QMCDriverNewTestWrapper qmcdriver(test_project, std::move(qmcdriver_input), walker_confs,
                                     MCPopulation(comm->size(), comm->rank(), particle_pool.getParticleSet("e"),
                                                  wavefunction_pool.getPrimary(), hamiltonian_pool.getPrimary()),
-				    particle_pool.getPool(),
-                                    comm);
+                                    particle_pool.getPool(), comm);
 
 
   auto tau       = 1.0;
