@@ -278,7 +278,7 @@ TEST_CASE("SpaceGrid::BadPeriodic", "[estimators]")
                   std::runtime_error);
 }
 
-TEST_CASE("SpaceGrid::Basic", "[estimators]")
+TEST_CASE("SpaceGrid::hdf5", "[estimators]")
 {
   using Input = testing::ValidSpaceGridInput;
   Communicate* comm;
@@ -308,6 +308,9 @@ TEST_CASE("SpaceGrid::Basic", "[estimators]")
   sge.pset_elec_.update();
   sge.pset_ions_.update();
 
+  std::vector<bool> p_outside(8, false);
+  space_grid.accumulate(sge.pset_elec_.R, values, p_outside, sge.pset_elec_.getDistTableAB(ei_tid));
+
   hdf_archive hd;
   std::string test_file{"ede_test.hdf"};
   bool okay = hd.create(test_file);
@@ -316,7 +319,45 @@ TEST_CASE("SpaceGrid::Basic", "[estimators]")
   std::vector<ObservableHelper> h5desc;
   space_grid.registerGrid(hd, h5desc, 0);
 
-  std::vector<bool> p_outside(8, false);
-  space_grid.accumulate(sge.pset_elec_.R, values, p_outside, sge.pset_elec_.getDistTableAB(ei_tid));
+  space_grid.write(hd);
+
+  hd.close();
+
+  hdf_archive hd_read;
+  bool okay_read = hd.open(test_file);
+  hd.push("spacegrid1");
+  //hdf5 values always end up as doubles
+  Matrix<double> read_values(1,24000);
+  hd.readEntry(read_values, "value");
+
+  auto tensorAccessor = [](const auto& grid_data, int i, int j, int k, int iv) -> double {
+    return grid_data.data()[1200 * i + 60 * j + 3 * k + iv];
+  };
+
+  auto value = tensorAccessor(read_values, 10, 17, 9, 0);
+  
+  CHECK(tensorAccessor(read_values, 10, 17, 9, 0) == Approx(2.0));
+  CHECK(tensorAccessor(read_values, 10, 17, 9, 1) == Approx(2.1));
+  CHECK(tensorAccessor(read_values, 10, 17, 9, 2) == Approx(2.2));
+  CHECK(tensorAccessor(read_values, 12, 15, 7, 0) == Approx(4.0));
+  CHECK(tensorAccessor(read_values, 12, 15, 7, 1) == Approx(4.1));
+  CHECK(tensorAccessor(read_values, 12, 15, 7, 2) == Approx(4.2));
+  CHECK(tensorAccessor(read_values, 12, 16, 11, 0) == Approx(3.0));
+  CHECK(tensorAccessor(read_values, 12, 16, 11, 1) == Approx(3.1));
+  CHECK(tensorAccessor(read_values, 12, 16, 11, 2) == Approx(3.2));
+  CHECK(tensorAccessor(read_values, 13, 11, 15, 0) == Approx(6.0));
+  CHECK(tensorAccessor(read_values, 13, 11, 15, 1) == Approx(6.1));
+  CHECK(tensorAccessor(read_values, 13, 11, 15, 2) == Approx(6.2));
+  CHECK(tensorAccessor(read_values, 14, 13, 13, 0) == Approx(1.0));
+  CHECK(tensorAccessor(read_values, 14, 13, 13, 1) == Approx(1.2));
+  CHECK(tensorAccessor(read_values, 14, 13, 13, 2) == Approx(1.4));
+  CHECK(tensorAccessor(read_values, 15, 11, 10, 0) == Approx(7.0));
+  CHECK(tensorAccessor(read_values, 15, 11, 10, 1) == Approx(7.1));
+  CHECK(tensorAccessor(read_values, 15, 11, 10, 2) == Approx(7.2));
+  CHECK(tensorAccessor(read_values, 17, 12, 9, 0) == Approx(5.0));
+  CHECK(tensorAccessor(read_values, 17, 12, 9, 1) == Approx(5.1));
+  CHECK(tensorAccessor(read_values, 17, 12, 9, 2) == Approx(5.2));
+
+  /// \todo add additional hdf5 output checks
 }
 } // namespace qmcplusplus

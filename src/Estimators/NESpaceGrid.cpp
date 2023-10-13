@@ -367,7 +367,7 @@ void NESpaceGrid::write_description(std::ostream& os, const std::string& indent)
   os << indent + "end NESpaceGrid" << std::endl;
 }
 
-  void NESpaceGrid::registerGrid(hdf_archive& file, std::vector<ObservableHelper>& h5desc, int grid_index)
+void NESpaceGrid::registerGrid(hdf_archive& file, std::vector<ObservableHelper>& h5desc, int grid_index)
 {
   using iMatrix = Matrix<int>;
   iMatrix imat;
@@ -377,8 +377,8 @@ void NESpaceGrid::write_description(std::ostream& os, const std::string& indent)
   ss << grid_index + cshift;
   hdf_path hdf_name{"spacegrid" + ss.str()};
   observable_helper_ = std::make_shared<ObservableHelper>(hdf_name);
-  auto& oh = *observable_helper_;
-  ng[0]    = nvalues_per_domain_ * ndomains_;
+  auto& oh           = *observable_helper_;
+  ng[0]              = nvalues_per_domain_ * ndomains_;
   oh.set_dimensions(ng, buffer_offset_);
 
   // Create a bunch of temporary SoA data from input to write the grid attributes
@@ -476,17 +476,21 @@ void NESpaceGrid::write_description(std::ostream& os, const std::string& indent)
 
 void NESpaceGrid::write(hdf_archive& file) const
 {
+  if (observable_helper_)
+  {
 #ifdef MIXED_PRECISION
-  std::vector<QMCT::FullPrecRealType> expanded_data(data_.size(), 0.0);
-  std::copy_n(data_.begin(), data_.size(), expanded_data.begin());
-  assert(!data_.empty());
-  // auto total = std::accumulate(data_->begin(), data_->end(), 0.0);
-  // std::cout << "data size: " << data_->size() << " : " << total << '\n';
-  observable_helper_->write(expanded_data.data(), file);
+    std::vector<QMCT::FullPrecRealType> expanded_data(data_.size(), 0.0);
+    std::copy_n(data_.begin(), data_.size(), expanded_data.begin());
+    assert(!data_.empty());
+    // auto total = std::accumulate(data_->begin(), data_->end(), 0.0);
+    // std::cout << "data size: " << data_->size() << " : " << total << '\n';
+    observable_helper_->write(expanded_data.data(), file);
 #else
-  observable_helper_->write(data_.data(), file);
+    observable_helper_->write(data_.data(), file);
 #endif
-  file.pop();
+    file.pop();
+  }
+  return;
 }
 
 #define NESpaceGrid_CHECK
