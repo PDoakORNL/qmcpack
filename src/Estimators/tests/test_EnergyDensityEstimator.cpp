@@ -211,6 +211,13 @@ TEST_CASE("NEEnergyDensityEstimator::AccumulateIntegration", "[estimators]")
   TrialWaveFunction::mw_evaluateLog(twf_list, p_list);
   QMCHamiltonian::mw_evaluate(ham_list, twf_list, p_list);
 
+  hdf_archive hd;
+  std::string test_file{"ede_test.hdf"};
+  okay = hd.create(test_file);
+  REQUIRE(okay);
+  std::vector<ObservableHelper> h5desc;
+  e_den_est.registerOperatorEstimator(hd);
+
   StdRandom<double> rng;
   rng.init(101);
 
@@ -220,13 +227,16 @@ TEST_CASE("NEEnergyDensityEstimator::AccumulateIntegration", "[estimators]")
   NESpaceGrid grid   = spacegrids[0];
   double summed_grid = 0;
   // grid memory layout is (W)eight (T) Kinetic (V) potential
-  for(int i = 0; i < 16000; i++)
+  for (int i = 0; i < 16000; i++)
     summed_grid += *(grid.getDataVector().begin() + i * 3 + 2) + *(grid.getDataVector().begin() + i * 3 + 1);
 
   auto expected_sum = pph_logger.sumOverAll();
   //Here we check the sum of logged energies against the total energy in the grid.
   CHECK(summed_grid == Approx(expected_sum));
+
+  e_den_est.write(hd);
 }
 
+TEST_CASE("NEEnergyDensityEstimator::write", "[estimators]") {}
 
 } // namespace qmcplusplus

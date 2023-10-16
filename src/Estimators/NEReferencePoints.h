@@ -37,7 +37,7 @@ public:
 
   void processParticleSets(ParticleSet& P, RefVector<ParticleSet>& Pref);
   void write_description(std::ostream& os, const std::string& indent) const;
-  void save(std::vector<ObservableHelper>& h5desc, hdf_archive& file) const;
+  void write(hdf_archive& file) const;
   const Points& get_points() const { return points_; }
 
 protected:

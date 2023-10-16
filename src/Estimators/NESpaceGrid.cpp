@@ -367,7 +367,7 @@ void NESpaceGrid::write_description(std::ostream& os, const std::string& indent)
   os << indent + "end NESpaceGrid" << std::endl;
 }
 
-void NESpaceGrid::registerGrid(hdf_archive& file, std::vector<ObservableHelper>& h5desc, int grid_index)
+void NESpaceGrid::registerGrid(hdf_archive& file, int grid_index)
 {
   using iMatrix = Matrix<int>;
   iMatrix imat;

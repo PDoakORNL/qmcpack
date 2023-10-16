@@ -98,15 +98,12 @@ void NEReferencePoints::write_description(std::ostream& os, const std::string& i
   return;
 }
 
-void NEReferencePoints::save(std::vector<ObservableHelper>& h5desc, hdf_archive& file) const
+void NEReferencePoints::write(hdf_archive& file) const
 {
-  h5desc.emplace_back(hdf_path{"reference_points"});
-  auto& oh = h5desc.back();
+  file.push(std::string_view("reference_points"));
   for (auto it = points_.cbegin(); it != points_.cend(); ++it)
-  {
-    oh.addProperty(const_cast<Point&>(it->second), it->first, file);
-  }
-  return;
+    file.write(const_cast<Point&>(it->second), it->first);
+  file.pop();
 }
 
 std::ostream& operator<<(std::ostream& out, const NEReferencePoints& rhs)

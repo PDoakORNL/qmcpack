@@ -2,7 +2,7 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2023 Jeongnim Kim and QMCPACK developers.
+// Copyright (c) 2023 QMCPACK developers.
 //
 // File developed by: Ye Luo, yeluo@anl.gov, Argonne National Laboratory
 //                    Jaron T. Krogel, krogeljt@ornl.gov, Oak Ridge National Laboratory
@@ -320,20 +320,24 @@ void NEEnergyDensityEstimator::collect(const RefVector<OperatorEstBase>& type_er
 void NEEnergyDensityEstimator::registerOperatorEstimator(hdf_archive& file)
 {
   hdf_path hdf_name{my_name_};
-  h5desc_.emplace_back(hdf_name / "variables");
-  auto& oh = h5desc_.back();
-  oh.addProperty(const_cast<int&>(n_particles_), "nparticles", file);
-  int nspacegrids = spacegrids_.size();
-  oh.addProperty(const_cast<int&>(nspacegrids), "nspacegrids", file);
-  oh.addProperty(const_cast<int&>(nsamples), "nsamples", file);
+
+  hdf_path path_variables = hdf_name / std::string_view("variables");
+  file.push(path_variables, true);
+  file.write(const_cast<int&>(n_particles_), "nparticles");
+  auto nspacegrids = input_.get_space_grid_inputs().size();
+  file.write(nspacegrids, "nspacegrids");
+  file.write(const_cast<int&>(nsamples), "nsamples");
 
   if (input_.get_ion_points())
   {
-    oh.addProperty(const_cast<int&>(n_ions_), "nions", file);
-    oh.addProperty(const_cast<Matrix<Real>&>(r_ion_work_), "ion_positions", file);
+    file.write(const_cast<int&>(n_ions_), "nions");
+    file.write(const_cast<Matrix<Real>&>(r_ion_work_), "ion_positions");
   }
+  file.pop();
 
-  ref_points_->save(h5desc_, file);
+  file.push(hdf_name);
+
+  ref_points_->write(file);
 
   h5desc_.emplace_back(hdf_name / "outside");
   auto& ohOutside = h5desc_.back();
@@ -341,29 +345,21 @@ void NEEnergyDensityEstimator::registerOperatorEstimator(hdf_archive& file)
   ng[0] = N_EDVALS;
   ohOutside.set_dimensions(ng, outside_buffer_offset);
   for (int i = 0; i < spacegrids_.size(); i++)
-  {
-    spacegrids_[i]->registerGrid(file, h5desc_, i);
-  }
-  if (input_.get_ion_points())
-  {
-    std::vector<int> ng2(2);
-    ng2[0] = n_ions_;
-    ng2[1] = N_EDVALS;
+    spacegrids_[i]->registerGrid(file, i);
 
-    h5desc_.emplace_back(hdf_name / "ions");
-    auto& ohIons = h5desc_.back();
-    ohIons.set_dimensions(ng2, 0);
-  }
+  file.pop();
 }
 
 void NEEnergyDensityEstimator::write(hdf_archive& file)
 {
-  // this is going to be complicated
-
+  hdf_path hdf_name{my_name_};
+  file.push(hdf_name);
+  file.write(particles_outside_, "outside");
   for (int i = 0; i < spacegrids_.size(); i++)
-  {
     spacegrids_[i]->write(file);
-  }
+  if (input_.get_ion_points())
+    file.write(ed_ion_values_, "ions");
+  file.pop();
 }
 
 std::unique_ptr<OperatorEstBase> NEEnergyDensityEstimator::spawnCrowdClone() const

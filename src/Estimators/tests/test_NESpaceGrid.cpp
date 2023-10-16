@@ -312,12 +312,12 @@ TEST_CASE("SpaceGrid::hdf5", "[estimators]")
   space_grid.accumulate(sge.pset_elec_.R, values, p_outside, sge.pset_elec_.getDistTableAB(ei_tid));
 
   hdf_archive hd;
-  std::string test_file{"ede_test.hdf"};
+  std::string test_file{"spacegrid_test.hdf"};
   bool okay = hd.create(test_file);
   REQUIRE(okay);
 
   std::vector<ObservableHelper> h5desc;
-  space_grid.registerGrid(hd, h5desc, 0);
+  space_grid.registerGrid(hd, 0);
 
   space_grid.write(hd);
 

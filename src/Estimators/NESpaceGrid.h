@@ -97,7 +97,7 @@ public:
    *  almost unchanged from legacy
    *  \todo uses Observable helper unpleasantly in implementation, remove
    */
-  void registerGrid(hdf_archive& file, std::vector<ObservableHelper>& h5desc, int grid_index);
+  void registerGrid(hdf_archive& file, int grid_index);
 
   void write(hdf_archive& file) const;
   /// @}
