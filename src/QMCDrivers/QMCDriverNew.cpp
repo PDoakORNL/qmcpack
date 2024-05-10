@@ -49,6 +49,7 @@ QMCDriverNew::QMCDriverNew(const ProjectData& project_data,
                            const std::optional<EstimatorManagerInput>& global_emi,
                            WalkerConfigurations& wc,
                            MCPopulation&& population,
+			   const PSPool& pset_pool,
                            const std::string timer_prefix,
                            Communicate* comm,
                            const std::string& QMC_driver_type)
@@ -61,7 +62,7 @@ QMCDriverNew::QMCDriverNew(const ProjectData& project_data,
       timers_(timer_prefix),
       driver_scope_profiler_(qmcdriver_input_.get_scoped_profiling()),
       project_data_(project_data),
-      walker_configs_ref_(wc)
+      walker_configs_ref_(wc))
 {
   // This is done so that the application level input structures reflect the actual input to the code.
   // While the actual simulation objects still take singular input structures at construction.
@@ -81,6 +82,7 @@ QMCDriverNew::QMCDriverNew(const ProjectData& project_data,
                                             makeEstimatorManagerInput(global_emi,
                                                                       qmcdriver_input_.get_estimator_manager_input()),
                                             population_.get_golden_hamiltonian(), population.get_golden_electrons(),
+					    pset_pool,
                                             population.get_golden_twf());
 
   drift_modifier_.reset(

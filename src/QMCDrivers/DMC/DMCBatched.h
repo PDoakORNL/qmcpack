@@ -87,6 +87,7 @@ public:
              DMCDriverInput&& input,
              WalkerConfigurations& wc,
              MCPopulation&& pop,
+	     const QMCDriverNew::PSPool& pset_pool,
              Communicate* comm);
 
   /// Copy Constructor (disabled)
