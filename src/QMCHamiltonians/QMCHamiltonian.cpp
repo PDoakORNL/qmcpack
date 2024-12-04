@@ -264,13 +264,13 @@ void QMCHamiltonian::registerCollectables(std::vector<ObservableHelper>& h5desc,
 
 void QMCHamiltonian::mw_registerKineticListener(QMCHamiltonian& ham_leader, ListenerVector<RealType> listener)
 {
-  // This creates a state replication burder of unknown scope when operators are cloned.
+  // This creates a state replication burden of unknown scope when operators are cloned.
   ham_leader.mw_res_handle_.getResource().kinetic_listeners_.push_back(listener);
 }
 
 void QMCHamiltonian::mw_registerLocalEnergyListener(QMCHamiltonian& ham_leader, ListenerVector<RealType> listener)
 {
-  // This creates a state replication burder of unknown scope when operators are cloned.
+  // This creates a state replication burden of unknown scope when operators are cloned.
   // A local energy listener listens to both the kinetic operator and all involved in the potential.
   ham_leader.mw_res_handle_.getResource().kinetic_listeners_.push_back(listener);
   ham_leader.mw_res_handle_.getResource().potential_listeners_.push_back(listener);
