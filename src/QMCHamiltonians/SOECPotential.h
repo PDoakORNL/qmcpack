@@ -39,6 +39,7 @@ public:
   void resetTargetParticleSet(ParticleSet& P) override;
 
   Return_t evaluate(ParticleSet& P) override;
+
   Return_t evaluateDeterministic(ParticleSet& P) override;
 
   Return_t evaluateValueAndDerivatives(ParticleSet& P,
@@ -50,11 +51,18 @@ public:
                    const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                    const RefVectorWithLeader<ParticleSet>& p_list) const override;
 
+
   void mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase>& o_list,
                               const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                               const RefVectorWithLeader<ParticleSet>& p_list,
-                              const std::vector<ListenerVector<Real>>& listeners,
-                              const std::vector<ListenerVector<Real>>& listeners_ions) const override;
+                              const std::vector<ListenerVector<RealType>>& listeners,
+                              const std::vector<ListenerVector<RealType>>& ion_listeners) const override;
+
+  void mw_evaluatePerParticleWithToperator(const RefVectorWithLeader<OperatorBase>& o_list,
+                                           const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+                                           const RefVectorWithLeader<ParticleSet>& p_list,
+                                           const std::vector<ListenerVector<RealType>>& listeners,
+                                           const std::vector<ListenerVector<RealType>>& ion_listeners) const override;
 
   bool put(xmlNodePtr cur) override { return true; }
 

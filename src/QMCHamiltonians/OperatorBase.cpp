@@ -80,10 +80,10 @@ OperatorBase::Return_t OperatorBase::evaluateDeterministic(ParticleSet& P) { ret
 
 void OperatorBase::mw_evaluate(const RefVectorWithLeader<OperatorBase>& o_list,
                                const RefVectorWithLeader<TrialWaveFunction>& wf_list,
-                               const RefVectorWithLeader<ParticleSet>& p_list) const
+                               const RefVectorWithLeader<ParticleSet>& p_list)  const
 {
   assert(this == &o_list.getLeader());
-/**  Temporary raw omp pragma for simple thread parallelism
+  /**  Temporary raw omp pragma for simple thread parallelism
    *   ignoring the driver level concurrency
    *   
    *  TODO: replace this with a proper abstraction. It should adequately describe the behavior
@@ -106,21 +106,13 @@ void OperatorBase::mw_evaluate(const RefVectorWithLeader<OperatorBase>& o_list,
    *
    *  This is only thread safe only if each walker has a complete
    *  set of anything involved in an Operator.evaluate.
+   *  
+   *
    */
-#pragma omp parallel for
+
   for (int iw = 0; iw < o_list.size(); iw++)
     o_list[iw].evaluate(p_list[iw]);
 }
-
-void OperatorBase::mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase>& o_list,
-                                          const RefVectorWithLeader<TrialWaveFunction>& wf_list,
-                                          const RefVectorWithLeader<ParticleSet>& p_list,
-                                          const std::vector<ListenerVector<RealType>>& listeners,
-                                          const std::vector<ListenerVector<RealType>>& listeners_ions) const
-{
-  mw_evaluate(o_list, wf_list, p_list);
-}
-
 
 void OperatorBase::mw_evaluateWithParameterDerivatives(const RefVectorWithLeader<OperatorBase>& o_list,
                                                        const RefVectorWithLeader<ParticleSet>& p_list,
@@ -145,24 +137,12 @@ OperatorBase::Return_t OperatorBase::evaluateWithToperator(ParticleSet& P) { ret
 void OperatorBase::mw_evaluateWithToperator(const RefVectorWithLeader<OperatorBase>& o_list,
                                             const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                                             const RefVectorWithLeader<ParticleSet>& p_list) const
+
 {
   // Only in NLPP evaluateWithToperator doesn't decay to evaluate. All other derived classes don't
   // provide evaluateWithToperator specialization but may provide mw_evaluate optimization.
   // Thus decaying to mw_evaluate is better than decalying to a loop over evaluateWithToperator
   mw_evaluate(o_list, wf_list, p_list);
-}
-
-void OperatorBase::mw_evaluatePerParticleWithToperator(
-    const RefVectorWithLeader<OperatorBase>& o_list,
-    const RefVectorWithLeader<TrialWaveFunction>& wf_list,
-    const RefVectorWithLeader<ParticleSet>& p_list,
-    const std::vector<ListenerVector<RealType>>& listeners,
-    const std::vector<ListenerVector<RealType>>& listeners_ions) const
-{
-  // This may or may not be what is expected.
-  // It the responsibility of the derived type to override this if the
-  // desired behavior is instead to call mw_evaluatePerParticle
-  mw_evaluateWithToperator(o_list, wf_list, p_list);
 }
 
 OperatorBase::Return_t OperatorBase::evaluateValueAndDerivatives(ParticleSet& P,

@@ -158,6 +158,16 @@ void SOECPotential::mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBas
   mw_evaluateImpl(o_list, wf_list, p_list, l_opt, false);
 }
 
+void SOECPotential::mw_evaluatePerParticleWithToperator(const RefVectorWithLeader<OperatorBase>& o_list,
+                                           const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+                                           const RefVectorWithLeader<ParticleSet>& p_list,
+                                           const std::vector<ListenerVector<Real>>& listeners,
+                                           const std::vector<ListenerVector<Real>>& listeners_ions) const
+{
+  std::optional<ListenerOption<Real>> l_opt(std::in_place, listeners, listeners_ions);
+  mw_evaluateImpl(o_list, wf_list, p_list, l_opt, false);
+}
+
 void SOECPotential::mw_evaluateImpl(const RefVectorWithLeader<OperatorBase>& o_list,
                                     const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                                     const RefVectorWithLeader<ParticleSet>& p_list,

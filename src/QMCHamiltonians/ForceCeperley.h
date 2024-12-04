@@ -45,6 +45,17 @@ public:
   std::string getClassName() const override { return "ForceCeperley"; }
 
   Return_t evaluate(ParticleSet& P) override;
+  void mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase>& o_list,
+                              const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+                              const RefVectorWithLeader<ParticleSet>& p_list,
+                              const std::vector<ListenerVector<RealType>>& listeners,
+                              const std::vector<ListenerVector<RealType>>& ion_listeners) const override;
+
+  void mw_evaluatePerParticleWithToperator(const RefVectorWithLeader<OperatorBase>& o_list,
+                                           const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+                                           const RefVectorWithLeader<ParticleSet>& p_list,
+                                           const std::vector<ListenerVector<RealType>>& listeners,
+                                           const std::vector<ListenerVector<RealType>>& ion_listeners) const override;
 
   void InitMatrix();
 

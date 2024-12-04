@@ -93,6 +93,24 @@ L2Potential::Return_t L2Potential::evaluate(ParticleSet& P)
   return value_;
 }
 
+void L2Potential::mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase>& o_list,
+                                          const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+                                          const RefVectorWithLeader<ParticleSet>& p_list,
+                                          const std::vector<ListenerVector<RealType>>& listeners,
+                                          const std::vector<ListenerVector<RealType>>& ion_listeners) const
+{
+  
+}
+
+void L2Potential::mw_evaluatePerParticleWithToperator(
+    const RefVectorWithLeader<OperatorBase>& o_list,
+    const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+    const RefVectorWithLeader<ParticleSet>& p_list,
+    const std::vector<ListenerVector<RealType>>& listeners,
+    const std::vector<ListenerVector<RealType>>& listeners_ions) const
+{
+  mw_evaluatePerParticle(o_list, wf_list, p_list, listeners, listeners_ions);
+}
 
 void L2Potential::evaluateDK(ParticleSet& P, int iel, TensorType& D, PosType& K)
 {

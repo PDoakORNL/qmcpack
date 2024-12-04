@@ -259,8 +259,11 @@ public:
    * @brief Evaluate the contribution of this component of multiple walkers per particle and report
    * to registerd listeners from objects in Estimators
    *
-   * Base class implementation decays to the mw_evaluate so if not overridden the estimator doesn't
-   * hear from this operator.
+   * Whether you operator reports to the estimators i.e. ie writes to listeners depends on whether it actually conatributes
+   * to the real tolal energy, if it does you must handle this. If not you can write a decay to the non per particle mw_evaluate
+   * for your subclassed operator's override.
+   * Incomplete implementation of operators has already broken estimawtors that depend on this. The intention is that
+   * your incomplete operator implementation will not compile.
    *
    * specialized versions of this should take advantage of multiwalker resources
    * to reduce the resource cost of collecting these values. 
@@ -269,7 +272,7 @@ public:
                                       const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                                       const RefVectorWithLeader<ParticleSet>& p_list,
                                       const std::vector<ListenerVector<RealType>>& listeners,
-                                      const std::vector<ListenerVector<RealType>>& listeners_ions) const;
+                                      const std::vector<ListenerVector<RealType>>& listeners_ions) const = 0;
 
   /**
    * @brief TODO: add docs
@@ -317,7 +320,10 @@ public:
    * @brief Evaluate the contribution of this component of multiple walkers per particle and report
    * to registerd listeners from objects in Estimators
    *
-   * default implementation decays to the mw_evaluatePerParticle.
+   * Whether you operator reports to the estimators i.e. ie writes to listeners should depend on whether it actually conatributes
+   * to the tolal energy and whether it actually does Toperator evaluations.
+   * Careless/Incomplete implementation of operators has already broken estimawtors that depend on this, the intention is that
+   * your incomplete operator implementation will not compile.
    *
    * specialized versions of this should take advantage of multiwalker resources
    * to reduce the resource cost of collecting these values. 
@@ -326,7 +332,7 @@ public:
                                                    const RefVectorWithLeader<TrialWaveFunction>& wf_list,
                                                    const RefVectorWithLeader<ParticleSet>& p_list,
                                                    const std::vector<ListenerVector<RealType>>& listeners,
-                                                   const std::vector<ListenerVector<RealType>>& listeners_ions) const;
+                                                   const std::vector<ListenerVector<RealType>>& listeners_ions) const = 0;
 
 
   /**

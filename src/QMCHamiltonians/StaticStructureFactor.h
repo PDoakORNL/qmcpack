@@ -42,6 +42,18 @@ public:
   bool put(xmlNodePtr cur) override;
   Return_t evaluate(ParticleSet& P) override;
 
+  void mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase>& o_list,
+                              const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+                              const RefVectorWithLeader<ParticleSet>& p_list,
+                              const std::vector<ListenerVector<RealType>>& listeners,
+                              const std::vector<ListenerVector<RealType>>& ion_listeners) const override;
+
+  void mw_evaluatePerParticleWithToperator(const RefVectorWithLeader<OperatorBase>& o_list,
+                                           const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+                                           const RefVectorWithLeader<ParticleSet>& p_list,
+                                           const std::vector<ListenerVector<RealType>>& listeners,
+                                           const std::vector<ListenerVector<RealType>>& ion_listeners) const override;
+  
   //required for Collectables interface
   void addObservables(PropertySetType& plist, BufferType& olist) override;
   void registerCollectables(std::vector<ObservableHelper>& h5desc, hdf_archive& file) const override;

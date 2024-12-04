@@ -70,6 +70,27 @@ ForwardWalking::Return_t ForwardWalking::evaluate(ParticleSet& P)
   return 0.0;
 }
 
+void ForwardWalking::mw_evaluatePerParticle(
+    const RefVectorWithLeader<OperatorBase>& o_list,
+    const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+    const RefVectorWithLeader<ParticleSet>& p_list,
+    const std::vector<ListenerVector<RealType>>& listeners,
+    const std::vector<ListenerVector<RealType>>& listeners_ions) const
+{
+  mw_evaluate(o_list, wf_list, p_list);
+}
+
+void ForwardWalking::mw_evaluatePerParticleWithToperator(
+    const RefVectorWithLeader<OperatorBase>& o_list,
+    const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+    const RefVectorWithLeader<ParticleSet>& p_list,
+    const std::vector<ListenerVector<RealType>>& listeners,
+    const std::vector<ListenerVector<RealType>>& listeners_ions) const
+{
+  mw_evaluatePerParticle(o_list, wf_list, p_list, listeners, listeners_ions);
+}
+
+
 bool ForwardWalking::put(xmlNodePtr cur) { return true; }
 
 bool ForwardWalking::putSpecial(xmlNodePtr cur, QMCHamiltonian& h, ParticleSet& P)

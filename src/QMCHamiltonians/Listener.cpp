@@ -24,16 +24,22 @@ void combinePerParticleEnergies(const CrowdEnergyValues<T>& cev_in, std::vector<
   for (int iw = 0; iw < num_walkers; ++iw)
     values_out[iw].resize(num_particles);
 
+  assert(values_out.size() == num_walkers);
+
   assert(cev_in.begin()->second.size() == values_out.size());
   assert(cev_in.begin()->second[0].size() == values_out[0].size());
 
   for (auto& [component, values] : cev_in)
   {
-    for (int iw = 0; iw < values.size(); ++iw)
+    //assert(values_out.size() <= num_walkers);
+    //assert(values.size() <= num_walkers);
+    for (int iw = 0; iw < num_walkers; ++iw)
     {
+      //assert(values_out[iw].size() == values[iw].size());
+      const std::vector<Vector<T>>& ref_values = values;
       // using Vector operator+=
-      for (int ip = 0; ip < values[iw].size(); ++ip)
-        values_out[iw][ip] += values[iw][ip];
+      for (int ip = 0; ip < num_particles; ++ip)
+        values_out[iw][ip] += ref_values[iw][ip];
     }
   }
 }

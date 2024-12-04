@@ -23,6 +23,10 @@
 
 namespace qmcplusplus
 {
+
+
+/** Is this really a Hamiltonian operator?  Seems like no.
+ */
 class ACForce : public OperatorBase
 {
 public:
@@ -72,6 +76,20 @@ public:
 
   /** Evaluate **/
   Return_t evaluate(ParticleSet& P) final;
+
+
+  void mw_evaluatePerParticle(const RefVectorWithLeader<OperatorBase>& o_list,
+                              const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+                              const RefVectorWithLeader<ParticleSet>& p_list,
+                              const std::vector<ListenerVector<RealType>>& listeners,
+                              const std::vector<ListenerVector<RealType>>& ion_listeners) const override;
+
+
+  void mw_evaluatePerParticleWithToperator(const RefVectorWithLeader<OperatorBase>& o_list,
+                                           const RefVectorWithLeader<TrialWaveFunction>& wf_list,
+                                           const RefVectorWithLeader<ParticleSet>& p_list,
+                                           const std::vector<ListenerVector<RealType>>& listeners,
+                                           const std::vector<ListenerVector<RealType>>& ion_listeners) const override;
 
 private:
   ///Finite difference timestep
