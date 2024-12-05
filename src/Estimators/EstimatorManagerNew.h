@@ -187,6 +187,8 @@ private:
   /// collect data and write
   void makeBlockAverages(unsigned long accept, unsigned long reject);
 
+  void reduceBlockData();
+
   /// write scalars to scalar.dat and h5
   void writeScalarH5();
 

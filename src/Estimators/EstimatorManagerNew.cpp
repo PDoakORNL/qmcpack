@@ -297,22 +297,8 @@ void EstimatorManagerNew::collectOperatorEstimators(const std::vector<RefVector<
   }
 }
 
-void EstimatorManagerNew::makeBlockAverages(unsigned long accepts, unsigned long rejects)
+void EstimatorManagerNew::reduceBlockData()
 {
-  // accumulate unsigned long counters over ranks.
-  // Blocks ends are infrequent, two MPI transfers to preserve type
-  // these could be replaced with a singple call MPI_struct_type some packing scheme or even
-  // a pack into and out of an fp type that can be assured to hold the integral type exactly
-  // IMHO they should not be primarily stored in a vector with magic indexes
-  std::vector<unsigned long> accepts_and_rejects(my_comm_->size() * 2, 0);
-  accepts_and_rejects[my_comm_->rank()]                    = accepts;
-  accepts_and_rejects[my_comm_->size() + my_comm_->rank()] = rejects;
-  my_comm_->allreduce(accepts_and_rejects);
-  int64_t total_block_accept =
-      std::accumulate(accepts_and_rejects.begin(), accepts_and_rejects.begin() + my_comm_->size(), int64_t(0));
-  int64_t total_block_reject = std::accumulate(accepts_and_rejects.begin() + my_comm_->size(),
-                                               accepts_and_rejects.begin() + my_comm_->size() * 2, int64_t(0));
-
   //Transfer FullPrecisionRead data
   const size_t n1 = AverageCache.size();
   const size_t n2 = n1 + PropertyCache.size();
@@ -341,6 +327,25 @@ void EstimatorManagerNew::makeBlockAverages(unsigned long accepts, unsigned long
     for (int i = 1; i < PropertyCache.size(); i++)
       PropertyCache[i] *= invTotWgt;
   }
+}
+
+void EstimatorManagerNew::makeBlockAverages(unsigned long accepts, unsigned long rejects)
+{
+  // accumulate unsigned long counters over ranks.
+  // Blocks ends are infrequent, two MPI transfers to preserve type
+  // these could be replaced with a singple call MPI_struct_type some packing scheme or even
+  // a pack into and out of an fp type that can be assured to hold the integral type exactly
+  // IMHO they should not be primarily stored in a vector with magic indexes
+  std::vector<unsigned long> accepts_and_rejects(my_comm_->size() * 2, 0);
+  accepts_and_rejects[my_comm_->rank()]                    = accepts;
+  accepts_and_rejects[my_comm_->size() + my_comm_->rank()] = rejects;
+  my_comm_->allreduce(accepts_and_rejects);
+  int64_t total_block_accept =
+      std::accumulate(accepts_and_rejects.begin(), accepts_and_rejects.begin() + my_comm_->size(), int64_t(0));
+  int64_t total_block_reject = std::accumulate(accepts_and_rejects.begin() + my_comm_->size(),
+                                               accepts_and_rejects.begin() + my_comm_->size() * 2, int64_t(0));
+
+  reduceBlockData();
 
   // now we put the correct accept ratio in
   PropertyCache[acceptRatioInd] = static_cast<FullPrecRealType>(total_block_accept) /
