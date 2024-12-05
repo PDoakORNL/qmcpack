@@ -74,6 +74,7 @@ public:
   EstimatorManagerNewTestAccess(EstimatorManagerNew& emn) : emn_(emn) {}
 
   void reduceOperatorEstimators() { emn_.reduceOperatorEstimators(); }
+  void stopBlock(unsigned long accept, unsigned long reject, double weight) { emn_.stopBlock(accept, reject, weight); }
 
   const ScalarEstimatorBase& getMainEstimator() { return *(emn_.main_estimator_.get()); }
   RefVector<OperatorEstBase> getOperatorEstimators() { return convertUPtrToRefVector(emn_.operator_ests_); }

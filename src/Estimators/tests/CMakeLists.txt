@@ -35,6 +35,9 @@ set(UTEST_HDF_INPUT_SPINOR ${qmcpack_SOURCE_DIR}/tests/solids/monoO_noncollinear
 set(UTEST_DIR ${CMAKE_CURRENT_BINARY_DIR})
 maybe_symlink(${UTEST_HDF_INPUT} ${UTEST_DIR}/diamondC_1x1x1.pwscf.h5)
 maybe_symlink(${UTEST_HDF_INPUT_SPINOR} ${UTEST_DIR}/o2_45deg_spins.pwscf.h5)
+foreach(fname C.BFD.xml)
+  maybe_symlink(${qmcpack_SOURCE_DIR}/tests/pseudopotentials_for_tests/${fname} ${UTEST_DIR}/${fname})
+endforeach()
 
 set(SRCS
     test_accumulator.cpp
