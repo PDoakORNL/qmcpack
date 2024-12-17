@@ -12,6 +12,7 @@
 
 #include "catch.hpp"
 
+#include "test_EnergyDensityEstimatorIntegration.h"
 #include "Message/Communicate.h"
 #include "OhmmsData/Libxml2Doc.h"
 #include "QMCHamiltonians/QMCHamiltonian.h"
@@ -24,6 +25,7 @@
 #include "EstimatorInputDelegates.h"
 #include "EstimatorManagerCrowd.h"
 #include "Utilities/ProjectData.h"
+#include <for_testing/NativeInitializerPrint.hpp>
 #include "GenerateRandomParticleSets.h"
 #include "EstimatorManagerNewTest.h"
 
@@ -149,19 +151,26 @@ TEST_CASE("EnergyDensityEstimatorIntegration::operator_reporting", "[estimators]
   for (int iw = 0; iw < num_walkers; ++iw)
     savePropertiesIntoWalker(ham_list[iw], walker_list[iw]);
 
+#ifndef NDEBUG
+  {
+    std::vector<RefVector<OperatorEstBase>> crowd_operator_ests = {emc.get_operator_estimators()};
+    auto& e_den_est_crowd = dynamic_cast<NEEnergyDensityEstimator&>((crowd_operator_ests[0])[0].get());
+    e_den_est_crowd.openDebugFile({"eden_values_" + std::to_string(comm->rank()) + "_particle.dat"});
+  }
+#endif
+
   emc.accumulate(walker_list, pset_list, twf_list, ham_list, rng);
 
   std::vector<RefVector<OperatorEstBase>> crowd_operator_ests = {emc.get_operator_estimators()};
   emn.collectOperatorEstimators(crowd_operator_ests);
 
-
   RefVector<ScalarEstimatorBase> main_scalar_estimators;
   main_scalar_estimators.push_back(emc.get_main_estimator());
   emn.collectMainEstimators(main_scalar_estimators);
-  testing::EstimatorManagerNewTestAccess emnta(emn);
-  emnta.reduceOperatorEstimators();
 
+  testing::EstimatorManagerNewTestAccess emnta(emn);
   auto operator_ests = emnta.getOperatorEstimators();
+  emnta.reduceOperatorEstimators();
 
   NEEnergyDensityEstimator& e_den_est = dynamic_cast<NEEnergyDensityEstimator&>(operator_ests[0].get());
 
@@ -181,7 +190,8 @@ TEST_CASE("EnergyDensityEstimatorIntegration::operator_reporting", "[estimators]
   // auto& pph_logger = dynamic_cast<PerParticleHamiltonianLogger&>(operator_ests[1].get());
   // so we just get this ranks;
   auto& pph_logger  = dynamic_cast<PerParticleHamiltonianLogger&>(crowd_operator_ests[0][1].get());
-  auto expected_sum = pph_logger.sumOverAll();
+  using namespace std::string_literals;
+  auto expected_sum = pph_logger.sumOverSome({"local_potential"s, "kinetic_energy"s, "ion_potential"s});
   //Here we check the sum of logged energies against the total energy in the grid.
 
   emnta.stopBlock(16, 0, 16.0);
@@ -192,6 +202,8 @@ TEST_CASE("EnergyDensityEstimatorIntegration::operator_reporting", "[estimators]
     expected_sum *= comm->size();
 
   CHECK(summed_grid == Approx(expected_sum));
+  auto debug_sum = testing::cannedSum() * comm->size();
+  CHECK(summed_grid == Approx(debug_sum));
 }
 
 } // namespace qmcplusplus

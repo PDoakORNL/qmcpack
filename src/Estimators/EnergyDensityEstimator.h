@@ -20,6 +20,7 @@
 #include "NESpaceGrid.h"
 #include "EnergyDensityInput.h"
 #include <ParticleSetPool.h>
+#include <fstream>
 
 namespace qmcplusplus
 {
@@ -114,6 +115,10 @@ public:
 
   RefVector<std::vector<QMCT::RealType>>& getExtraData();
 
+#ifndef NDEBUG
+  void openDebugFile(const std::string& file_name);
+#endif
+
 private:
   auto extractIonPositionsAndCharge(const ParticleSet& pset);
 
@@ -197,6 +202,10 @@ private:
   // // to be computed everywhere from species
   // std::vector<Real> Zptcl;
   // ParticlePos Rptcl;
+
+#ifndef NDEBUG
+  UPtr<std::ofstream> debug_ofs_;
+#endif
 };
 } // namespace qmcplusplus
 

@@ -2,7 +2,7 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2023 QMCPACK developers.
+// Copyright (c) 2024 QMCPACK developers.
 //
 // File developed by: Ye Luo, yeluo@anl.gov, Argonne National Laboratory
 //                    Jaron T. Krogel, krogeljt@ornl.gov, Oak Ridge National Laboratory
@@ -13,6 +13,10 @@
 //////////////////////////////////////////////////////////////////////////////////////
 
 #include "EnergyDensityEstimator.h"
+#ifndef NDEBUG
+#include <for_testing/NativeInitializerPrint.hpp>
+#include <fstream>
+#endif
 
 namespace qmcplusplus
 {
@@ -121,6 +125,7 @@ void NEEnergyDensityEstimator::constructToReferencePoints(ParticleSet& pset_dyna
   ed_values_.resize(n_particles_, N_EDVALS);
 
   // right now this is only the case when pset_static_ && input.get_ion_points_ are true
+
   if (n_ions_ > 0)
   {
     ed_ion_values_.resize(n_ions_, N_EDVALS);
@@ -133,7 +138,15 @@ void NEEnergyDensityEstimator::constructToReferencePoints(ParticleSet& pset_dyna
   ref_points_ = std::make_unique<NEReferencePoints>(input_.get_ref_points_input(), pset_dynamic_, pset_refs);
 }
 
-NEEnergyDensityEstimator::~NEEnergyDensityEstimator() {};
+NEEnergyDensityEstimator::~NEEnergyDensityEstimator() {}
+
+#ifndef NDEBUG
+void NEEnergyDensityEstimator::openDebugFile(const std::string& file_name)
+{
+  debug_ofs_ = std::make_unique<std::ofstream>(file_name);
+  assert(debug_ofs_->is_open());
+}
+#endif
 
 void NEEnergyDensityEstimator::registerListeners(QMCHamiltonian& ham_leader)
 {
@@ -211,6 +224,15 @@ void NEEnergyDensityEstimator::accumulate(const RefVector<MCPWalker>& walkers,
   reduced_local_kinetic_values_.resize(walkers.size());
   reduced_local_pot_values_.resize(walkers.size());
   reduced_local_ion_pot_values_.resize(walkers.size());
+
+#ifndef NDEBUG
+  if (debug_ofs_ != nullptr) {
+    auto& debug_ofs = *debug_ofs_;
+    debug_ofs << "kinetic_values_ = " << NativePrint(kinetic_values_) << '\n'
+               << "local potential values = " << NativePrint(local_pot_values_) << '\n'
+               << "local ion pot values = " << NativePrint(local_ion_pot_values_) << '\n';
+  }
+#endif
 
   // Depending on Hamiltonian setup one or more of these values could be absent.
   if (!local_pot_values_.empty())

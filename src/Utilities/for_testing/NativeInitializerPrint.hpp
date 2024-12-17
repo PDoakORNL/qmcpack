@@ -89,6 +89,30 @@ inline std::ostream& operator<<(std::ostream& out, const NativePrint<Vector<T>>&
   return out;
 }
 
+template<class T>
+inline std::ostream& operator<<(
+    std::ostream& out,
+    const NativePrint<std::unordered_map<std::string, std::vector<Vector<T>>>>& np_crowd_energy)
+{
+  out << "{";
+  auto& crowd_energy = np_crowd_energy.get_obj();
+  for (auto iter = crowd_energy.begin(); iter != crowd_energy.end(); ++iter)
+  {
+    out << "{{\"" << iter->first << "\"}, {";
+    auto& v_walkers = iter->second;
+    for (auto& v_particles : v_walkers)
+    {
+      out << "{";
+      for (const T& t : v_particles)
+        out << std::setprecision(10) << t << ", ";
+      out << "},";
+    }
+    out << " }},\n";
+  }
+  out << "};";
+  return out;
+}
+
 
 } // namespace qmcplusplus
 
