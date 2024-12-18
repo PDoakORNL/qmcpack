@@ -137,7 +137,8 @@ TEST_CASE("NEEnergyDensityEstimator::AccumulateIntegration", "[estimators]")
   for (int i = 0; i < 16000; i++)
     summed_grid += *(grid.getDataVector().begin() + i * 3 + 2) + *(grid.getDataVector().begin() + i * 3 + 1);
 
-  auto expected_sum = pph_logger.sumOverAll();
+  using namespace std::string_literals;
+  auto expected_sum = pph_logger.sumOverSome({"local_potential"s, "kinetic_energy"s, "ion_potential"s});
   //Here we check the sum of logged energies against the total energy in the grid.
   CHECK(summed_grid == Approx(expected_sum));
 

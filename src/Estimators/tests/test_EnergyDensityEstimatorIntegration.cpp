@@ -29,7 +29,7 @@
 #include "GenerateRandomParticleSets.h"
 #include "EstimatorManagerNewTest.h"
 
-constexpr bool generate_test_data = true;
+constexpr bool generate_test_data = false;
 
 namespace qmcplusplus
 {
@@ -88,14 +88,16 @@ TEST_CASE("EnergyDensityEstimatorIntegration::multirank_reduction", "[estimators
 
   double summed_grid = 0;
   // grid memory layout is (W)eight (T) Kinetic (V) potential
-  for (int i = 0; i < 16000; i++)
+  for (int i = 0; i < grid.nDomains(); i++)
     summed_grid += *(grid.getDataVector().begin() + i * 3 + 2) + *(grid.getDataVector().begin() + i * 3 + 1);
 
   // We can't just do this because you do not reduce values down to the head rank per particle logger
   // auto& pph_logger = dynamic_cast<PerParticleHamiltonianLogger&>(operator_ests[1].get());
   // so we just get this ranks;
   auto& pph_logger  = dynamic_cast<PerParticleHamiltonianLogger&>(crowd_operator_ests[0][1].get());
-  auto expected_sum = pph_logger.sumOverAll();
+  
+  using namespace std::string_literals;
+  auto expected_sum = pph_logger.sumOverSome({"local_potential"s, "kinetic_energy"s, "ion_potential"s});
   //Here we check the sum of logged energies against the total energy in the grid.
 
   // The head rank sees the reduction across ranks of the space grid. so its expectation is * num_ranks
@@ -202,7 +204,9 @@ TEST_CASE("EnergyDensityEstimatorIntegration::operator_reporting", "[estimators]
     expected_sum *= comm->size();
 
   CHECK(summed_grid == Approx(expected_sum));
-  auto debug_sum = testing::cannedSum() * comm->size();
+  auto debug_sum = testing::cannedSum();
+  if (comm->rank() == 0)
+    debug_sum *= comm->size();
   CHECK(summed_grid == Approx(debug_sum));
 }
 
