@@ -885,6 +885,27 @@ understand, and review. In this way we can maintain a good collective developmen
 .. _current workflow conventions: https://github.com/QMCPACK/qmcpack/wiki/Development-workflow
 .. _helping others review your changes: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/getting-started/helping-others-review-your-changes
 
+Reviewing Pull Requests
+-----------------------
+
+First and foremost the purpose of code reviews is to ensure correct
+and high quality code is added. Concerns that are primarily with
+regards to local design or style are not a good reason to block a PR merge.
+
+Don't
+~~~~~
+
+* Assume you understand the scope of dependent changes in future PR's.
+  A great deal of developer time has been wasted by Reviewers second guessing
+  necessary changes for larger features.  In review you are insuring
+  correctness, that new code is properly tested and that old code
+  is not broken and remains sufficiently tested.
+
+  Unless a feature is a collective work please wait for completion before requesting a
+  refactor or design changes. You can suggest but it is unreasonable
+  to block.
+
+
 Release Process
 ---------------
 
