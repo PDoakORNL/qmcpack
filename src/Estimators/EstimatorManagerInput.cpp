@@ -91,6 +91,8 @@ void EstimatorManagerInput::readXML(xmlNodePtr cur)
         appendEstimatorInput<MagnetizationDensityInput>(child);
       else if (atype == "energydensity")
         appendEstimatorInput<EnergyDensityInput>(child);
+      else if (atype == "structurefactor")
+	appendEstimatorInput<StructureFactorInput>(child);
       else
         throw UniformCommunicateError(error_tag + "unparsable <estimator> node, name: " + aname + " type: " + atype +
                                       " in Estimators input.");
