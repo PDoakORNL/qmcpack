@@ -55,8 +55,8 @@ private:
 
   std::string name_{"sk"};
   std::string type_{"sk"};
-  std::string source_;
-  std::string target_;
+  std::string source_{"ion0"};
+  std::string target_{"e"};
   bool write_hdf5_{false};
   bool write_rho_{false};
   bool write_ion_ion_{false};
