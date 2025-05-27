@@ -41,6 +41,8 @@ public:
       bools        = {"hdf5", "writerho", "writeionion"};
     }
     // clang-format: on
+    /** Here the delegate input object is registered */
+    StructureFactorInputSection(const StructureFactorInputSection&) = default;
     void checkParticularValidity() override;
   };
 
