@@ -17,6 +17,7 @@
 #include "OhmmsPETE/OhmmsVector.h"
 #include "OhmmsPETE/OhmmsMatrix.h"
 #include "OhmmsPETE/OhmmsArray.h"
+#include "hdf_dataspace.h"
 #include "hdf_dataproxy.h"
 
 namespace qmcplusplus
@@ -53,9 +54,17 @@ struct h5data_proxy<Vector<T>> : public h5_space_type<T, 1>
                      hsize_t& current_append_index,
                      hid_t xfer_plist = H5P_DEFAULT)
   {
-    std::array<hsize_t, 2> my_dims{1, dims[0]};
-    return h5d_append(grp, aname.c_str(), current_append_index, 2, my_dims.data(), get_address(ref.data()), 1,
-                      xfer_plist);
+    std::array<hsize_t, FileSpace::rank> my_dims;
+    my_dims[0]    = ref.size();
+    int dim_index = 1;
+    for (auto dim : dims)
+    {
+      my_dims[dim_index] = dims[dim_index];
+      ++dim_index;
+    }
+    int index{1};
+    return h5d_append(grp, aname.c_str(), current_append_index, FileSpace::rank, my_dims.data(),
+                      get_address(ref.data()), 1, xfer_plist);
   }
 };
 
