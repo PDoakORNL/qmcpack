@@ -64,7 +64,6 @@ struct h5data_proxy<Vector<T>> : public h5_space_type<T, 1>
       my_dims[dim_index] = dim;
       ++dim_index;
     }
-    std::cout << "append dims : " << NativePrint(my_dims) << "\n";
     int index{1};
     return h5d_append(grp, aname.c_str(), current_append_index, FileSpace::rank + 1, my_dims.data(),
                       get_address(ref.data()), 1, xfer_plist);
