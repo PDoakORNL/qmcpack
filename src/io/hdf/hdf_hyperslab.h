@@ -129,9 +129,12 @@ struct hyperslab_proxy
   inline void adaptShape(const std::vector<IT>& sizes_file)
   {
     // validate user ranks
+    using namespace std::string_literals;
     if (sizes_file.size() != slab_rank)
-      throw std::runtime_error("User specified and filespace dimensions mismatch!\n");
-
+    {
+      throw std::runtime_error("User specified rank "s + std::to_string(sizes_file.size()) +
+                               " and filespace dimensions " + std::to_string(slab_rank) + " mismatch!\n"s);
+    }
     for (int dim = 0; dim < slab_rank; dim++)
     {
       if (file_space.dims[dim] == 0)

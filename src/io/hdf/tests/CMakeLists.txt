@@ -19,7 +19,7 @@ set(UTEST_DIR ${CMAKE_CURRENT_BINARY_DIR})
 set(UTEST_SRC test_hdf_archive.cpp test_hdf_error_suppression.cpp test_hdf_path.cpp test_hdf_parallel.cpp test_hdf_reshape.cpp test_hdf_hyperslab.cpp)
 
 add_executable(${UTEST_EXE} ${UTEST_SRC})
-target_link_libraries(${UTEST_EXE} catch_main qmcio)
+target_link_libraries(${UTEST_EXE} catch_main qmcio containers)
 
 if(BUILD_AFQMC)
   target_sources(${UTEST_EXE} PUBLIC test_hdf_multiarray.cpp)
