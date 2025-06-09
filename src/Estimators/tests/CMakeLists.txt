@@ -27,7 +27,7 @@ if(USE_OBJECT_TARGET)
 else()
   add_library(test_estimators_help ${TEST_ESTIMATORS_HELP})
 endif()
-target_link_libraries(test_estimators_help catch_main qmcestimators minimal_testing_pools utilities_for_test)
+target_link_libraries(test_estimators_help catch_main qmcestimators utilities_for_test)
 
 set(UTEST_EXE test_${SRC_DIR})
 set(UTEST_NAME deterministic-unit_test_${SRC_DIR})

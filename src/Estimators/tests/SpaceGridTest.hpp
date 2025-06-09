@@ -12,7 +12,7 @@
 
 #include "ValidReferencePointsInput.h"
 #include "ValidSpaceGridInput.h"
-#include <MinimalParticlePool.h>
+#include "Particle/tests/MinimalParticlePool.h"
 #include "OperatorEstBase.h"
 #include <NESpaceGrid.h>
 
@@ -73,7 +73,6 @@ public:
 private:
   std::vector<ParticleSet> psets_;
   const SpaceGridEnv<VALID>& sgenv_;
-  
 };
 
 extern template class SpaceGridTest<float, ValidSpaceGridInput::valid::DEFAULT>;

@@ -109,7 +109,7 @@ public:
    *
    *  This method accumulates to this space grid, at least in DMC with each step.
    *
-   *  right now cartesian grids are assumed to be periodic because this was the legacy behavior 
+   *  right now cartesian grids are assumed to be periodic because this was the legacy behavior
    *  In the period case the assumption minimum image is called holds, a out of bounds exception will occur
    *  for anything coordinate more than one grid cell outside of the periodic boundaries and density can
    *  incorrectly be accumulated at the edges of the grid for particles outside of the minimum image boundary
@@ -131,7 +131,7 @@ public:
   /** collect to the rank level space grid.
    *  This is intended to occur each block. accumulated state is of the crowd grids is not changed.
    */
-  void static collect(NESpaceGrid& reduction_grid, const RefVector<const NESpaceGrid> grid_for_each_crowd);
+  void static collect(NESpaceGrid& reduction_grid, const RefVector<NESpaceGrid> grid_for_each_crowd);
 
   void zero();
 
@@ -163,7 +163,7 @@ private:
    *  Causes side effects updating
    *    origin_    fixed up origin for grid
    *    axes_      axes with scaling applied to it.
-   *    axinv_     the inverse of the axes with scaling applied   
+   *    axinv_     the inverse of the axes with scaling applied
    */
   bool initializeRectilinear(const SpaceGridInput& input, const Points& points);
 
@@ -173,7 +173,7 @@ private:
    *  Causes side effects updating
    *    origin_    fixed up origin for grid
    *    axes_      axes with scaling applied to it.
-   *    axinv_     the inverse of the axes with scaling applied   
+   *    axinv_     the inverse of the axes with scaling applied
    */
   bool initializeCylindrical(const SpaceGridInput& input, const Points& points);
 
@@ -183,7 +183,7 @@ private:
    *  Causes side effects updating
    *    origin_    fixed up origin for grid
    *    axes_      axes with scaling applied to it.
-   *    axinv_     the inverse of the axes with scaling applied   
+   *    axinv_     the inverse of the axes with scaling applied
    */
   bool initializeSpherical(const SpaceGridInput& input, const Points& points);
 
@@ -278,7 +278,7 @@ template<typename POS>
 auto NESpaceGrid<REAL>::findGMapIndexes(const POS& position)
 {
   std::array<int, OHMMS_DIM> iu;
-  Point u              = dot(axinv_, (position - origin_));
+  Point u = dot(axinv_, (position - origin_));
 
   auto gmapIndex = [this](int d, const auto& u) {
     int raw_index = std::floor((u[d] - this->umin_[d]) * this->odu_[d]);
@@ -297,8 +297,7 @@ auto NESpaceGrid<REAL>::findGMapIndexes(const POS& position)
   catch (const std::exception& exc)
   {
     std::ostringstream error;
-    error << "NESpaceGrid: position: " << position << " u: " << u + origin_ << "   u-org: " << u
-          << '\n'
+    error << "NESpaceGrid: position: " << position << " u: " << u + origin_ << "   u-org: " << u << '\n'
           << "which maps to ";
     for (int d = 0; d < OHMMS_DIM; ++d)
       error << gmapIndex(d, u) << ",  umin: " << umin_[d] << "  umax: " << umax_[d] << "  odu: " << odu_[d] << '\n';
@@ -308,7 +307,7 @@ auto NESpaceGrid<REAL>::findGMapIndexes(const POS& position)
   }
   return iu;
 }
- 
+
 extern template class NESpaceGrid<float>;
 extern template class NESpaceGrid<double>;
 

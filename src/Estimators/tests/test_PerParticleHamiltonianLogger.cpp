@@ -14,12 +14,11 @@
 #include "PerParticleHamiltonianLogger.h"
 
 #include <filesystem>
-
+#include "OhmmsData/Libxml2Doc.h"
 #include "Utilities/StdRandom.h"
 
 namespace qmcplusplus
 {
-
 using QMCT = QMCTraits;
 using Real = QMCT::RealType;
 
@@ -31,7 +30,7 @@ private:
   int walkers_;
 
 public:
-  MultiWalkerTalker(const std::string& name, int walkers) : name_(name), walkers_(walkers){};
+  MultiWalkerTalker(const std::string& name, int walkers) : name_(name), walkers_(walkers) {};
   void registerVector(ListenerVector<Real>& listener_vector) { listener_vectors_.push_back(listener_vector); }
   void reportVector()
   {
@@ -121,14 +120,14 @@ TEST_CASE("PerParticleHamiltonianLogger_sum", "[estimators]")
 
     FakeRandom<OHMMS_PRECISION_FULL> rng;
 
-    int crowd_id = 0;
+    int crowd_id   = 0;
     long walker_id = 0;
     for (auto& crowd_oeb : crowd_loggers)
     {
       // Mocking walker ids
       using Walker = typename decltype(ref_walkers)::value_type::type;
-      for(Walker& walker : ref_walkers)
-	walker.setWalkerID(walker_id++);
+      for (Walker& walker : ref_walkers)
+        walker.setWalkerID(walker_id++);
       crowd_oeb->accumulate(ref_walkers, ref_psets, ref_wfns, ref_hams, rng);
     }
 

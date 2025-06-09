@@ -275,7 +275,7 @@ void NEEnergyDensityEstimator::evaluate(ParticleSet& pset, const MCPWalker& walk
   if (pset_static_)
   {
     const ParticleSet& Ps = *pset_static_;
-    auto& Vs        = reduced_local_ion_pot_values_[walker_index];
+    auto& Vs              = reduced_local_ion_pot_values_[walker_index];
     Vs.resize(Ps.getTotalNum());
     if (!input_.get_ion_points())
     {
@@ -335,7 +335,7 @@ void NEEnergyDensityEstimator::collect(const RefVector<OperatorEstBase>& type_er
   int num_crowds = type_erased_operator_estimators.size();
   for (int ig = 0; ig < spacegrids_.size(); ++ig)
   {
-    RefVector<const NESpaceGrid<Real>> crowd_grids;
+    RefVector<NESpaceGrid<Real>> crowd_grids;
     crowd_grids.reserve(num_crowds);
     for (OperatorEstBase& crowd_oeb : type_erased_operator_estimators)
     {

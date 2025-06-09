@@ -16,6 +16,7 @@
 #include "EstimatorTesting.h"
 #include "ValidEnergyDensityInput.h"
 #include <iostream>
+#include "OhmmsData/Libxml2Doc.h"
 
 namespace qmcplusplus
 {
@@ -27,7 +28,7 @@ TEST_CASE("EnergyDensityInput::parseXML::valid", "[estimators]")
   int test_num = 0;
   for (auto input_xml : input)
   {
-    std::cout << "input number: " << test_num++ << '\n'; 
+    std::cout << "input number: " << test_num++ << '\n';
     Libxml2Document doc;
     bool okay       = doc.parseFromString(input_xml);
     xmlNodePtr node = doc.getRoot();
@@ -80,7 +81,7 @@ TEST_CASE("EnergyDensityInput::copy_construction", "[estimators]")
   EnergyDensityInput edi(node);
 
   static_assert(std::is_copy_constructible_v<EnergyDensityInput>);
-  
+
   EnergyDensityInput edi2(edi);
 }
 

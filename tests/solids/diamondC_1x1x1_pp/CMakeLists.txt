@@ -753,7 +753,7 @@ if(add_estimator_tests)
     -s
     0
     -q
-    'energydensity,EDcellBatched'
+    'energydensity,EDcell'
     -e
     20
     -c
@@ -762,7 +762,7 @@ if(add_estimator_tests)
     qmc_edens_cell_short_batched
     -r
     qmc-ref/qmc_edens_cell_short.s000.stat_ref_energydensity.dat)
-  
+
   simple_run_and_check(
     short-diamondC_1x1x1_pp-vmc-estimator-energydensity-voronoi
     "${qmcpack_SOURCE_DIR}/tests/solids/diamondC_1x1x1_pp"
@@ -1855,7 +1855,7 @@ if(add_traces_tests)
       check_traces.py
       -p
       qmc_trace_scalars
-      -n 
+      -n
       4
       -s
       '0,1'
@@ -1910,7 +1910,7 @@ if(add_traces_tests)
       -m
       vmc
       --dmc_steps_exclude=1)
- 
+
     simple_run_and_check(
       deterministic-diamondC_1x1x1_pp-vmc-walkerlog_scalars
       "${qmcpack_SOURCE_DIR}/tests/solids/diamondC_1x1x1_pp"
@@ -1959,7 +1959,7 @@ if(add_traces_tests)
       -m
       vmc
       --dmc_steps_exclude=1)
- 
+
     simple_run_and_check(
       deterministic-diamondC_1x1x1_pp-vmcbatch-walkerlog_scalars
       "${qmcpack_SOURCE_DIR}/tests/solids/diamondC_1x1x1_pp"
@@ -2025,7 +2025,7 @@ if(add_traces_tests)
       check_traces.py
       -p
       qmc_trace_scalars_selective
-      -n 
+      -n
       4
       -s
       '0,1'
@@ -2223,4 +2223,3 @@ qmc_run_and_check(
   1
   1
   FALSE)
-
