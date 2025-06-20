@@ -586,4 +586,11 @@ void DMCBatched::createStepContexts(int num_crowds)
                                                                dmcdriver_input_.get_gamma()));
 }
 
+void DMCBatched::mockRunStart()
+{
+  estimator_manager_->startDriverRun();
+  StateForThread dmc_state(qmcdriver_input_, *drift_modifier_, *branch_engine_, population_, steps_per_block_,
+                           serializing_crowd_walkers_);
+
+
 } // namespace qmcplusplus
