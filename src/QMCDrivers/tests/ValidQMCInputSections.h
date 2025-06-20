@@ -139,7 +139,7 @@ private:
 )XML",
       R"XML(
   <qmc method="dmc_batch" move="pbyp">
-    <parameter name="crowds">                 4 </parameter>
+<parameter name="crowds">                 4 </parameter>
     <estimator name="LocalEnergy" hdf5="no" />
     <parameter name="total_walkers">          8 </parameter>
     <parameter name="reserve">             1.25 </parameter>
@@ -153,6 +153,9 @@ private:
 )XML",
       R"XML(
   <qmc method="dmc" move="pbyp">
+    <estimators>
+      <estimator type="PerParticleHamiltonianLogger" to_stdout="false" />
+    </estimators>
     <parameter name="crowds">                 4 </parameter>
     <estimator name="LocalEnergy" hdf5="no" />
     <parameter name="total_walkers">          8 </parameter>
