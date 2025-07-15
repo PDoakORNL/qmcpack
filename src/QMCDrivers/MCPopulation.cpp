@@ -157,6 +157,88 @@ void MCPopulation::createWalkers(IndexType num_walkers, const WalkerConfiguratio
   // And now num_local_walkers_ will be correct.
 }
 
+void MCPopulation::createWalkersInCrowd(int crowd_id,
+                                        UPtrVector<Crowd>& crowds,
+                                        IndexType num_walkers,
+                                        const WalkerConfigurations& walker_configs,
+                                        RealType reserve)
+{
+  assert(reserve >= 1.0);
+  IndexType num_walkers_plus_reserve = static_cast<IndexType>(num_walkers * reserve);
+
+  // Hack to hopefully insure no truly new walkers will be made by spawn, since I suspect that
+  // doesn't capture everything that needs to make a walker + elements valid to load from a transferred
+  // buffer;
+  // Ye: need to resize walker_t and ParticleSet Properties
+  // Really MCPopulation does not own this elec_particle_set_  seems like it should be immutable
+  elec_particle_set_->Properties.resize(1, elec_particle_set_->PropertyList.size());
+
+  // This pattern is begging for a micro benchmark, is this really better
+  // than the simpler walkers_.pushback;
+  walkers_.resize(num_walkers_plus_reserve);
+  walker_elec_particle_sets_.resize(num_walkers_plus_reserve);
+  walker_trial_wavefunctions_.resize(num_walkers_plus_reserve);
+  walker_hamiltonians_.resize(num_walkers_plus_reserve);
+
+  outputManager.pause();
+
+  // nextWalkerID is not thread safe so we need to get our walker id's here
+  // before we enter a parallel section.
+  std::vector<long> walker_ids(num_walkers_plus_reserve, 0);
+  // notice we only get walker_ids for the number of walkers in the walker_configs
+  for (size_t iw = 0; iw < num_walkers; iw++)
+    walker_ids[iw] = nextWalkerID();
+
+  // this part is time consuming, it must be threaded and calls should be thread-safe.
+  // It would make more sense if it was over crowd threads as the thread locality of the walkers
+  // would at least initially be "optimal" Depending on the number of OMP threads and implementation
+  // this may be equivalent.
+#pragma omp parallel for shared(walker_ids)
+  for (size_t iw = 0; iw < num_walkers_plus_reserve; iw++)
+  {
+    // initialize walkers from existing walker_configs
+    if (const auto num_existing_walkers = walker_configs.getActiveWalkers())
+    {
+      walkers_[iw] = std::make_unique<MCPWalker>(*walker_configs[iw % num_existing_walkers]);
+      // An outside section context parent ID is multiplied by -1.
+      walkers_[iw]->setParentID(-1 * walker_configs[iw % num_existing_walkers]->getWalkerID());
+      walkers_[iw]->setWalkerID(walker_ids[iw]);
+    }
+    else // these are fresh walkers no incoming walkers
+    {
+      // These walkers are orphans they don't get their intial configuration from a walkerconfig
+      // but from the golden particle set.  They get an walker ID of 0;
+      walkers_[iw] = std::make_unique<MCPWalker>(walker_ids[iw], 0 /* parent_id */, elec_particle_set_->getTotalNum());
+      // Should these get a randomize from source?
+      // This seems to be what happens in legacy but its surprisingly opaque there
+      // How is it not undesirable to have all these walkers start from the same positions
+      walkers_[iw]->R     = elec_particle_set_->R;
+      walkers_[iw]->spins = elec_particle_set_->spins;
+    }
+
+    walkers_[iw]->Properties = elec_particle_set_->Properties;
+    walkers_[iw]->registerData();
+    walkers_[iw]->DataSet.allocate();
+
+    walker_elec_particle_sets_[iw]  = std::make_unique<ParticleSet>(*elec_particle_set_);
+    walker_trial_wavefunctions_[iw] = trial_wf_->makeClone(*walker_elec_particle_sets_[iw]);
+    walker_hamiltonians_[iw] =
+        hamiltonian_->makeClone(*walker_elec_particle_sets_[iw], *walker_trial_wavefunctions_[iw]);
+  };
+
+  outputManager.resume();
+
+  // kill and spawn walkers update the state variable num_local_walkers_
+  // so it must start at the number of reserved walkers
+  num_local_walkers_ = num_walkers_plus_reserve;
+
+  IndexType extra_walkers = num_walkers_plus_reserve - num_walkers;
+  // Now we kill the extra reserve walkers and elements that we made.
+  for (int i = 0; i < extra_walkers; ++i)
+    killLastWalker();
+  // And now num_local_walkers_ will be correct.
+}
+
 long MCPopulation::nextWalkerID() { return num_walkers_created_++ * num_ranks_ + rank_ + 1; }
 
 WalkerElementsRef MCPopulation::getWalkerElementsRef(const size_t index)

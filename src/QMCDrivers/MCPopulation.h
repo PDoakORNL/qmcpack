@@ -131,8 +131,30 @@ public:
    */
   void createWalkers(IndexType num_walkers, const WalkerConfigurations& walker_configs, RealType reserve = 1.0);
 
+  /** Creates walkers with a clone of the golden electron particle set
+   * and golden trial wavefunction in controlled crowd contexts
+   *
+   *  this facilitates reproducible results by not producing a
+   *  threaded context where we don't have strict control and
+   *  knowledge
+   *  of RNG walkconfig assignment etc.
+   *
+   *  \param[in] crowd_id         crowd function is running in
+   *  \param[in] crowds           the crowds
+   *  \param[in] num_walkers      for the rank
+   *  \param[in] walker_configs   0 or more walker configurations will be assigned
+   *                              cyclically if num_walkers > walker_configs.getActiveWalkers()
+   *  \param[in] reserve          multiple above num_walker to
+   *                              reserve >=1.0
+   */
+  void createWalkersInCrowd(int crowd_id,
+                            UPtrVector<Crowd>& crowds,
+                            IndexType num_walkers,
+                            const WalkerConfigurations& walker_configs,
+                            RealType reserve = 1.0);
+
   /** distributes walkers and their "cloned" elements to the elements of a vector
-   *  of unique_ptr to "walker_consumers". 
+   *  of unique_ptr to "walker_consumers".
    *
    *  a valid "walker_consumer" has a member function of
    *  void addWalker(MCPWalker& walker, ParticleSet& elecs, TrialWaveFunction& twf, QMCHamiltonian& hamiltonian);
@@ -217,7 +239,7 @@ public:
   UPtrVector<QMCHamiltonian>& get_dead_hamiltonians() { return dead_walker_hamiltonians_; }
 
   /** Non threadsafe access to walkers and their elements
-   *  
+   *
    *  Prefer to distribute the walker elements and access
    *  through a crowd to support the concurrency design.
    *
