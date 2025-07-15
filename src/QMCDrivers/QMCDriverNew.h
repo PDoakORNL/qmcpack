@@ -16,7 +16,7 @@
  *
  * This will replace QMCDriver once unified drivers are finished
  * the general documentation from QMCDriver.h must be moved before then
- *  
+ *
  * This driver base class should be generic with respect to precision,
  * value type, device execution, and ...
  * It should contain no typdefs not related to compiler bugs or platform workarounds
@@ -43,6 +43,7 @@
 #include "Particle/MCCoords.hpp"
 #include "WalkerLogInput.h"
 #include <algorithm>
+#include "ContextForSteps.hpp"
 
 class Communicate;
 
@@ -77,7 +78,7 @@ public:
   using IndexType        = QMCTraits::IndexType;
   using FullPrecRealType = QMCTraits::FullPrecRealType;
   /** separate but similar to QMCModeEnum
-   *  
+   *
    *  a code smell
    */
   enum
@@ -111,17 +112,6 @@ public:
   //xmlNodePtr walker_logs_xml;
 
 protected:
-  /// a collection of driver-specific objects needed per batch
-  class ContextForSteps
-  {
-  public:
-    ContextForSteps(RandomBase<FullPrecRealType>& random_gen) : random_gen_(random_gen) {}
-    RandomBase<FullPrecRealType>& get_random_gen() { return random_gen_; }
-
-  protected:
-    RandomBase<FullPrecRealType>& random_gen_;
-  };
-
   /** This is a data structure strictly for QMCDriver and its derived classes
    *
    *  i.e. its nested in scope for a reason
@@ -137,7 +127,7 @@ protected:
    *
    * set up population_, crowds_
    */
-  void initPopulationAndCrowds(const AdjustedWalkerCounts& awc);
+  void initPopulationAndCrowds(const AdjustedWalkerCounts& awc, RefVector<ContextForSteps> context_for_steps);
 
   /// inject additional barrier and measure load imbalance.
   void measureImbalance(const std::string& tag) const;
@@ -184,6 +174,16 @@ public:
   */
   void makeLocalWalkers(int nwalkers, RealType reserve);
 
+  /** Adjust populations local walkers to this number
+  * @param nwalkers number of walkers to add
+  *
+  */
+  void makeLocalWalkers(int nwalkers,
+                        RealType reserve,
+                        UPtrVector<Crowd>& crowds,
+                        const RefVector<ContextForSteps>& contexts_for_steps);
+
+
   DriftModifierBase& get_drift_modifier() const { return *drift_modifier_; }
 
   const RefVector<RandomBase<FullPrecRealType>>& getRngRefs() const { return rngs_; }
@@ -219,7 +219,7 @@ public:
    */
   void setStatus(const std::string& aname, const std::string& h5name, bool append) override;
 
-  void add_H_and_Psi(QMCHamiltonian* h, TrialWaveFunction* psi) override{};
+  void add_H_and_Psi(QMCHamiltonian* h, TrialWaveFunction* psi) override {};
 
   void putWalkers(std::vector<xmlNodePtr>& wset) override;
 
@@ -310,7 +310,7 @@ protected:
    */
   static int determineNumCrowds(const int requested_num_crowds, const int rng_count);
 
-  /** pure function returning AdjustedWalkerCounts data structure 
+  /** pure function returning AdjustedWalkerCounts data structure
    *
    *  The logic is now walker counts is fairly simple.
    *  TotalWalkers trumps all other walker parameters
@@ -353,7 +353,7 @@ protected:
 
   /** The timers for the driver.
    *
-   * This cleans up the driver constructor, and a reference to this structure 
+   * This cleans up the driver constructor, and a reference to this structure
    * Takes the timers into thread scope. We assume the timers are threadsafe.
    */
   struct DriverTimers

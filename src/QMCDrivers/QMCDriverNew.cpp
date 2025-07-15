@@ -17,6 +17,7 @@
 
 #include "QMCDriverNew.h"
 #include "Concurrency/ParallelExecutor.hpp"
+#include "ContextForSteps.hpp"
 #include "ParticleBase/ParticleUtility.h"
 #include "ParticleBase/RandomSeqGenerator.h"
 #include "Utilities/FairDivide.h"
@@ -41,7 +42,7 @@
 namespace qmcplusplus
 {
 /** Has nasty workaround for RandomNumberControl
- *   
+ *
  *  Num crowds must be less than omp_get_max_threads because RandomNumberControl is global c lib function
  *  masquerading as a C++ object.
  */
@@ -102,7 +103,8 @@ int QMCDriverNew::determineNumCrowds(const int requested_num_crowds, const int r
   return num_crowds;
 }
 
-void QMCDriverNew::initPopulationAndCrowds(const AdjustedWalkerCounts& awc)
+void QMCDriverNew::initPopulationAndCrowds(const AdjustedWalkerCounts& awc,
+                                           RefVector<ContextForSteps> context_for_steps)
 {
   app_summary() << QMCType << " Driver running with" << std::endl
                 << "             total_walkers     = " << awc.global_walkers << std::endl
@@ -144,16 +146,10 @@ void QMCDriverNew::initPopulationAndCrowds(const AdjustedWalkerCounts& awc)
     app_debug() << "Multi walker shared resources creation completed" << std::endl;
   }
 
-  makeLocalWalkers(awc.walkers_per_rank[myComm->rank()], awc.reserve_walkers);
+  makeLocalWalkers(awc.walkers_per_rank[myComm->rank()], awc.reserve_walkers, crowds_, context_for_steps);
 
-  crowds_.resize(awc.walkers_per_crowd.size());
 
   // at this point we can finally construct the Crowd objects.
-  for (int i = 0; i < crowds_.size(); ++i)
-  {
-    crowds_[i] = std::make_unique<Crowd>(*estimator_manager_, golden_resource_, population_.get_golden_electrons(),
-                                         population_.get_golden_twf(), population_.get_golden_hamiltonian());
-  }
 
   //now give walkers references to their walkers
   population_.redistributeWalkers(crowds_);
@@ -177,7 +173,7 @@ void QMCDriverNew::setStatus(const std::string& aname, const std::string& h5name
  * @param wset list of xml elements containing mcwalkerset
  *
  * All this does is look in the walker xml section for the hdf file.
- * It reads that (I think) and if there are active walkers 
+ * It reads that (I think) and if there are active walkers
  * declares it a restart run.
  *
  * This inferred behavior is asking for trouble.
@@ -253,6 +249,31 @@ void QMCDriverNew::makeLocalWalkers(IndexType nwalkers, RealType reserve)
       population_.killLastWalker();
   }
 }
+
+void QMCDriverNew::makeLocalWalkers(IndexType nwalkers,
+                                    RealType reserve,
+                                    UPtrVector<Crowd>& crowds,
+                                    const RefVector<ContextForSteps>& contexts_for_steps)
+{
+  ScopedTimer local_timer(timers_.create_walkers_timer);
+  // ensure nwalkers local walkers in population_
+  if (population_.get_walkers().size() == 0)
+    population_.createWalkersInCrowd(contexts_for_steps, crowds, nwalkers, walker_configs_ref_, reserve);
+  else if (population_.get_walkers().size() < nwalkers)
+  {
+    throw std::runtime_error("Unexpected walker count resulting in dangerous spawning");
+    IndexType num_additional_walkers = nwalkers - population_.get_walkers().size();
+    for (int i = 0; i < num_additional_walkers; ++i)
+      population_.spawnWalker();
+  }
+  else
+  {
+    IndexType num_walkers_to_kill = population_.get_walkers().size() - nwalkers;
+    for (int i = 0; i < num_walkers_to_kill; ++i)
+      population_.killLastWalker();
+  }
+}
+
 
 void QMCDriverNew::initialLogEvaluation(int crowd_id,
                                         UPtrVector<Crowd>& crowds,

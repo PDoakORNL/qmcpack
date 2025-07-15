@@ -2,7 +2,7 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2024 QMCPACK developers.
+// Copyright (c) 2025 QMCPACK developers.
 //
 // File developed by: Peter Doak, doakpw@ornl.gov, Oak Ridge National Laboratory
 //                    Ye Luo, yeluo@anl.gov, Argonne National Laboratory
@@ -22,6 +22,7 @@
 #include "ParticleBase/ParticleAttrib.h"
 #include "Particle/Walker.h"
 #include "QMCWaveFunctions/TrialWaveFunction.h"
+#include "ContextForSteps.hpp"
 #include "QMCDrivers/WalkerElementsRef.h"
 #include "OhmmsPETE/OhmmsVector.h"
 #include "Utilities/FairDivide.h"
@@ -36,6 +37,7 @@ namespace qmcplusplus
 {
 // forward declaration
 class QMCHamiltonian;
+class Crowd;
 class MCPopulation
 {
 public:
@@ -66,6 +68,13 @@ private:
   std::vector<RealType> ptclgrp_inv_mass_;
   ///1/Mass per particle
   std::vector<RealType> ptcl_inv_mass_;
+
+  struct GoldenSet
+  {
+    TrialWaveFunction& trial_wf;
+    ParticleSet& elec_particle_set;
+    QMCHamiltonian& hamiltonian;
+  };
 
   // This is necessary MCPopulation is constructed in a simple call scope in QMCDriverFactory from the legacy MCWalkerConfiguration
   // MCPopulation should have QMCMain scope eventually and the driver will just have a reference to it.
@@ -147,11 +156,24 @@ public:
    *  \param[in] reserve          multiple above num_walker to
    *                              reserve >=1.0
    */
-  void createWalkersInCrowd(int crowd_id,
+  void createWalkersInCrowd(RefVector<ContextForSteps> step_context_refs,
                             UPtrVector<Crowd>& crowds,
                             IndexType num_walkers,
                             const WalkerConfigurations& walker_configs,
                             RealType reserve = 1.0);
+
+  static void createWalkersCrowd(int crowd_id,
+                                 const GoldenSet gold_set,
+                                 UPtrVector<Crowd>& crowds,
+                                 const RefVector<ContextForSteps>& context_for_steps,
+                                 const WalkerConfigurations& walker_configs,
+                                 std::vector<IndexType>& walker_occupations,
+                                 std::vector<IndexType>& crowd_offsets,
+                                 std::vector<long>& walker_ids,
+                                 UPtrVector<MCPWalker>& walkers,
+                                 UPtrVector<ParticleSet>& walker_elec_particle_sets,
+                                 UPtrVector<TrialWaveFunction>& walker_trial_wavefunctions,
+                                 UPtrVector<QMCHamiltonian>& walker_hamiltonians);
 
   /** distributes walkers and their "cloned" elements to the elements of a vector
    *  of unique_ptr to "walker_consumers".

@@ -30,6 +30,7 @@ set(QMCDRIVERS
     MCPopulation.cpp
     QMCDriver.cpp
     QMCDriverInput.cpp
+    ContextForSteps.cpp
     QMCDriverNew.cpp
     WFOpt/LinearMethod.cpp
     WFOpt/ConjugateGradient.cpp

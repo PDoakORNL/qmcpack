@@ -388,12 +388,19 @@ void DMCBatched::process(xmlNodePtr node)
                                 qmcdriver_input_.get_walkers_per_rank(), dmcdriver_input_.get_reserve(),
                                 determineNumCrowds(qmcdriver_input_.get_num_crowds(), rngs_.size()));
 
+    crowds_.resize(awc.walkers_per_crowd.size());
+    for (int i = 0; i < crowds_.size(); ++i)
+    {
+      crowds_[i] = std::make_unique<Crowd>(*estimator_manager_, golden_resource_, population_.get_golden_electrons(),
+                                           population_.get_golden_twf(), population_.get_golden_hamiltonian());
+    }
+
     steps_per_block_ =
         determineStepsPerBlock(awc.global_walkers, qmcdriver_input_.get_requested_samples(),
                                qmcdriver_input_.get_requested_steps(), qmcdriver_input_.get_max_blocks());
 
-    initPopulationAndCrowds(awc);
     createStepContexts(crowds_.size());
+    initPopulationAndCrowds(awc, getContextForStepsRefs());
   }
   catch (const UniformCommunicateError& ue)
   {
@@ -552,7 +559,7 @@ bool DMCBatched::run()
   return finalize(num_blocks, true);
 }
 
-RefVector<QMCDriverNew::ContextForSteps> DMCBatched::getContextForStepsRefs() const
+RefVector<ContextForSteps> DMCBatched::getContextForStepsRefs() const
 {
   RefVector<ContextForSteps> refs;
   refs.reserve(step_contexts_.size());

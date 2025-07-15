@@ -17,6 +17,7 @@
 #include "Concurrency/ParallelExecutor.hpp"
 #include "Message/UniformCommunicateError.h"
 #include "ProjectData.h"
+#include "ContextForSteps.hpp"
 
 namespace qmcplusplus
 {
@@ -50,6 +51,26 @@ public:
 
   QMCRunType getRunType() override { return QMCRunType::DUMMY; }
 
+  UPtrVector<ContextForSteps> step_contexts_;
+
+  /// obtain reference vector of step contexts
+  RefVector<ContextForSteps> getContextForStepsRefs() const
+  {
+    RefVector<ContextForSteps> refs;
+    refs.reserve(step_contexts_.size());
+    for (auto& one_context : step_contexts_)
+      refs.push_back(*one_context);
+    return refs;
+  }
+
+  void createStepContexts(int num_crowds)
+  {
+    assert(num_crowds <= rngs_.size());
+    step_contexts_.resize(num_crowds);
+    for (int i = 0; i < num_crowds; ++i)
+      step_contexts_[i] = std::make_unique<ContextForSteps>(rngs_[i]);
+  }
+
   void process(xmlNodePtr node) override
   {
     // We want to test the reserve ability as well
@@ -57,7 +78,8 @@ public:
         adjustGlobalWalkerCount(*myComm, 0, qmcdriver_input_.get_total_walkers(),
                                 qmcdriver_input_.get_walkers_per_rank(), 1.0, qmcdriver_input_.get_num_crowds());
 
-    initPopulationAndCrowds(awc);
+    createStepContexts(awc.walkers_per_crowd.size());
+    initPopulationAndCrowds(awc, getContextForStepsRefs());
   }
 
   void testAdjustGlobalWalkerCount()
