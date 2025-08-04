@@ -16,7 +16,11 @@
 
 namespace qmcplusplus
 {
-/// a collection of driver-specific objects needed per batch
+/** a collection of driver-specific objects needed per batch
+ *  any other situation where rng is used over threads this should
+ *  also be used and not the legacy method of using an omp for
+ *  and omp thread id based global rng.
+ */
 template<typename FULLPRECREAL>
 class ContextForStepsT
 {
