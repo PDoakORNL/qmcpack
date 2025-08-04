@@ -15,6 +15,7 @@
 set(PARTICLE
     InitMolecularSystem.cpp
     SimulationCell.cpp
+    ParticleBase/RandomSeqGenerator.cpp
     ParticleSetPool.cpp
     ParticleSet.cpp
     PSdispatcher.cpp
@@ -51,9 +52,7 @@ endif(USE_OBJECT_TARGET)
 target_include_directories(qmcparticle PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(qmcparticle PRIVATE platform_cpu_LA)
 target_link_libraries(qmcparticle PUBLIC qmcnumerics qmcutil platform_runtime)
-set(PARTICLE_OMPTARGET_SRCS
-    createDistanceTableAAOMPTarget.cpp
-    createDistanceTableABOMPTarget.cpp)
+set(PARTICLE_OMPTARGET_SRCS createDistanceTableAAOMPTarget.cpp createDistanceTableABOMPTarget.cpp)
 
 add_library(qmcparticle_omptarget OBJECT ${PARTICLE_OMPTARGET_SRCS})
 

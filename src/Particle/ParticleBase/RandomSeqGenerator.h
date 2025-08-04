@@ -2,7 +2,7 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2022 QMCPACK developers.
+// Copyright (c) 2025 QMCPACK developers.
 //
 // File developed by: Jeongnim Kim, jeongnim.kim@gmail.com, University of Illinois at Urbana-Champaign
 //                    Ken Esler, kpesler@gmail.com, University of Illinois at Urbana-Champaign
@@ -17,9 +17,11 @@
 #define QMCPLUSPLUS_RANDOMSEQUENCEGENERATOR_H
 #include <algorithm>
 #include <type_traits>
+#include "Configuration.h"
 #include "OhmmsPETE/OhmmsMatrix.h"
 #include "ParticleBase/ParticleAttrib.h"
 #include "Particle/MCCoords.hpp"
+#include "config.h"
 #include "config/stdlib/Constants.h"
 
 /*!\fn template<class T> void assignGaussRand(T* restrict a, unsigned n)
@@ -29,6 +31,9 @@
   */
 namespace qmcplusplus
 {
+template<typename T>
+class StdRandom;
+
 template<class T, class RG>
 inline void assignGaussRand(T* restrict a, unsigned n, RG& rng)
 {
@@ -100,6 +105,10 @@ inline void makeGaussRandomWithEngine(MCCoords<CT>& a, RG& rng)
   if constexpr (CT == CoordsType::POS_SPIN)
     makeGaussRandomWithEngine(a.spins, rng);
 }
+
+extern template void makeGaussRandomWithEngine<OHMMS_PRECISION_FULL, OHMMS_DIM, StdRandom<OHMMS_PRECISION_FULL>>(
+    std::vector<TinyVector<OHMMS_PRECISION_FULL, OHMMS_DIM>>& a,
+    StdRandom<OHMMS_PRECISION_FULL>& rng);
 
 } // namespace qmcplusplus
 #endif
