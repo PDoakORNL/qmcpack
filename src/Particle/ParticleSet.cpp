@@ -190,7 +190,10 @@ void ParticleSet::resetGroups()
     assert(GroupID[iat] < nspecies);
 }
 
-void ParticleSet::randomizeFromSource(const ParticleSet& src)
+void ParticleSet::randomizeFromSource(const ParticleSet& src) { randomizeFromSourceWithEngine(src, Random); }
+
+template<class RANDOM>
+void ParticleSet::randomizeFromSourceWithEngine(const ParticleSet& src, RANDOM& rng)
 {
   const SpeciesSet& srcSpSet(src.getSpeciesSet());
   SpeciesSet& spSet(getSpeciesSet());
@@ -231,7 +234,7 @@ void ParticleSet::randomizeFromSource(const ParticleSet& src)
   // This is decremented when we run out of electrons in each species
   int spLeft = NumSpecies;
   std::vector<PosType> gaussRand(Nptcl);
-  makeGaussRandom(gaussRand);
+  makeGaussRandomWithEngine(gaussRand, rng);
   for (int iat = 0; iat < Nsrc; iat++)
   {
     // Loop over electrons to add, selecting round-robin from the
