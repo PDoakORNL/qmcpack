@@ -29,6 +29,10 @@ T FakeRandom<T>::operator()()
   return m_val;
 }
 
+template<class T>
+void FakeRandom<T>::discard(unsigned long long discard)
+{}
+
 template<typename T>
 RandomBase<T>& FakeRandom<T>::operator=(const RandomBase<T>& other)
 {

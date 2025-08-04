@@ -38,6 +38,13 @@ uint32_t make_seed(int i, int n);
 
 namespace qmcplusplus
 {
+
+/** RandomGenerator with thread safety
+ *
+ *  anyuse of this derived type is a bad code smell as it indicates
+ *  global use of a rng and a determinism problem for testing and
+ *  situations in which the application too should be deterministic.
+ */
 template<class RNG>
 class RNGThreadSafe : public RNG
 {

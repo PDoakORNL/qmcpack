@@ -14,7 +14,8 @@
 
 # use this target if using all three minimal pools
 add_library(minimal_test_pools INTERFACE)
-target_link_libraries(minimal_test_pools INTERFACE minimal_particle_pool minimal_wavefunction_pool minimal_hamiltonian_pool)
+target_link_libraries(minimal_test_pools INTERFACE minimal_particle_pool minimal_wavefunction_pool
+                                                   minimal_hamiltonian_pool)
 
 # at the crowd thread scope of the API's each walker is associated
 # with one object of ParticleSet, QMCWavefunction, and
@@ -30,3 +31,7 @@ add_library(mock_walker_elements MockGoldWalkerElements.cpp)
 target_include_directories(mock_walker_elements PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(mock_walker_elements PUBLIC qmcparticle qmcwfs qmcham minimal_test_pools message)
 target_link_libraries(mock_walker_elements PRIVATE catch_main)
+
+add_library(random_generator_pool RandomGeneratorPool.cpp)
+target_include_directories(random_generator_pool PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(random_generator_pool PUBLIC qmcutil)

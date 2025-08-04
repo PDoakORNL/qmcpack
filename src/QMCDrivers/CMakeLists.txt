@@ -103,7 +103,7 @@ endif()
 
 target_include_directories(qmcdriver PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-target_link_libraries(qmcdriver PUBLIC qmcham qmcestimators)
+target_link_libraries(qmcdriver PUBLIC qmcham qmcestimators qmcparticle)
 
 target_link_libraries(qmcdriver PRIVATE platform_LA Boost::boost)
 if(BUILD_LMYENGINE_INTERFACE)

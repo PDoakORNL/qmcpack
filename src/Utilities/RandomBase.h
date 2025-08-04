@@ -37,9 +37,10 @@ public:
   virtual size_t state_size() const                         = 0;
   virtual std::unique_ptr<RandomBase<T>> makeClone() const  = 0;
   virtual RandomBase& operator=(const RandomBase& other) { return *this; }
+  virtual void discard(unsigned long long discard) = 0;
 
 protected:
-  RandomBase() = default;
+  RandomBase()                  = default;
   RandomBase(const RandomBase&) = default;
 };
 

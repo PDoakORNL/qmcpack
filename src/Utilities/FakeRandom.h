@@ -28,13 +28,13 @@ public:
 
   FakeRandom();
   T operator()() override;
-
-  void init(int iseed) override{};
-  void seed(uint_fast32_t aseed) override{};
+  void discard(unsigned long long discard) override;
+  void init(int iseed) override {};
+  void seed(uint_fast32_t aseed) override {};
   void write(std::ostream& rout) const override { rout << m_val; };
   void read(std::istream& rin) override { rin >> m_val; };
-  void load(const std::vector<uint_type>& newstate) override{};
-  void save(std::vector<uint_type>& curstate) const override{};
+  void load(const std::vector<uint_type>& newstate) override {};
+  void save(std::vector<uint_type>& curstate) const override {};
   size_t state_size() const override { return 0; };
   std::unique_ptr<RandomBase<T>> makeClone() const override { return std::make_unique<FakeRandom<T>>(*this); }
   RandomBase<T>& operator=(const RandomBase<T>& other) override;

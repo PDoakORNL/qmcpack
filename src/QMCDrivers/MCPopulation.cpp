@@ -272,7 +272,8 @@ void MCPopulation::createWalkersCrowd(int crowd_id,
       // This seems to be what happens in legacy but its surprisingly opaque there
       // How is it not undesirable to have all these walkers start
       // from the same positions
-      walker_elec_particle_sets[iw]->randomizeFromSourceWithEngine(gold_set.ion_particle_set);
+      walker_elec_particle_sets[iw]->randomizeFromSourceWithEngine(gold_set.ion_particle_set,
+                                                                   context_for_steps[crowd_id].get().get_random_gen());
       walkers[iw]->R     = walker_elec_particle_sets[iw]->R;
       walkers[iw]->spins = walker_elec_particle_sets[iw]->spins;
     }

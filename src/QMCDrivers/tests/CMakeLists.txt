@@ -130,4 +130,29 @@ if(HAVE_MPI)
     add_unit_test(${UTEST_NAME} ${NUM_RANKS} 1 $<TARGET_FILE:${UTEST_EXE}>)
     set_tests_properties(${UTEST_NAME} PROPERTIES WORKING_DIRECTORY ${UTEST_DIR})
   endforeach()
+
+  ### Integration tests that don't require a large range of mpi ranks
+  set(UTEST_EXE test_new_${SRC_DIR}_integration)
+  #this is dependent on the directory creation and sym linking of earlier driver tests
+  set(DRIVER_TEST_SRC test_MCPopulation_integration.cpp)
+  add_executable(${UTEST_EXE} ${DRIVER_TEST_SRC})
+  target_link_libraries(${UTEST_EXE} catch_main qmcdriver minimal_test_pools mock_walker_elements random_generator_pool)
+  if(USE_OBJECT_TARGET)
+    target_link_libraries(
+      ${UTEST_EXE}
+      qmcestimators
+      qmcham
+      qmcwfs
+      qmcparticle
+      qmcwfs_omptarget
+      qmcparticle_omptarget
+      qmcutil
+      platform_omptarget_LA)
+  endif()
+  foreach(NUM_RANKS 4)
+    set(UTEST_NAME deterministic-unit_${UTEST_EXE}-r${NUM_RANKS})
+    add_unit_test(${UTEST_NAME} ${NUM_RANKS} 1 $<TARGET_FILE:${UTEST_EXE}>)
+    set_tests_properties(${UTEST_NAME} PROPERTIES WORKING_DIRECTORY ${UTEST_DIR})
+  endforeach()
+
 endif(HAVE_MPI)

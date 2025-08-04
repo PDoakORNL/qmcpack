@@ -2,9 +2,10 @@
 #// This file is distributed under the University of Illinois/NCSA Open Source License.
 #// See LICENSE file in top directory for details.
 #//
-#// Copyright (c) 2020 QMCPACK developers.
+#// Copyright (c) 2025 QMCPACK developers.
 #//
 #// File developed by: Ye Luo, yeluo@anl.gov, Argonne National Laboratory
+#//                    Peter W. Doak, doakpw@ornl.gov, Oak Ridge National Laboratory
 #//
 #// File created by: Ye Luo, yeluo@anl.gov, Argonne National Laboratory
 #//////////////////////////////////////////////////////////////////////////////////////
@@ -18,6 +19,7 @@ set(PARTICLE
     ParticleBase/RandomSeqGenerator.cpp
     ParticleSetPool.cpp
     ParticleSet.cpp
+    ParticleSetExplicit.cpp
     PSdispatcher.cpp
     VirtualParticleSet.cpp
     ParticleSet.BC.cpp
@@ -49,7 +51,7 @@ else(USE_OBJECT_TARGET)
   add_library(qmcparticle ${PARTICLE} ${PARTICLEIO})
 endif(USE_OBJECT_TARGET)
 
-target_include_directories(qmcparticle PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_include_directories(qmcparticle PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/ParticleBase")
 target_link_libraries(qmcparticle PRIVATE platform_cpu_LA)
 target_link_libraries(qmcparticle PUBLIC qmcnumerics qmcutil platform_runtime)
 set(PARTICLE_OMPTARGET_SRCS createDistanceTableAAOMPTarget.cpp createDistanceTableABOMPTarget.cpp)

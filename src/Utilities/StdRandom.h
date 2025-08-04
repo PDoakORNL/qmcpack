@@ -35,6 +35,7 @@ class uniform_real_distribution_as_boost
 {
 public:
   using result_type = T;
+
   static_assert(std::is_floating_point_v<T>);
 
   uniform_real_distribution_as_boost(T min = T(0.0), T max = T(1.0)) : min_(min), max_(max) {}
@@ -61,6 +62,8 @@ public:
   using uint_type   = typename RandomBase<T>::uint_type;
 
   StdRandom(uint_type iseed = 911);
+
+  void discard(unsigned long long discard) override;
 
   void init(int iseed_in) override
   {
@@ -90,6 +93,10 @@ private:
   /// the number count of streaming states. Must match read/write/load/save
   std::size_t stream_state_size;
 };
+
+extern template class StdRandom<double>;
+extern template class StdRandom<float>;
+
 
 } // namespace qmcplusplus
 

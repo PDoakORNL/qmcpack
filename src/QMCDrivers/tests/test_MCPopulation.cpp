@@ -281,5 +281,35 @@ TEST_CASE("MCPopulation::fissionHighMultiplicityWalkers", "[particle][population
     CHECK(walker->Multiplicity == 1.0);
 }
 
+TEST_CASE("MCPopulation::randomDeterminisim", "[particle][population]")
+{
+  using namespace testing;
+
+  RuntimeOptions runtime_options;
+  Communicate* comm = OHMMS::Controller;
+
+  auto particle_pool     = MinimalParticlePool::make_diamondC_1x1x1(comm);
+  auto wavefunction_pool = MinimalWaveFunctionPool::make_diamondC_1x1x1(runtime_options, comm, particle_pool);
+  auto hamiltonian_pool  = MinimalHamiltonianPool::make_hamWithEE(comm, particle_pool, wavefunction_pool);
+  WalkerConfigurations walker_confs;
+  MCPopulation population(1, comm->rank(), particle_pool.getParticleSet("e"), wavefunction_pool.getPrimary(),
+                          hamiltonian_pool.getPrimary());
+
+  population.createWalkers(8, walker_confs);
+  auto& walkers = population.get_walkers();
+  CHECK(walkers.size() == 8);
+  walkers[0]->Multiplicity = 4;
+  population.fissionHighMultiplicityWalkers();
+  CHECK(walkers.size() == 11);
+
+  walkers[2]->Multiplicity = 3;
+  walkers[9]->Multiplicity = 4;
+  population.fissionHighMultiplicityWalkers();
+  CHECK(walkers.size() == 16);
+
+  for (auto& walker : walkers)
+    CHECK(walker->Multiplicity == 1.0);
+}
+
 
 } // namespace qmcplusplus
