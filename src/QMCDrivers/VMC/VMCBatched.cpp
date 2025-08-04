@@ -278,12 +278,8 @@ void VMCBatched::process(xmlNodePtr node)
                                 qmcdriver_input_.get_walkers_per_rank(), 1.0,
                                 determineNumCrowds(qmcdriver_input_.get_num_crowds(), rngs_.size()));
 
-    crowds_.resize(awc.walkers_per_crowd.size());
-    for (int i = 0; i < crowds_.size(); ++i)
-    {
-      crowds_[i] = std::make_unique<Crowd>(*estimator_manager_, golden_resource_, population_.get_golden_electrons(),
-                                           population_.get_golden_twf(), population_.get_golden_hamiltonian());
-    }
+
+    makeDriverCrowds(crowds_, population_, estimator_manager_, awc, golden_resource_);
 
     steps_per_block_ =
         determineStepsPerBlock(awc.global_walkers, qmcdriver_input_.get_requested_samples(),

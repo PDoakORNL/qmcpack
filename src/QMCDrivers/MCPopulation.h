@@ -73,6 +73,7 @@ private:
   {
     TrialWaveFunction& trial_wf;
     ParticleSet& elec_particle_set;
+    ParticleSet& ion_particle_set;
     QMCHamiltonian& hamiltonian;
   };
 
@@ -81,6 +82,7 @@ private:
   // Then these too can be references.
   TrialWaveFunction* trial_wf_;
   ParticleSet* elec_particle_set_;
+  ParticleSet* ion_particle_set_;
   QMCHamiltonian* hamiltonian_;
   // At the moment these are "clones" but I think this design pattern smells.
   UPtrVector<ParticleSet> walker_elec_particle_sets_;

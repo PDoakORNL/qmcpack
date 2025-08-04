@@ -78,6 +78,8 @@ public:
         adjustGlobalWalkerCount(*myComm, 0, qmcdriver_input_.get_total_walkers(),
                                 qmcdriver_input_.get_walkers_per_rank(), 1.0, qmcdriver_input_.get_num_crowds());
 
+    makeDriverCrowds(crowds_, population_, estimator_manager_, awc, golden_resource_);
+
     createStepContexts(awc.walkers_per_crowd.size());
     initPopulationAndCrowds(awc, getContextForStepsRefs());
   }

@@ -166,16 +166,33 @@ public:
 
   ~QMCDriverNew() override;
 
+  static void makeDriverCrowds(UPtrVector<Crowd>& crowds,
+                               MCPopulation& population,
+                               UPtr<EstimatorManagerNew>& estimator_manager,
+                               AdjustedWalkerCounts& awc,
+                               DriverWalkerResourceCollection& golden_resource);
+
   bool putQMCInfo(xmlNodePtr cur);
 
   /** Adjust populations local walkers to this number
   * @param nwalkers number of walkers to add
   *
+  *   This method leaves the exact crowd/thread context up to the
+  *   vagaries of the runtime omp configuration.  This does a great
+  *   job of breaking deterministic integration testing that has
+  *   gone out of its way to avoid nondeterministic thread and/or rank
+  *   situations.  And this mean important integration tests that can
+  *   and should be tested deterministically really cannot be and must
+  *   be tested at a statistical level which is time consuming and
+  *   prone to false negatives and positives.
   */
   void makeLocalWalkers(int nwalkers, RealType reserve);
 
   /** Adjust populations local walkers to this number
   * @param nwalkers number of walkers to add
+  *
+  *   This method makes walkers in a known crowd context. Just as the
+  *   main loop of advancing walkers does.
   *
   */
   void makeLocalWalkers(int nwalkers,

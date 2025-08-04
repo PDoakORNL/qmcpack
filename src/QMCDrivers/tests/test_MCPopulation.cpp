@@ -2,7 +2,7 @@
 // This file is distributed under the University of Illinois/NCSA Open Source License.
 // See LICENSE file in top directory for details.
 //
-// Copyright (c) 2020 QMCPACK developers.
+// Copyright (c) 2025 QMCPACK developers.
 //
 // File developed by: Peter Doak, doakpw@ornl.gov, Oak Ridge National Laboratory
 //
@@ -10,7 +10,10 @@
 //////////////////////////////////////////////////////////////////////////////////////
 
 
+#include "ContextForSteps.hpp"
+#include "DriverWalkerTypes.h"
 #include "catch.hpp"
+#include <memory>
 #include <vector>
 #include <algorithm>
 
@@ -18,10 +21,14 @@
 #include "OhmmsPETE/TinyVector.h"
 #include "QMCDrivers/MCPopulation.h"
 #include "QMCDrivers/tests/WalkerConsumer.h"
+#include "Crowd.h"
+#include <type_traits/template_types.hpp>
 #include <MinimalParticlePool.h>
 #include <MinimalWaveFunctionPool.h>
 #include <MinimalHamiltonianPool.h>
 #include "Utilities/for_testing/NativeInitializerPrint.hpp"
+#include "SetupPools.h"
+#include <EstimatorManagerNew.h>
 
 namespace qmcplusplus
 {
@@ -52,7 +59,7 @@ TEST_CASE("MCPopulation::createWalkers", "[particle][population]")
   // keep 3 only configurations.
   WalkerConfigurations walker_confs2;
   walker_confs2.resize(3, 0);
-  for(int iw = 0; iw < walker_confs2.getActiveWalkers(); ++iw)
+  for (int iw = 0; iw < walker_confs2.getActiveWalkers(); ++iw)
     *walker_confs2[iw] = *walker_confs[iw];
   CHECK(walker_confs2.getActiveWalkers() == 3);
   auto old_R00 = walker_confs[0]->R[0][0];
@@ -97,7 +104,7 @@ TEST_CASE("MCPopulation::createWalkers_walker_ids", "[particle][population]")
     pops.emplace_back(num_ranks, i, particle_pool.getParticleSet("e"), &twf, hamiltonian_pool.getPrimary());
 
   std::vector<long> walker_ids;
-  std::array<std::vector<long>,3> per_rank_walker_ids;
+  std::array<std::vector<long>, 3> per_rank_walker_ids;
   for (int i = 0; i < num_ranks; ++i)
   {
     pops[i].createWalkers(8, walker_confs, 2.0);
@@ -113,8 +120,9 @@ TEST_CASE("MCPopulation::createWalkers_walker_ids", "[particle][population]")
   }
   std::sort(walker_ids.begin(), walker_ids.end());
   // Walker IDs cannot collide unless they are -1
-  for (int i = 1; i < walker_ids.size(); ++i) {
-    INFO(" i = " << i );
+  for (int i = 1; i < walker_ids.size(); ++i)
+  {
+    INFO(" i = " << i);
     CHECK(walker_ids[i - 1] != walker_ids[i]);
   }
   int new_walkers = 3;
@@ -142,10 +150,71 @@ TEST_CASE("MCPopulation::createWalkers_walker_ids", "[particle][population]")
   for (int rank = 0; rank < num_ranks; ++rank)
   {
     std::vector<long> rank_expected_ids(11);
-    std::generate(rank_expected_ids.begin(), rank_expected_ids.end(),  [n = 0, rank, num_ranks] () mutable { return (n++) * num_ranks + rank + 1;});
+    std::generate(rank_expected_ids.begin(), rank_expected_ids.end(),
+                  [n = 0, rank, num_ranks]() mutable { return (n++) * num_ranks + rank + 1; });
     CHECK(per_rank_walker_ids[rank] == rank_expected_ids);
     std::cout << NativePrint(rank_expected_ids) << '\n';
   }
+}
+
+TEST_CASE("MCPopulation::createWalkerInCrowds", "[particle][population]")
+{
+  using namespace testing;
+
+  RuntimeOptions runtime_options;
+  Communicate* comm = OHMMS::Controller;
+
+  auto particle_pool     = MinimalParticlePool::make_diamondC_1x1x1(comm);
+  auto wavefunction_pool = MinimalWaveFunctionPool::make_diamondC_1x1x1(runtime_options, comm, particle_pool);
+  auto hamiltonian_pool  = MinimalHamiltonianPool::make_hamWithEE(comm, particle_pool, wavefunction_pool);
+  TrialWaveFunction twf(runtime_options);
+  WalkerConfigurations walker_confs;
+
+  // Test is intended to be run on one rank
+  MCPopulation population(1, comm->rank(), particle_pool.getParticleSet("e"), &twf, hamiltonian_pool.getPrimary());
+
+  int num_walkers = 8;
+
+  population.createWalkers(num_walkers, walker_confs, 2.0);
+  CHECK(population.get_walkers().size() == num_walkers);
+  CHECK(population.get_dead_walkers().size() == num_walkers);
+  CHECK(population.get_num_local_walkers() == num_walkers);
+  population.saveWalkerConfigurations(walker_confs);
+  CHECK(walker_confs.getActiveWalkers() == num_walkers);
+
+  int num_crowds = 2;
+  MCPopulation population_det(1, comm->rank(), particle_pool.getParticleSet("e"), &twf, hamiltonian_pool.getPrimary());
+  WalkerConfigurations walker_confs_det;
+
+  UPtrVector<ContextForSteps> step_contexts;
+  RandomNumberGeneratorPool rng_pool(num_crowds);
+  auto rngs = rng_pool.getRngRefs();
+  step_contexts.resize(num_crowds);
+  std::generate(step_contexts.begin(), step_contexts.end(),
+                [i = 0, &rngs]() mutable { return std::make_unique<ContextForSteps>(rngs[i++]); });
+  auto step_context_refs = convertUPtrToRefVector(step_contexts);
+
+  auto estimator_manager = std::make_unique<EstimatorManagerNew>(population_det.get_golden_hamiltonian(), comm);
+
+
+  UPtrVector<Crowd> crowds(num_crowds);
+  DriverWalkerResourceCollection golden_resource;
+  population_det.get_golden_electrons().createResource(golden_resource.pset_res);
+  population_det.get_golden_twf().createResource(golden_resource.twf_res);
+  population_det.get_golden_hamiltonian().createResource(golden_resource.ham_res);
+
+  for (auto& crowd : crowds)
+    crowd = std::make_unique<Crowd>(*estimator_manager, golden_resource, population_det.get_golden_electrons(),
+                                    population_det.get_golden_twf(), population.get_golden_hamiltonian());
+
+  population_det.createWalkersInCrowd(step_context_refs, crowds, num_walkers, walker_confs_det, 2.0);
+
+  population_det.createWalkers(num_walkers, walker_confs, 2.0);
+  CHECK(population_det.get_walkers().size() == num_walkers);
+  CHECK(population_det.get_dead_walkers().size() == num_walkers);
+  CHECK(population_det.get_num_local_walkers() == num_walkers);
+  population_det.saveWalkerConfigurations(walker_confs_det);
+  CHECK(walker_confs_det.getActiveWalkers() == num_walkers);
 }
 
 TEST_CASE("MCPopulation::redistributeWalkers", "[particle][population]")
@@ -199,16 +268,16 @@ TEST_CASE("MCPopulation::fissionHighMultiplicityWalkers", "[particle][population
   population.createWalkers(8, walker_confs);
   auto& walkers = population.get_walkers();
   CHECK(walkers.size() == 8);
-  walkers[0]->Multiplicity=4;
+  walkers[0]->Multiplicity = 4;
   population.fissionHighMultiplicityWalkers();
   CHECK(walkers.size() == 11);
 
-  walkers[2]->Multiplicity=3;
-  walkers[9]->Multiplicity=4;
+  walkers[2]->Multiplicity = 3;
+  walkers[9]->Multiplicity = 4;
   population.fissionHighMultiplicityWalkers();
   CHECK(walkers.size() == 16);
 
-  for(auto& walker : walkers)
+  for (auto& walker : walkers)
     CHECK(walker->Multiplicity == 1.0);
 }
 

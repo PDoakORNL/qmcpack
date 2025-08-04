@@ -18,6 +18,7 @@
 #include "QMCDriverNew.h"
 #include "Concurrency/ParallelExecutor.hpp"
 #include "ContextForSteps.hpp"
+#include "MCPopulation.h"
 #include "ParticleBase/ParticleUtility.h"
 #include "ParticleBase/RandomSeqGenerator.h"
 #include "Utilities/FairDivide.h"
@@ -148,11 +149,22 @@ void QMCDriverNew::initPopulationAndCrowds(const AdjustedWalkerCounts& awc,
 
   makeLocalWalkers(awc.walkers_per_rank[myComm->rank()], awc.reserve_walkers, crowds_, context_for_steps);
 
-
-  // at this point we can finally construct the Crowd objects.
-
   //now give walkers references to their walkers
   population_.redistributeWalkers(crowds_);
+}
+
+void QMCDriverNew::makeDriverCrowds(UPtrVector<Crowd>& crowds,
+                                    MCPopulation& population,
+                                    UPtr<EstimatorManagerNew>& estimator_manager,
+                                    AdjustedWalkerCounts& awc,
+                                    DriverWalkerResourceCollection& golden_resource)
+{
+  crowds.resize(awc.walkers_per_crowd.size());
+  for (auto& crowd : crowds)
+  {
+    crowd = std::make_unique<Crowd>(*estimator_manager, golden_resource, population.get_golden_electrons(),
+                                    population.get_golden_twf(), population.get_golden_hamiltonian());
+  }
 }
 
 /** QMCDriverNew ignores h5name if you want to read and h5 config you have to explicitly

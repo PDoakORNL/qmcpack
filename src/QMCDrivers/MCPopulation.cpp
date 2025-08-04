@@ -1,13 +1,13 @@
 //////////////////////////////////////////////////////////////////////////////////////
-// this file is distributed under the university of illinois/ncsa open source license.
-// see license file in top directory for details.
+// This file is distributed under the University of Illinois/NCSA Open Source License.
+// See LICENSE file in top directory for details.
 //
-// copyright (c) 2025 qmcpack developers.
+// Copyright (c) 2025 QMCPACK developers.
 //
-// file developed by: peter doak, doakpw@ornl.gov, oak ridge national laboratory
-//                    ye luo, yeluo@anl.gov, argonne national laboratory
+// File developed by: Peter Doak, doakpw@ornl.gov, Oak Ridge National Laboratory
+//                    Ye Luo, yeluo@anl.gov, Argonne National Laboratory
 //
-// file refactored from: mcwalkerconfiguration.cpp, qmcupdate.cpp
+// File refactored from: MCWalkerConfiguration.cpp, QMCUpdate.cpp
 //////////////////////////////////////////////////////////////////////////////////////
 
 #include <numeric>
@@ -208,7 +208,7 @@ void MCPopulation::createWalkersInCrowd(RefVector<ContextForSteps> step_context_
   // produce equivalent walker elements.
   {
     ParallelExecutor<> create_walkers_task;
-    GoldenSet gold_set{*trial_wf_, *elec_particle_set_, *hamiltonian_};
+    GoldenSet gold_set{*trial_wf_, *elec_particle_set_, *ion_particle_set_, *hamiltonian_};
     create_walkers_task(static_cast<int>(crowds.size()), createWalkersCrowd, gold_set, crowds, step_context_refs,
                         walker_configs, occupations, offsets, walker_ids, walkers_, walker_elec_particle_sets_,
                         walker_trial_wavefunctions_, walker_hamiltonians_);
@@ -252,6 +252,9 @@ void MCPopulation::createWalkersCrowd(int crowd_id,
   for (IndexType i = 0; i < walker_occupations[crowd_id]; ++i)
   {
     auto iw = i + my_offset;
+
+    walker_elec_particle_sets[iw] = std::make_unique<ParticleSet>(gold_set.elec_particle_set);
+
     if (const auto num_existing_walkers = walker_configs.getActiveWalkers())
     {
       walkers[iw] = std::make_unique<MCPWalker>(*walker_configs[iw % num_existing_walkers]);
@@ -267,15 +270,16 @@ void MCPopulation::createWalkersCrowd(int crowd_id,
           std::make_unique<MCPWalker>(walker_ids[iw], 0 /* parent_id */, gold_set.elec_particle_set.getTotalNum());
       // Should these get a randomize from source?
       // This seems to be what happens in legacy but its surprisingly opaque there
-      // How is it not undesirable to have all these walkers start from the same positions
-      walkers[iw]->R     = gold_set.elec_particle_set.R;
-      walkers[iw]->spins = gold_set.elec_particle_set.spins;
+      // How is it not undesirable to have all these walkers start
+      // from the same positions
+      walker_elec_particle_sets[iw]->randomizeFromSourceWithEngine(gold_set.ion_particle_set);
+      walkers[iw]->R     = walker_elec_particle_sets[iw]->R;
+      walkers[iw]->spins = walker_elec_particle_sets[iw]->spins;
     }
     walkers[iw]->Properties = gold_set.elec_particle_set.Properties;
     walkers[iw]->registerData();
     walkers[iw]->DataSet.allocate();
 
-    walker_elec_particle_sets[iw]  = std::make_unique<ParticleSet>(gold_set.elec_particle_set);
     walker_trial_wavefunctions[iw] = gold_set.trial_wf.makeClone(*walker_elec_particle_sets[iw]);
     walker_hamiltonians[iw] =
         gold_set.hamiltonian.makeClone(*walker_elec_particle_sets[iw], *walker_trial_wavefunctions[iw]);
