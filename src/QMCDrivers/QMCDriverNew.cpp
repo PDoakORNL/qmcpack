@@ -147,7 +147,8 @@ void QMCDriverNew::initPopulationAndCrowds(const AdjustedWalkerCounts& awc,
     app_debug() << "Multi walker shared resources creation completed" << std::endl;
   }
 
-  makeLocalWalkers(awc.walkers_per_rank[myComm->rank()], awc.reserve_walkers, crowds_, context_for_steps);
+  makeLocalWalkers(awc.walkers_per_rank[myComm->rank()], awc.reserve_walkers, crowds_,
+                   population_.get_golden_electrons(), context_for_steps);
 
   //now give walkers references to their walkers
   population_.redistributeWalkers(crowds_);
@@ -265,12 +266,14 @@ void QMCDriverNew::makeLocalWalkers(IndexType nwalkers, RealType reserve)
 void QMCDriverNew::makeLocalWalkers(IndexType nwalkers,
                                     RealType reserve,
                                     UPtrVector<Crowd>& crowds,
+                                    const ParticleSet& ion_particle_ref,
                                     const RefVector<ContextForSteps>& contexts_for_steps)
 {
   ScopedTimer local_timer(timers_.create_walkers_timer);
   // ensure nwalkers local walkers in population_
   if (population_.get_walkers().size() == 0)
-    population_.createWalkersInCrowd(contexts_for_steps, crowds, nwalkers, walker_configs_ref_, reserve);
+    population_.createWalkersInCrowd(contexts_for_steps, crowds, ion_particle_ref, nwalkers, walker_configs_ref_,
+                                     reserve);
   else if (population_.get_walkers().size() < nwalkers)
   {
     throw std::runtime_error("Unexpected walker count resulting in dangerous spawning");

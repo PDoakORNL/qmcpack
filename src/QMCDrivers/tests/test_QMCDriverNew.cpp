@@ -45,12 +45,16 @@ TEST_CASE("QMCDriverNew tiny case", "[drivers]")
       MinimalWaveFunctionPool::make_diamondC_1x1x1(test_project.getRuntimeOptions(), comm, particle_pool);
 
   auto hamiltonian_pool = MinimalHamiltonianPool::make_hamWithEE(comm, particle_pool, wavefunction_pool);
+  auto* elecs           = particle_pool.getParticleSet("e");
+  auto* ions            = particle_pool.getParticleSet("ion");
+  MCPopulation::GoldenSet golden_set{*elecs, std::make_optional<std::reference_wrapper<const ParticleSet>>(*ions),
+                                     *wavefunction_pool.getPrimary(), *hamiltonian_pool.getPrimary()};
+
+
   WalkerConfigurations walker_confs;
   RandomNumberGeneratorPool rng_pool(1);
   QMCDriverNewTestWrapper qmcdriver(test_project, std::move(qmcdriver_input), walker_confs,
-                                    MCPopulation(comm->size(), comm->rank(), particle_pool.getParticleSet("e"),
-                                                 wavefunction_pool.getPrimary(), hamiltonian_pool.getPrimary()),
-                                    rng_pool.getRngRefs(), comm);
+                                    {comm->size(), comm->rank(), golden_set}, rng_pool.getRngRefs(), comm);
 
   // setStatus must be called before process
   std::string root_name{"Test"};
@@ -91,10 +95,14 @@ TEST_CASE("QMCDriverNew walker counts", "[drivers]")
   QMCDriverInput qmcdriver_copy(qmcdriver_input);
   WalkerConfigurations walker_confs;
   RandomNumberGeneratorPool rng_pool(8);
+  auto* elecs = particle_pool.getParticleSet("e");
+  auto* ions  = particle_pool.getParticleSet("ion");
+  MCPopulation::GoldenSet golden_set{*elecs, std::make_optional<std::reference_wrapper<const ParticleSet>>(*ions),
+                                     *wavefunction_pool.getPrimary(), *hamiltonian_pool.getPrimary()};
+
   QMCDriverNewTestWrapper qmc_batched(test_project, std::move(qmcdriver_copy), walker_confs,
-                                      MCPopulation(comm->size(), comm->rank(), particle_pool.getParticleSet("e"),
-                                                   wavefunction_pool.getPrimary(), hamiltonian_pool.getPrimary()),
-                                      rng_pool.getRngRefs(), comm);
+                                      MCPopulation(comm->size(), comm->rank(), golden_set), rng_pool.getRngRefs(),
+                                      comm);
 
   qmc_batched.testAdjustGlobalWalkerCount();
   qmc_batched.testDetermintNumCrowds();
@@ -121,10 +129,14 @@ TEST_CASE("QMCDriverNew test driver operations", "[drivers]")
   auto hamiltonian_pool = MinimalHamiltonianPool::make_hamWithEE(comm, particle_pool, wavefunction_pool);
   WalkerConfigurations walker_confs;
   RandomNumberGeneratorPool rng_pool(1);
+
+  auto* elecs = particle_pool.getParticleSet("e");
+  auto* ions  = particle_pool.getParticleSet("ion");
+  MCPopulation::GoldenSet golden_set{*elecs, std::make_optional<std::reference_wrapper<const ParticleSet>>(*ions),
+                                     *wavefunction_pool.getPrimary(), *hamiltonian_pool.getPrimary()};
+
   QMCDriverNewTestWrapper qmcdriver(test_project, std::move(qmcdriver_input), walker_confs,
-                                    MCPopulation(comm->size(), comm->rank(), particle_pool.getParticleSet("e"),
-                                                 wavefunction_pool.getPrimary(), hamiltonian_pool.getPrimary()),
-                                    rng_pool.getRngRefs(), comm);
+                                    MCPopulation(comm->size(), comm->rank(), golden_set), rng_pool.getRngRefs(), comm);
 
 
   auto tau       = 1.0;

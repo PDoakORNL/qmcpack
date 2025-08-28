@@ -34,9 +34,11 @@ namespace testing
 UnifiedDriverWalkerControlMPITest::UnifiedDriverWalkerControlMPITest() : wc_(dpools_.comm, Random)
 {
   int num_ranks = dpools_.comm->size();
-  pop_ =
-      std::make_unique<MCPopulation>(num_ranks, dpools_.comm->rank(), dpools_.particle_pool->getParticleSet("e"),
-                                     dpools_.wavefunction_pool->getPrimary(), dpools_.hamiltonian_pool->getPrimary());
+  MCPopulation::GoldenSet golden_set{*dpools_.particle_pool->getParticleSet("e"),
+                                     *dpools_.particle_pool->getParticleSet("ion"),
+                                     *dpools_.wavefunction_pool->getPrimary(), *dpools_.hamiltonian_pool->getPrimary()};
+
+  pop_ = std::make_unique<MCPopulation>(num_ranks, dpools_.comm->rank(), golden_set);
 
   pop_->createWalkers(1, walker_confs);
 }

@@ -10,6 +10,8 @@
 //////////////////////////////////////////////////////////////////////////////////////
 
 #include <catch.hpp>
+#include <functional>
+#include <optional>
 
 #include "Message/Communicate.h"
 
@@ -38,9 +40,15 @@ public:
 
   SetupSFNBranch() : comm_{OHMMS::Controller} {}
 
-  std::unique_ptr<SFNBranch> operator()(ParticleSet& pset, TrialWaveFunction& twf, QMCHamiltonian& ham)
+  std::unique_ptr<SFNBranch> operator()(ParticleSet& elecs,
+                                        ParticleSet& ions,
+                                        TrialWaveFunction& twf,
+                                        QMCHamiltonian& ham)
   {
-    pop_ = std::make_unique<MCPopulation>(1, comm_->rank(), &pset, &twf, &ham);
+    MCPopulation::GoldenSet golden_set{elecs, std::make_optional<std::reference_wrapper<const ParticleSet>>(ions), twf,
+                                       ham};
+    pop_ = std::make_unique<MCPopulation>(1, comm_->rank(), golden_set);
+
     // MCPopulation owns it walkers it cannot just take refs so we just create and then update its walkers.
     pop_->createWalkers(2, walker_confs_);
 
@@ -84,8 +92,8 @@ TEST_CASE("SFNBranch::branch(MCPopulation...)", "[drivers]")
   SetupPools pools;
   SetupSFNBranch setup_sfnb(pools.comm);
   std::unique_ptr<SFNBranch> sfnb =
-      setup_sfnb(*pools.particle_pool->getParticleSet("e"), *pools.wavefunction_pool->getPrimary(),
-                 *pools.hamiltonian_pool->getPrimary());
+      setup_sfnb(*pools.particle_pool->getParticleSet("e"), *pools.particle_pool->getParticleSet("ion"),
+                 *pools.wavefunction_pool->getPrimary(), *pools.hamiltonian_pool->getPrimary());
 }
 
 

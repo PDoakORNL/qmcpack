@@ -49,6 +49,14 @@ public:
   using FullPrecRealType   = QMCTraits::FullPrecRealType;
   using opt_variables_type = optimize::VariableSet;
 
+  struct GoldenSet
+  {
+    ParticleSet& elec_particle_set;
+    std::optional<std::reference_wrapper<const ParticleSet>> ion_particle_set;
+    TrialWaveFunction& trial_wf;
+    QMCHamiltonian& hamiltonian;
+  };
+
 private:
   // Potential thread safety issue
   MCDataType<QMCTraits::FullPrecRealType> ensemble_property_;
@@ -69,21 +77,16 @@ private:
   ///1/Mass per particle
   std::vector<RealType> ptcl_inv_mass_;
 
-  struct GoldenSet
-  {
-    TrialWaveFunction& trial_wf;
-    ParticleSet& elec_particle_set;
-    ParticleSet& ion_particle_set;
-    QMCHamiltonian& hamiltonian;
-  };
-
+  GoldenSet golden_set_;
+  // Superceded by golden set
   // This is necessary MCPopulation is constructed in a simple call scope in QMCDriverFactory from the legacy MCWalkerConfiguration
   // MCPopulation should have QMCMain scope eventually and the driver will just have a reference to it.
   // Then these too can be references.
-  TrialWaveFunction* trial_wf_;
-  ParticleSet* elec_particle_set_;
-  ParticleSet* ion_particle_set_;
-  QMCHamiltonian* hamiltonian_;
+  // TrialWaveFunction* trial_wf_;
+  // ParticleSet* elec_particle_set_;
+  // ParticleSet* ion_particle_set_;
+  // QMCHamiltonian* hamiltonian_;
+
   // At the moment these are "clones" but I think this design pattern smells.
   UPtrVector<ParticleSet> walker_elec_particle_sets_;
   UPtrVector<TrialWaveFunction> walker_trial_wavefunctions_;
@@ -111,11 +114,7 @@ public:
   /** Temporary constructor to deal with MCWalkerConfiguration be the only source of some information
    *  in QMCDriverFactory.
    */
-  MCPopulation(int num_ranks,
-               int this_rank,
-               ParticleSet* elecs,
-               TrialWaveFunction* trial_wf,
-               QMCHamiltonian* hamiltonian_);
+  MCPopulation(int num_ranks, int this_rank, GoldenSet golden_set);
 
   ~MCPopulation();
   MCPopulation(MCPopulation&)            = delete;
@@ -160,6 +159,7 @@ public:
    */
   void createWalkersInCrowd(RefVector<ContextForSteps> step_context_refs,
                             UPtrVector<Crowd>& crowds,
+                            const ParticleSet& ion_particle_ref,
                             IndexType num_walkers,
                             const WalkerConfigurations& walker_configs,
                             RealType reserve = 1.0);
@@ -232,12 +232,13 @@ public:
   //const Properties& get_properties() const { return properties_; }
 
   // accessor to the gold copy
-  const ParticleSet& get_golden_electrons() const { return *elec_particle_set_; }
-  ParticleSet& get_golden_electrons() { return *elec_particle_set_; }
-  const TrialWaveFunction& get_golden_twf() const { return *trial_wf_; }
-  TrialWaveFunction& get_golden_twf() { return *trial_wf_; }
+  const ParticleSet& get_golden_electrons() const { return golden_set_.elec_particle_set; }
+  ParticleSet& get_golden_electrons() { return golden_set_.elec_particle_set; }
+  auto get_golden_ions() { return golden_set_.ion_particle_set; }
+  const TrialWaveFunction& get_golden_twf() const { return golden_set_.trial_wf; }
+  TrialWaveFunction& get_golden_twf() { return golden_set_.trial_wf; }
   // TODO: the fact this is needed is sad remove need for its existence.
-  QMCHamiltonian& get_golden_hamiltonian() { return *hamiltonian_; }
+  QMCHamiltonian& get_golden_hamiltonian() { return golden_set_.hamiltonian; }
 
   void set_num_global_walkers(IndexType num_global_walkers) { num_global_walkers_ = num_global_walkers; }
   void set_num_local_walkers(IndexType num_local_walkers) { num_local_walkers_ = num_local_walkers; }

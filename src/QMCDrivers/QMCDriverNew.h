@@ -198,6 +198,7 @@ public:
   void makeLocalWalkers(int nwalkers,
                         RealType reserve,
                         UPtrVector<Crowd>& crowds,
+                        const ParticleSet& ion_particle_ref,
                         const RefVector<ContextForSteps>& contexts_for_steps);
 
 

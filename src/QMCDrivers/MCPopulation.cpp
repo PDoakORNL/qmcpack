@@ -23,25 +23,22 @@
 
 namespace qmcplusplus
 {
-MCPopulation::MCPopulation(int num_ranks,
-                           int this_rank,
-                           ParticleSet* elecs,
-                           TrialWaveFunction* trial_wf,
-                           QMCHamiltonian* hamiltonian)
-    : trial_wf_(trial_wf), elec_particle_set_(elecs), hamiltonian_(hamiltonian), num_ranks_(num_ranks), rank_(this_rank)
+MCPopulation::MCPopulation(int num_ranks, int this_rank, GoldenSet golden_set)
+    : golden_set_(golden_set), num_ranks_(num_ranks), rank_(this_rank)
 {
-  const auto num_groups = elecs->groups();
+  const auto num_groups = golden_set_.elec_particle_set.groups();
   ptclgrp_mass_.resize(num_groups);
   ptclgrp_inv_mass_.resize(num_groups);
+  auto& elecs = golden_set.elec_particle_set;
   for (int ig = 0; ig < num_groups; ++ig)
   {
-    ptclgrp_mass_[ig]     = elecs->Mass[elecs->first(ig)];
+    ptclgrp_mass_[ig]     = elecs.Mass[elecs.first(ig)];
     ptclgrp_inv_mass_[ig] = 1.0 / ptclgrp_mass_[ig];
   }
 
-  ptcl_inv_mass_.resize(elecs->getTotalNum());
+  ptcl_inv_mass_.resize(elecs.getTotalNum());
   for (int ig = 0; ig < num_groups; ++ig)
-    for (int iat = elecs->first(ig); iat < elecs->last(ig); ++iat)
+    for (int iat = elecs.first(ig); iat < elecs.last(ig); ++iat)
       ptcl_inv_mass_[iat] = ptclgrp_inv_mass_[ig];
 }
 
@@ -91,7 +88,8 @@ void MCPopulation::createWalkers(IndexType num_walkers, const WalkerConfiguratio
   // buffer;
   // Ye: need to resize walker_t and ParticleSet Properties
   // Really MCPopulation does not own this elec_particle_set_  seems like it should be immutable
-  elec_particle_set_->Properties.resize(1, elec_particle_set_->PropertyList.size());
+  auto& elecs = golden_set_.elec_particle_set;
+  elecs.Properties.resize(1, elecs.PropertyList.size());
 
   // This pattern is begging for a micro benchmark, is this really better
   // than the simpler walkers_.pushback;
@@ -126,24 +124,27 @@ void MCPopulation::createWalkers(IndexType num_walkers, const WalkerConfiguratio
     }
     else // these are fresh walkers no incoming walkers
     {
+      auto& elecs = golden_set_.elec_particle_set;
       // These walkers are orphans they don't get their intial configuration from a walkerconfig
       // but from the golden particle set.  They get an walker ID of 0;
-      walkers_[iw] = std::make_unique<MCPWalker>(walker_ids[iw], 0 /* parent_id */, elec_particle_set_->getTotalNum());
+      walkers_[iw] = std::make_unique<MCPWalker>(walker_ids[iw], 0 /* parent_id */, elecs.getTotalNum());
       // Should these get a randomize from source?
       // This seems to be what happens in legacy but its surprisingly opaque there
       // How is it not undesirable to have all these walkers start from the same positions
-      walkers_[iw]->R     = elec_particle_set_->R;
-      walkers_[iw]->spins = elec_particle_set_->spins;
+      walkers_[iw]->R     = elecs.R;
+      walkers_[iw]->spins = elecs.spins;
     }
 
-    walkers_[iw]->Properties = elec_particle_set_->Properties;
+    walkers_[iw]->Properties = elecs.Properties;
     walkers_[iw]->registerData();
     walkers_[iw]->DataSet.allocate();
 
-    walker_elec_particle_sets_[iw]  = std::make_unique<ParticleSet>(*elec_particle_set_);
-    walker_trial_wavefunctions_[iw] = trial_wf_->makeClone(*walker_elec_particle_sets_[iw]);
+    walker_elec_particle_sets_[iw]  = std::make_unique<ParticleSet>(elecs);
+    auto& trial_wf = golden_set_.trial_wf;
+    walker_trial_wavefunctions_[iw] = trial_wf.makeClone(*walker_elec_particle_sets_[iw]);
+    auto& hamiltonian = golden_set_.hamiltonian;
     walker_hamiltonians_[iw] =
-        hamiltonian_->makeClone(*walker_elec_particle_sets_[iw], *walker_trial_wavefunctions_[iw]);
+        hamiltonian.makeClone(*walker_elec_particle_sets_[iw], *walker_trial_wavefunctions_[iw]);
   };
 
   outputManager.resume();
@@ -161,6 +162,7 @@ void MCPopulation::createWalkers(IndexType num_walkers, const WalkerConfiguratio
 
 void MCPopulation::createWalkersInCrowd(RefVector<ContextForSteps> step_context_refs,
                                         UPtrVector<Crowd>& crowds,
+                                        const ParticleSet& ion_particle_ref,
                                         IndexType num_walkers,
                                         const WalkerConfigurations& walker_configs,
                                         RealType reserve)
@@ -173,7 +175,8 @@ void MCPopulation::createWalkersInCrowd(RefVector<ContextForSteps> step_context_
   // buffer;
   // Ye: need to resize walker_t and ParticleSet Properties
   // Really MCPopulation does not own this elec_particle_set_  seems like it should be immutable
-  elec_particle_set_->Properties.resize(1, elec_particle_set_->PropertyList.size());
+  auto& elecs = golden_set_.elec_particle_set;
+  elecs.Properties.resize(1, elecs.PropertyList.size());
 
   // This pattern is begging for a micro benchmark, is this really better
   // than the simpler walkers_.pushback;
@@ -200,6 +203,8 @@ void MCPopulation::createWalkersInCrowd(RefVector<ContextForSteps> step_context_
   };
   std::vector<IndexType> offsets = make_offsets(crowds.size(), occupations);
 
+  auto& trial_wf = golden_set_.trial_wf;
+  auto& hamiltonian = golden_set_.hamiltonian;
   // this part is allegedly time consuming, but previously it was
   // threaded with simple omp for and as a result was not
   // deterministic even if the number of crowds and ranks was fixed
@@ -208,7 +213,7 @@ void MCPopulation::createWalkersInCrowd(RefVector<ContextForSteps> step_context_
   // produce equivalent walker elements.
   {
     ParallelExecutor<> create_walkers_task;
-    GoldenSet gold_set{*trial_wf_, *elec_particle_set_, *ion_particle_set_, *hamiltonian_};
+    GoldenSet gold_set{elecs, ion_particle_ref, trial_wf, hamiltonian};
     create_walkers_task(static_cast<int>(crowds.size()), createWalkersCrowd, gold_set, crowds, step_context_refs,
                         walker_configs, occupations, offsets, walker_ids, walkers_, walker_elec_particle_sets_,
                         walker_trial_wavefunctions_, walker_hamiltonians_);
@@ -241,7 +246,7 @@ void MCPopulation::createWalkersCrowd(int crowd_id,
                                       UPtrVector<QMCHamiltonian>& walker_hamiltonians)
 {
   Crowd& crowd = *(crowds[crowd_id]);
-  if (crowd.size() == 0)
+  if (crowds.size() == 0)
     return;
 
   ContextForSteps& my_context(context_for_steps[crowd_id]);
@@ -272,9 +277,10 @@ void MCPopulation::createWalkersCrowd(int crowd_id,
       // This seems to be what happens in legacy but its surprisingly opaque there
       // How is it not undesirable to have all these walkers start
       // from the same positions
-      walker_elec_particle_sets[iw]->randomizeFromSourceWithEngine(gold_set.ion_particle_set,
+      walkers[iw]->R = walker_elec_particle_sets[iw]->R;
+      if(gold_set.ion_particle_set)
+        walker_elec_particle_sets[iw]->randomizeFromSourceWithEngine(*gold_set.ion_particle_set,
                                                                    context_for_steps[crowd_id].get().get_random_gen());
-      walkers[iw]->R     = walker_elec_particle_sets[iw]->R;
       walkers[iw]->spins = walker_elec_particle_sets[iw]->spins;
     }
     walkers[iw]->Properties = gold_set.elec_particle_set.Properties;
@@ -350,11 +356,13 @@ WalkerElementsRef MCPopulation::spawnWalker()
     walkers_.push_back(std::make_unique<MCPWalker>(*(walkers_.back()), walker_id, 0));
 
     outputManager.pause();
-
-    walker_elec_particle_sets_.emplace_back(std::make_unique<ParticleSet>(*elec_particle_set_));
-    walker_trial_wavefunctions_.emplace_back(trial_wf_->makeClone(*walker_elec_particle_sets_.back()));
+    auto& elecs = golden_set_.elec_particle_set;
+    walker_elec_particle_sets_.emplace_back(std::make_unique<ParticleSet>(elecs));
+    auto& trial_wf = golden_set_.trial_wf;
+    walker_trial_wavefunctions_.emplace_back(trial_wf.makeClone(*walker_elec_particle_sets_.back()));
+    auto& hamiltonian = golden_set_.hamiltonian;
     walker_hamiltonians_.emplace_back(
-        hamiltonian_->makeClone(*walker_elec_particle_sets_.back(), *walker_trial_wavefunctions_.back()));
+        hamiltonian.makeClone(*walker_elec_particle_sets_.back(), *walker_trial_wavefunctions_.back()));
     walkers_.back()->Multiplicity = 1.0;
     walkers_.back()->Weight       = 1.0;
   }
@@ -471,7 +479,8 @@ void MCPopulation::checkIntegrity() const
 
 void MCPopulation::saveWalkerConfigurations(WalkerConfigurations& walker_configs)
 {
-  walker_configs.resize(walker_elec_particle_sets_.size(), elec_particle_set_->getTotalNum());
+  auto& elecs = golden_set_.elec_particle_set;
+  walker_configs.resize(walker_elec_particle_sets_.size(), elecs.getTotalNum());
   for (int iw = 0; iw < walker_elec_particle_sets_.size(); iw++)
   {
     walker_configs[iw]->R      = walkers_[iw]->R;

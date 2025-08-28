@@ -50,8 +50,9 @@ public:
             nullptr,
             std::move(dmc_input_copy),
             walker_confs,
-            MCPopulation(comm->size(), comm->rank(), particle_pool->getParticleSet("e"),
-                         wavefunction_pool->getPrimary(), hamiltonian_pool->getPrimary()),
+            MCPopulation(comm->size(), comm->rank(),
+                         {*particle_pool->getParticleSet("e"), *particle_pool->getParticleSet("ion"),
+                          *wavefunction_pool->getPrimary(), *hamiltonian_pool->getPrimary()}),
             rng_pool.getRngRefs(),
             comm};
   }
